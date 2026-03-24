@@ -175,8 +175,13 @@ def _log_binned(module, prefix, values, t_flat):
     for name, lo, hi in zip(_T_BIN_NAMES, _T_BIN_EDGES[:-1], _T_BIN_EDGES[1:]):
         mask = (t_flat >= lo) & (t_flat < hi)
         if mask.sum() > 1:
-            module.log(f"{prefix}_{name}", values[mask].var(),
-                       on_step=True, on_epoch=False, prog_bar=False)
+            module.log(
+                f"{prefix}_{name}",
+                values[mask].var(),
+                on_step=True,
+                on_epoch=False,
+                prog_bar=False,
+            )
 
 
 class OnPolicyValue(L.LightningModule):
@@ -194,7 +199,12 @@ class OnPolicyValue(L.LightningModule):
     ):
         super().__init__()
         self.save_hyperparameters(
-            ignore=["base_score_module", "value_module", "reward_function", "analytical_value_fn"]
+            ignore=[
+                "base_score_module",
+                "value_module",
+                "reward_function",
+                "analytical_value_fn",
+            ]
         )
         self.reward_function = reward_function
         self.base_score_module = base_score_module
