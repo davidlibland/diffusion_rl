@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "diffusion_rl"
+version = "0.1.0"
+description = "This repo contains some small scale experiments around RL methods for diffusion models."
+readme = "README.rst"
+authors = [
+  {name = "David Li-Bland", email = "david.libland@gmail.com"}
+]
+maintainers = [
+  {name = "David Li-Bland", email = "david.libland@gmail.com"}
+]
+classifiers = [
+
+]
+license = {text = "MIT license"}
+dependencies = [
+  "click",
+  "numpy",
+  "pandas",
+  "jupyter",
+  "jupytext",
+  "matplotlib",
+  "lightning",
+  "tensorboard",
+  "einops",
+  "scikit-learn",
+  "litdata",
+  "tiktoken",
+  "datasets",  # Huggingface
+]
+
+[project.optional-dependencies]
+dev = [
+    "isort",  # code formatting
+    "black",  # code formatting
+    "ruff",  # code formatting
+    "mypy",  # static type checking
+    "pytest",  # testing
+    "coverage",  # testing
+    "hypothesis", # property-based testing
+]
+
+[project.urls]
+
+bugs = "https://github.com/davidlibland/diffusion_rl/issues"
+changelog = "https://github.com/davidlibland/diffusion_rl/blob/master/changelog.md"
+homepage = "https://github.com/davidlibland/diffusion_rl"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.package-data]
+"*" = ["*.*"]
+
+
+[project.scripts]
+diffusion_rl = "diffusion_rl.cli:main"
+train_diff_llm = "diffusion_rl.train_diff_llm:train_diff_llm"
+
+
+
+# Mypy
+# ----
+
+[tool.mypy]
+files = "."
+
+# Use strict defaults
+strict = true
+warn_unreachable = true
+warn_no_return = true
+
+[[tool.mypy.overrides]]
+# Don't require test functions to include types
+module = "tests.*"
+allow_untyped_defs = true
+disable_error_code = "attr-defined"
+
+[tool.unidep]
+project_dependency_handling = "same-name"  # Or "pip-only", "ignore"
+channels = ["conda-forge", "huggingface"]
+dependencies = [
+    {pip = "torch"},
+    {pip = "torchvision"},
+]
