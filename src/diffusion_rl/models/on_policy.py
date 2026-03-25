@@ -153,6 +153,21 @@ class OnPolicySMCDataset(IterableDataset):
                             n_steps=self.n_steps,
                             device=self.device,
                         )
+                elif self.sampling_method == "ancestral_mc_td_lambda":
+                    with torch.no_grad():
+                        all_x, all_t, all_tgt = ancestral_mc_td_lambda(
+                            drift=self.drift,  # (B*N, dim), (B*N, 1) -> (B*N, dim)
+                            value=self.value,  # log F(x,t): same sig -> (B*N, 1)
+                            log_tau=self.smc_value,  # log τ(x,t): same sig -> (B*N, 1)
+                            h=self.reward,  # log h(x): (B*N, dim) -> (B*N, 1), or None to reuse value at t=1
+                            a=self.a,  # diffusion coefficient
+                            lambda_eff=self.lambda_eff,
+                            batch_size=ceil(self.batch_size / self.mc_samples_per_step),
+                            mc_samples=self.mc_samples_per_step,
+                            dim=self.dim,
+                            n_steps=self.n_steps,
+                            device=self.device,
+                        )
                 self._x = all_x
                 self._t = all_t.unsqueeze(-1)
                 self._y = all_tgt.unsqueeze(-1)
@@ -366,7 +381,9 @@ def one_step_bootstrap(
             dx = drift(x, t) * dt
             db = sqrt(2 * a * dt) * torch.randn_like(x)
             x_next = x + dx + db
-            v_next = value(x_next, t) if _t < 1 else h(x_next)
+            t_next_scalar = float(_t) + dt
+            t_next = torch.full_like(t, min(t_next_scalar, 1.0))
+            v_next = value(x_next, t_next)
 
             # Compute the targets using the values:
             # if ix = [2, 0, 0], then sample 0 was duplicated: x[1] and x[2] are both identical
@@ -388,7 +405,7 @@ def one_step_bootstrap(
             # Since x[0] was a singleton, while x[1] and x[2] were identical (but the chilren were not).
 
             # Resample the samples
-            v_smc_next = log_tau(x_next, t)
+            v_smc_next = log_tau(x_next, t_next)
             rel_weights = torch.exp(v_smc_next - v_smc)
 
             # Update ix, x, and v for next pass.
@@ -431,8 +448,7 @@ def _tvec(t_scalar, batch_size, mc_samples, dtype, device):
 
 
 def _sde_step(x_flat, drift, a, t_scalar, dt, batch_size, mc_samples, dim, device):
-    dtype = x_flat.dtype
-    t_vec = _tvec(t_scalar, batch_size, mc_samples, dtype, device)
+    t_vec = _tvec(t_scalar, batch_size, mc_samples, x_flat.dtype, device)
     dx = drift(x_flat, t_vec) * dt
     db = sqrt(2.0 * a * dt) * torch.randn_like(x_flat)
     return x_flat + dx + db
@@ -442,27 +458,29 @@ def _log_mean_exp_by_ancestor(log_vals, ancestor_ix):
     """
     log_vals:    (B, N, 1)  -- values on child particles
     ancestor_ix: (B, N, 1)  -- index of parent for each child
-    Returns:     (B, N, 1)  -- log-mean-exp over children, on ancestor support.
-                               Entries with no children are -inf.
+    Returns:
+        log_mean: (B, N, 1) -- log-mean-exp over children, on ancestor support
+                               (-inf where no children)
+        counts:   (B, N, 1) -- number of children per ancestor
     """
     B, N, _ = log_vals.shape
     anc_max = torch.full(
         (B, N, 1), float("-inf"), dtype=log_vals.dtype, device=log_vals.device
     )
     anc_max.scatter_reduce_(1, ancestor_ix, log_vals, reduce="amax", include_self=False)
-    anc_max_clamped = anc_max.clamp(min=-1e38)
-    shifted = log_vals - torch.gather(anc_max_clamped, 1, ancestor_ix)
+    anc_max_c = anc_max.clamp(min=-1e38)
+    shifted = log_vals - torch.gather(anc_max_c, 1, ancestor_ix)
     exp_sum = torch.zeros(B, N, 1, dtype=log_vals.dtype, device=log_vals.device)
     exp_sum.scatter_add_(1, ancestor_ix, shifted.exp())
     counts = torch.zeros(B, N, 1, dtype=log_vals.dtype, device=log_vals.device)
     counts.scatter_add_(1, ancestor_ix, torch.ones_like(log_vals))
-    valid = counts > 0
+    has_children = counts > 0
     log_mean = torch.where(
-        valid,
-        torch.log(exp_sum.clamp(min=1e-38) / counts.clamp(min=1.0)) + anc_max_clamped,
+        has_children,
+        torch.log(exp_sum.clamp(1e-38) / counts.clamp(1.0)) + anc_max_c,
         torch.full_like(anc_max, float("-inf")),
     )
-    return log_mean, counts  # (B, N, 1), (B, N, 1)
+    return log_mean, counts
 
 
 def _resample(log_w, x_next, log_tau_next, batch_size, mc_samples, dim):
@@ -481,6 +499,28 @@ def _resample(log_w, x_next, log_tau_next, batch_size, mc_samples, dim):
     x_r = torch.gather(x_next, 1, ix.expand_as(x_next))
     log_tau_r = torch.gather(log_tau_next, 1, ix)
     return x_r, log_tau_r, ix
+
+
+def _log_td_blend(log_one_step, log_multi_step, lam):
+    """
+    Computes log((1-λ)*exp(O) + λ*exp(M)) stably via logsumexp.
+    All inputs broadcast-compatible.
+
+    Special cases:
+      lam=0 → returns log_one_step  (pure one-step bootstrap)
+      lam=1 → returns log_multi_step (pure multi-step / MC)
+    These avoid log(0) and ensure exact limiting behaviour.
+    """
+    if lam == 0.0:
+        return log_one_step
+    if lam == 1.0:
+        return log_multi_step
+    log_1m_lam = log(1.0 - lam)
+    log_lam = log(lam)
+    return torch.logsumexp(
+        torch.stack([log_one_step + log_1m_lam, log_multi_step + log_lam], dim=0),
+        dim=0,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -505,7 +545,7 @@ def ancestral_td_lambda(
     """
     Ancestral TD(λ).
 
-    Runs a single SMC sweep with `batch_size * mc_samples` particles from x=0.
+    Runs a single SMC sweep with batch_size * mc_samples particles from x=0.
     Each particle's value estimate v_i = log F(x*_i, t) is a valid log-target
     for its parent x_i (by the martingale property).  Resampling decides which
     particles to refine; log_mean_exp_by_ancestor averages sibling estimates.
@@ -513,25 +553,28 @@ def ancestral_td_lambda(
     λ per step = lambda_eff^(1/n_steps), so the terminal weight is lambda_eff
     regardless of n_steps.
 
+    The t=0 generation (all particles at x=0) is excluded from the output to
+    keep the temporal range consistent with other sampling methods (dt to
+    (n_steps-1)*dt).
+
     Returns:
-        xs:      (B*N*(n_steps), dim)   -- flattened particles before resampling
-        ts:      (B*N*(n_steps),)       -- corresponding times
-        log_tgts:(B*N*(n_steps),)       -- TD(λ) log-targets
+        all_x:   (B*N*(n_steps-1), dim)   -- particles at t = dt, 2*dt, ..., (T-1)*dt
+        all_t:   (B*N*(n_steps-1),)
+        all_tgt: (B*N*(n_steps-1),)       -- log-targets for H(x,t)
     """
     lam = lambda_eff ** (1.0 / n_steps)  # per-step lambda
     dt = 1.0 / n_steps
     N = mc_samples
 
     x = torch.zeros(batch_size, N, dim, dtype=dtype, device=device)
-
-    # Storage for forward pass
-    step_xs = []  # particles before resampling, (B, N, dim)
-    step_vs = []  # log-values after step,       (B, N, 1)
-    step_ixs = []  # resample indices,             (B, N, 1)
-
     log_tau_x = log_tau(
-        _flat(x, batch_size, N, dim), _tvec(0.0, batch_size, N, dtype, device)
+        _flat(x, batch_size, N, dim),
+        _tvec(0.0, batch_size, N, dtype, device),
     ).reshape(batch_size, N, 1)
+
+    step_xs = []  # (B, N, dim) particles before resampling
+    step_vs = []  # (B, N, 1)  log F at next-step proposals
+    step_ixs = []  # (B, N, 1)  resample indices
 
     # ------------------------------------------------------------------
     # Forward pass
@@ -548,7 +591,7 @@ def ancestral_td_lambda(
 
         t_next_vec = _tvec(t_next, batch_size, N, dtype, device)
 
-        # v_i = log F(x*_i, t_next)  or  log h(x*_i) at terminal
+        # v_i = log F(x*_i, t_next) or log h(x*_i) at terminal
         if step_idx == n_steps - 1 and h is not None:
             v = h(x_next_flat).reshape(batch_size, N, 1)
         else:
@@ -577,33 +620,30 @@ def ancestral_td_lambda(
         v_j = step_vs[j]  # (B, N, 1)
         ix_j = step_ixs[j]  # (B, N, 1)
 
-        # Aggregate future target to parent support
+        # Aggregate future target to parent support via log-mean-exp
         m_j, counts = _log_mean_exp_by_ancestor(target, ix_j)  # (B, N, 1)
 
-        # For childless particles fall back to v_j
-        future_log = torch.where(counts > 0, m_j, v_j)
+        # Fallback for childless particles: use v_j (pure one-step)
+        log_multi = torch.where(counts > 0, m_j, v_j)
 
-        # TD(λ) blend in log-sum-exp form:
-        #   target = log( (1-λ)*exp(v_j) + λ*exp(future_log) )
-        stacked = torch.stack([v_j + log(1 - lam), future_log + log(lam)], dim=0)
-        target = torch.logsumexp(stacked, dim=0)
+        # TD(λ): log((1-λ)*exp(v_j) + λ*exp(log_multi))
+        target = _log_td_blend(v_j, log_multi, lam)
         targets[j] = target
 
     # ------------------------------------------------------------------
-    # Flatten and return
+    # Flatten and return  (skip index 0: t=0, all particles at x=0)
     # ------------------------------------------------------------------
-    all_x = torch.cat([s.reshape(batch_size * N, dim) for s in step_xs], dim=0)
+    ts_scalar = [float(torch.linspace(0, 1, n_steps + 1)[i]) for i in range(T)]
+
+    all_x = torch.cat([s.reshape(batch_size * N, dim) for s in step_xs[1:]], dim=0)
     all_t = torch.cat(
         [
-            torch.full((batch_size * N,), step_ts, dtype=dtype, device=device)
-            for step_ts in [
-                float(torch.linspace(0, 1, n_steps + 1)[i]) for i in range(T)
-            ]
+            torch.full((batch_size * N,), ts_scalar[i], dtype=dtype, device=device)
+            for i in range(1, T)
         ],
         dim=0,
     )
-    all_tgt = torch.cat([t.reshape(batch_size * N) for t in targets], dim=0)
-
+    all_tgt = torch.cat([t.reshape(batch_size * N) for t in targets[1:]], dim=0)
     return all_x, all_t, all_tgt
 
 
@@ -626,35 +666,33 @@ def _single_seed_forward(
     dtype,
 ):
     """
-    Runs the single-seed SMC forward pass common to both single-seed algorithms.
+    Single-seed SMC forward pass shared by both single-seed algorithms.
 
-    At each step a BATCH of seeds x (B, dim) is propagated; n mc_samples are
-    drawn from each seed independently, giving a (B, N, dim) array of proposals.
+    At each step a batch of seeds x (B, dim) is propagated; mc_samples
+    proposals are drawn from each seed independently giving (B, N, dim).
 
-    Returns lists (length n_steps) of:
-        xs          (B, dim)    -- seed particle before step
-        ts          float       -- time of seed
-        log_z_ratios (B,)       -- log(1/N sum_i w_i), the step's log-Z estimate
-        log_mean_vs  (B,)       -- log(1/N sum_i exp(v_i) / tau(x*_i))
-                                   bootstrap term at t_next
-        log_taus     (B,)       -- log tau(x_seed, t_curr)
-    and the final seed particles x (B, dim) at t=1.
+    Returns lists of length n_steps:
+        xs_list:          (B, dim)  seed particle at t_next (post-resample)
+        ts_list:          float     time of seed (t_next)
+        log_z_list:       (B,)      log(1/N sum_i w_i)
+        log_mean_v_list:  (B,)      log(1/N sum_i exp(v_i - log_tau_i))
+                                    bootstrap term: log mean F(x*)/tau(x*)
+        log_tau_list:     (B,)      log tau at seed after step
     """
     dt = 1.0 / n_steps
     N = mc_samples
 
-    # One seed per batch element
-    x = torch.zeros(batch_size, dim, dtype=dtype, device=device)  # (B, dim)
+    x = torch.zeros(batch_size, dim, dtype=dtype, device=device)
+    log_tau_x = log_tau(
+        x,
+        torch.full((batch_size, 1), 0.0, dtype=dtype, device=device),
+    ).reshape([-1, 1])  # (B, 1)
 
     xs_list = []
     ts_list = []
     log_z_list = []
     log_mean_v_list = []
     log_tau_list = []
-
-    log_tau_x = log_tau(
-        x, torch.full((batch_size, 1), 0.0, dtype=dtype, device=device)
-    ).reshape([-1, 1])  # (B, 1)
 
     for step_idx, _t in enumerate(torch.linspace(0, 1, n_steps + 1, dtype=dtype)[:-1]):
         t_curr = float(_t)
@@ -677,16 +715,17 @@ def _single_seed_forward(
         # log_tau_x is (B,1); broadcast over N
         log_w = log_tau_next - log_tau_x.unsqueeze(1)  # (B, N, 1)
 
-        # log Z ratio: log(1/N sum_i w_i)  shape (B,)
+        # log Z ratio: log(1/N sum_i w_i)
         log_z_ratio = torch.logsumexp(log_w.squeeze(-1), dim=1) - log(N)  # (B,)
 
         # Value at proposals
-        if step_idx == n_steps - 1 and h is not None:
+        is_terminal = step_idx == n_steps - 1
+        if is_terminal and h is not None:
             v = h(x_next_flat).reshape(batch_size, N, 1)
         else:
             v = value(x_next_flat, t_next_vec).reshape(batch_size, N, 1)
 
-        # Resample to get next seed
+        # Resample
         log_w_stable = log_w - log_w.amax(dim=1, keepdim=True)
         ix = torch.multinomial(
             log_w_stable.squeeze(-1).exp(),
@@ -694,8 +733,7 @@ def _single_seed_forward(
             replacement=True,
         )  # (B, N)
 
-        # Bootstrap term: log(1/N sum_i exp(v_i[ix]) / tau(x*_i[ix], t_next))
-        #   = log_mean_exp over resampled particles of (v - log_tau_next)
+        # Bootstrap: log(1/N sum_i exp(v_i - log_tau_next_i)) over resampled
         v_r = torch.gather(v.squeeze(-1), 1, ix)  # (B, N)
         lt_r = torch.gather(log_tau_next.squeeze(-1), 1, ix)  # (B, N)
         log_mean_v = torch.logsumexp(v_r - lt_r, dim=1) - log(N)  # (B,)
@@ -707,14 +745,15 @@ def _single_seed_forward(
         x = x_next_r[:, 0, :]  # (B, dim)
 
         log_tau_x = log_tau(
-            x, torch.full((batch_size, 1), t_next, dtype=dtype, device=device)
+            x,
+            torch.full((batch_size, 1), t_next, dtype=dtype, device=device),
         ).reshape([-1, 1])  # (B, 1)
 
-        xs_list.append(x.clone())  # seed AFTER step (= x at t_next)
+        xs_list.append(x.clone())
         ts_list.append(t_next)
         log_z_list.append(log_z_ratio)
         log_mean_v_list.append(log_mean_v)
-        log_tau_list.append(log_tau_x.squeeze(-1))  # log tau at new seed
+        log_tau_list.append(log_tau_x.squeeze(-1))
 
     return xs_list, ts_list, log_z_list, log_mean_v_list, log_tau_list
 
@@ -741,21 +780,40 @@ def single_seed_td_lambda(
     """
     Single-Seed TD(λ).
 
-    A single seed per batch element is propagated forward under the twisted
-    chain; at each step N proposals are drawn to estimate the one-step
-    bootstrap and the Z ratio.  TD(λ) blends k-step returns backward.
+    A single seed per batch element propagates forward under the twisted
+    chain; at each step N proposals estimate the one-step bootstrap and
+    the Z ratio.  TD(λ) blends k-step returns backward via:
+
+        log_target = log( (1-λ)*exp(one_step) + λ*exp(multi_step) )
+
+    where:
+        one_step  = log_tau(x) + log_mean_v      (bootstrap from F)
+        multi_step = log_tau(x) + log_z + log_target_next - log_tau_next
 
     λ per step = lambda_eff^(1/n_steps).
 
+    NOTE: mc_samples proposals are used internally at each step but only
+    ONE seed particle is kept per batch element per step.
+
     Returns:
-        xs:      (B * n_steps, dim)
-        ts:      (B * n_steps,)
-        log_tgts:(B * n_steps,)
+        all_x:   (batch_size * n_steps, dim)   -- seeds at t = dt, 2*dt, ..., 1
+        all_t:   (batch_size * n_steps,)
+        all_tgt: (batch_size * n_steps,)
     """
     lam = lambda_eff ** (1.0 / n_steps)
 
     xs_list, ts_list, log_z_list, log_mean_v_list, log_tau_list = _single_seed_forward(
-        drift, value, log_tau, h, a, batch_size, mc_samples, dim, n_steps, device, dtype
+        drift,
+        value,
+        log_tau,
+        h,
+        a,
+        batch_size,
+        mc_samples,
+        dim,
+        n_steps,
+        device,
+        dtype,
     )
 
     T = n_steps
@@ -770,7 +828,6 @@ def single_seed_td_lambda(
     #   log_target = log_tau[T-1] + log_mean_v[T-1]
     log_target = log_tau_list[-1] + log_mean_v_list[-1]  # (B,)
     log_tau_curr = log_tau_list[-1]  # (B,)
-
     log_targets = [log_target]
 
     for j in range(T - 2, -1, -1):
@@ -778,18 +835,16 @@ def single_seed_td_lambda(
         log_mv = log_mean_v_list[j]  # one-step bootstrap at j
         new_log_tau = log_tau_list[j]  # log tau at seed x_j
 
-        # k-step estimate propagated from j+1 back to j:
-        #   log H_hat^(k)(x_j) = new_log_tau + log_z + log_target - log_tau_curr
-        log_k_step = new_log_tau + log_z + log_target - log_tau_curr
-
-        # one-step estimate at j:
+        # One-step estimate at step j:
         #   log H_hat^(1)(x_j) = new_log_tau + log_mv
-        log_1_step = new_log_tau + log_mv
+        log_one_step = new_log_tau + log_mv
 
-        # TD(λ) blend:
-        #   log_target = log( (1-λ)*exp(log_1_step) + λ*exp(log_k_step) )
-        stacked = torch.stack([log_1_step + log(1 - lam), log_k_step + log(lam)], dim=0)
-        log_target = torch.logsumexp(stacked, dim=0)  # (B,)
+        # Multi-step estimate propagated from j+1 back to j:
+        #   log H_hat^(k)(x_j) = new_log_tau + log_z + log_target - log_tau_curr
+        log_multi_step = new_log_tau + log_z + log_target - log_tau_curr
+
+        # TD(λ) blend: log( (1-λ)*exp(one_step) + λ*exp(multi_step) )
+        log_target = _log_td_blend(log_one_step, log_multi_step, lam)
         log_tau_curr = new_log_tau
         log_targets.append(log_target)
 
@@ -805,7 +860,6 @@ def single_seed_td_lambda(
         .reshape(batch_size * T)
     )
     all_tgt = torch.stack(log_targets, dim=1).reshape(batch_size * T)
-
     return all_x, all_t, all_tgt
 
 
@@ -830,21 +884,33 @@ def single_seed_mc(
     """
     Single-Seed Monte Carlo.
 
-    Same forward pass as Single-Seed TD(λ), but the backward pass telescopes
-    the full Z-product rather than blending bootstrap estimates.  Equivalent
-    to lambda_eff=1 in Single-Seed TD(λ) but written explicitly for clarity
-    and without the log(0) issue at lam=1.
+    Same forward pass as Single-Seed TD(λ) but the backward pass telescopes
+    the full Z-product (equivalent to lambda_eff=1 but without log(0) issues).
 
-        log H_hat(x_j) = log_tau(x_j) + sum_{k=j}^{T-1} log_z_ratio_k
+        log H_hat(x_j) = log_tau(x_j)
+                        + sum_{k=j}^{T-1} log_z_ratio_k
                         + log_mean_v_T
 
+    NOTE: mc_samples proposals are used internally at each step but only
+    ONE seed particle is kept per batch element per step.
+
     Returns:
-        xs:      (B * n_steps, dim)
-        ts:      (B * n_steps,)
-        log_tgts:(B * n_steps,)
+        all_x:   (batch_size * n_steps, dim)   -- seeds at t = dt, 2*dt, ..., 1
+        all_t:   (batch_size * n_steps,)
+        all_tgt: (batch_size * n_steps,)
     """
     xs_list, ts_list, log_z_list, log_mean_v_list, log_tau_list = _single_seed_forward(
-        drift, value, log_tau, h, a, batch_size, mc_samples, dim, n_steps, device, dtype
+        drift,
+        value,
+        log_tau,
+        h,
+        a,
+        batch_size,
+        mc_samples,
+        dim,
+        n_steps,
+        device,
+        dtype,
     )
 
     T = n_steps
@@ -858,8 +924,7 @@ def single_seed_mc(
         log_z = log_z_list[j + 1]
         new_log_tau = log_tau_list[j]
 
-        # Telescope: multiply in the next Z factor and adjust tau
-        #   log H_hat(x_j) = new_log_tau + log_z + log_target - log_tau_curr
+        # Pure telescoping: no bootstrap blend
         log_target = new_log_tau + log_z + log_target - log_tau_curr
         log_tau_curr = new_log_tau
         log_targets.append(log_target)
@@ -874,5 +939,175 @@ def single_seed_mc(
         .reshape(batch_size * T)
     )
     all_tgt = torch.stack(log_targets, dim=1).reshape(batch_size * T)
-
     return all_x, all_t, all_tgt
+
+
+# ---------------------------------------------------------------------------
+# Algorithm 4 – Ancestral MC-TD(λ)
+# ---------------------------------------------------------------------------
+
+
+def ancestral_mc_td_lambda(
+    drift,
+    value,
+    log_tau,
+    h,
+    a,
+    lambda_eff,
+    batch_size,
+    mc_samples,
+    dim,
+    n_steps,
+    device,
+    dtype=torch.float32,
+):
+    """
+    Ancestral MC-TD(λ).
+
+    Runs a standard SMC sweep (batch_size * mc_samples particles, resampled
+    each step using τ-weights), then walks backward through the resampling
+    tree to assign TD(λ) targets.
+
+    The TD(λ) blend is performed in linear space before logging:
+        R_i = log( (1-λ)*exp(O_i) + λ*exp(M_i) )
+    where:
+        O_i = V_i - log_tau(x*_i, t)          one-step bootstrap
+        M_i = log_Z_i + log_mean_exp_R_children  multi-step return
+
+    and target_i = R_i + log_tau(x_i, t).
+
+    The t=0 generation (all particles at x=0) is NOT included in the output;
+    the earliest stored generation is the post-resample particles at t=dt.
+    The final post-resample generation at t=1 IS included (with exact reward
+    targets), giving n_steps generations total.
+
+    Returns:
+        all_x:   (batch_size * mc_samples * n_steps, dim)
+                 particles at t = dt, 2*dt, ..., n_steps*dt=1
+        all_t:   (batch_size * mc_samples * n_steps,)
+        all_tgt: (batch_size * mc_samples * n_steps,)
+    """
+    lam = lambda_eff ** (1.0 / n_steps)
+    dt = 1.0 / n_steps
+    N = mc_samples
+    BN = batch_size * N
+
+    def flat(z):
+        return z.reshape(BN, dim)
+
+    def tvec(t_scalar):
+        return torch.full((BN, 1), t_scalar, dtype=dtype, device=device)
+
+    # ------------------------------------------------------------------
+    # Forward pass
+    # ------------------------------------------------------------------
+    x = torch.zeros(batch_size, N, dim, dtype=dtype, device=device)
+    log_tau_x = log_tau(flat(x), tvec(0.0)).reshape(batch_size, N, 1)
+
+    fwd_x_post = []  # (B, N, dim) post-resample at each step
+    fwd_x_pre = []  # (B, N, dim) pre-resample (= post-resample of prev step)
+    fwd_log_v = []  # (B, N, 1)  value at pre-resample particles of NEXT step
+    fwd_log_w = []  # (B, N, 1)  log weights at pre-resample particles
+    fwd_ix = []  # (B, N, 1)  resample indices
+    fwd_ts = []  # float
+
+    for step_idx, _t in enumerate(torch.linspace(0, 1, n_steps + 1, dtype=dtype)[:-1]):
+        t_curr = float(_t)
+        t_next = t_curr + dt
+
+        x_flat = flat(x)
+        x_next_flat = _sde_step(
+            x_flat, drift, a, t_curr, dt, batch_size, N, dim, device
+        )
+        x_next = x_next_flat.reshape(batch_size, N, dim)
+
+        log_tau_next = log_tau(x_next_flat, tvec(t_next)).reshape(batch_size, N, 1)
+        log_w = log_tau_next - log_tau_x
+
+        is_terminal = step_idx == n_steps - 1
+        if is_terminal and h is not None:
+            log_v = h(x_next_flat).reshape(batch_size, N, 1)
+        else:
+            log_v = value(x_next_flat, tvec(t_next)).reshape(batch_size, N, 1)
+
+        fwd_x_pre.append(x.clone())
+        fwd_log_w.append(log_w)
+        fwd_log_v.append(log_v)
+
+        x_post, log_tau_x, ix = _resample(
+            log_w, x_next, log_tau_next, batch_size, N, dim
+        )
+
+        fwd_x_post.append(x_post.clone())
+        fwd_ix.append(ix)
+        fwd_ts.append(t_next)
+
+        x = x_post
+
+    # ------------------------------------------------------------------
+    # Backward pass
+    # ------------------------------------------------------------------
+    # Base case: final post-resample generation
+    #   R_i = h(x_i) - log_tau(x_i)  =>  target = h(x_i)
+    x_final = fwd_x_post[-1]
+    log_tau_final = log_tau(flat(x_final), tvec(fwd_ts[-1])).reshape(batch_size, N, 1)
+    log_h_final = h(flat(x_final)).reshape(batch_size, N, 1)
+    R = log_h_final - log_tau_final  # (B, N, 1)
+
+    all_x_list = [flat(x_final)]
+    all_t_list = [torch.full((BN,), fwd_ts[-1], dtype=dtype, device=device)]
+    all_tgt_list = [(R + log_tau_final).reshape(BN)]
+
+    for gen in range(n_steps - 1, 0, -1):
+        ix_gen = fwd_ix[gen]  # (B, N, 1)
+        log_w_gen = fwd_log_w[gen]  # (B, N, 1)
+        x_post_prev = fwd_x_post[gen - 1]  # (B, N, dim)
+
+        log_tau_post_prev = log_tau(flat(x_post_prev), tvec(fwd_ts[gen - 1])).reshape(
+            batch_size, N, 1
+        )
+
+        # V_i = log F(x*_i, t_gen) -- value at pre-resample particles of gen
+        # fwd_log_v[gen] holds value at x_next for step gen,
+        # which are the pre-resample particles at generation gen. ✓
+        V = fwd_log_v[gen]  # (B, N, 1)
+
+        # One-step term: O_i = V_i - log_tau(x*_i, t_gen)
+        # x*_i at gen == x_post_prev (same particles), so:
+        O = V - log_tau_post_prev  # (B, N, 1)
+
+        # log Z_i = log mean_{j in d(i)} w_j  (arithmetic mean of weights)
+        log_Z, has_children = _log_mean_exp_by_ancestor(log_w_gen, ix_gen)
+
+        # log mean_{j in d(i)} exp(R_j)
+        log_mean_R, _ = _log_mean_exp_by_ancestor(R, ix_gen)
+
+        # Multi-step term: M_i = log_Z_i + log_mean_exp_R
+        M = log_Z + log_mean_R  # (B, N, 1)
+
+        # TD(λ) blend: R = log( (1-λ)*exp(O) + λ*exp(M) )
+        # Fall back to O for childless particles
+        R = torch.where(
+            has_children > 0,
+            _log_td_blend(O, M, lam),
+            O,
+        )  # (B, N, 1)
+
+        target = (R + log_tau_post_prev).reshape(BN)
+
+        all_x_list.append(flat(x_post_prev))
+        all_t_list.append(
+            torch.full((BN,), fwd_ts[gen - 1], dtype=dtype, device=device)
+        )
+        all_tgt_list.append(target)
+
+    # Reverse to chronological order
+    all_x_list = all_x_list[::-1]
+    all_t_list = all_t_list[::-1]
+    all_tgt_list = all_tgt_list[::-1]
+
+    return (
+        torch.cat(all_x_list, dim=0),
+        torch.cat(all_t_list, dim=0),
+        torch.cat(all_tgt_list, dim=0),
+    )
