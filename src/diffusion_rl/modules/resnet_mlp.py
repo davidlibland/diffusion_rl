@@ -202,8 +202,8 @@ class ValueNetwork(ResNetMLP):
         hidden_dim: int = 256,
         num_blocks: int = 4,
         bias=None,
-        # reward_fn=None,
-        # k=1,
+        reward_fn=None,
+        k=1,
         **kwargs,
     ):
         """Initialize ValueNetwork.
@@ -223,8 +223,8 @@ class ValueNetwork(ResNetMLP):
         )
         if bias is not None:
             self.output_proj.bias.data.fill_(bias)
-        # self.reward_fn = reward_fn
-        # self.k = k
+        self.reward_fn = reward_fn
+        self.k = k
 
     def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         """Forward pass returning scalar values.
@@ -237,9 +237,9 @@ class ValueNetwork(ResNetMLP):
             Value tensor of shape (batch_size,).
         """
         pred = super().forward(x, t).squeeze(-1)
-        # if self.reward_fn is not None:
-        #     reward_at_1 = self.reward_fn(x)
-        #     return reward_at_1 * t.flatten() ** self.k + pred * (
-        #         1 - t.flatten() ** self.k
-        #     )
+        if self.reward_fn is not None:
+            reward_at_1 = self.reward_fn(x)
+            return reward_at_1 * t.flatten() ** self.k + pred * (
+                1 - t.flatten() ** self.k
+            )
         return pred

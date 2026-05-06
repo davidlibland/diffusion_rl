@@ -260,11 +260,35 @@ early_smc_fn = make_smc_model_fn(early_model_fn)
 mid_smc_fn   = make_smc_model_fn(mid_model_fn)
 best_smc_fn  = make_smc_model_fn(best_model_fn)
 
+
+# Blended value functions: t*r(x) + (1-t)*V(x,t)
+# This is what one_step_bootstrap was accidentally using before the raw_value_fn fix.
+def make_blended_fn(model_fn):
+    def blended(x, t):
+        v = model_fn(x, t)
+        r = reward(x)
+        t_flat = t.flatten()
+        return t_flat * r + (1 - t_flat) * v
+    return blended
+
+early_blended_fn = make_blended_fn(early_model_fn)
+mid_blended_fn   = make_blended_fn(mid_model_fn)
+best_blended_fn  = make_blended_fn(best_model_fn)
+
 # ---------------------------------------------------------------------------
 # Lambda sweep configuration
 # ---------------------------------------------------------------------------
-LAMBDA_VALUES = [1e-5, 0.05, 0.2, 0.5, 0.8, 1.0]
-LAMBDA_LABELS = ["λ≈0", "λ=0.05", "λ=0.2", "λ=0.5", "λ=0.8", "λ=1"]
+# lambda_eff values.  Per-step lambda = lambda_eff^(1/n_steps).
+# With n_steps=100:
+#   λ=0       → per_step=0
+#   1e-100    → per_step=0.1
+#   7.89e-31  → per_step=0.5
+#   0.1       → per_step≈0.977
+#   0.5       → per_step≈0.993
+#   0.8       → per_step≈0.998
+#   1.0       → per_step=1.0
+LAMBDA_VALUES = [0.0, 1e-100, 7.89e-31, 0.1, 0.5, 0.8, 1.0]
+LAMBDA_LABELS = ["λ=0", "λ_s=0.1", "λ_s=0.5", "λ_eff=0.1", "λ_eff=0.5", "λ_eff=0.8", "λ=1"]
 
 # ---------------------------------------------------------------------------
 # Binning configuration
@@ -282,6 +306,10 @@ METHOD_STYLES = {
     "ancestral_mc_td_lambda": {"ls": ":",  "marker": "^"},
     "single_seed_mc":         {"ls": "-.", "marker": "D"},
     "one_step_bootstrap":     {"ls": "-",  "marker": "P"},
+    "fbrrt":                  {"ls": "-",  "marker": "X"},
+    "fbrrt_td_lambda":        {"ls": "--", "marker": "X"},
+    "fbrrt_cv":               {"ls": ":",  "marker": "*"},
+    "fbrrt_mc_z":             {"ls": "-.", "marker": "v"},
 }
 METHOD_COLORS = {
     "ancestral_td_lambda":    "#e74c3c",
@@ -289,6 +317,10 @@ METHOD_COLORS = {
     "ancestral_mc_td_lambda": "#2ecc71",
     "single_seed_mc":         "#9b59b6",
     "one_step_bootstrap":     "#f39c12",
+    "fbrrt":                  "#1abc9c",
+    "fbrrt_td_lambda":        "#e67e22",
+    "fbrrt_cv":               "#16a085",
+    "fbrrt_mc_z":             "#c0392b",
     "off_policy":             "#2c3e50",
 }
 METHOD_DISPLAY = {
@@ -297,6 +329,10 @@ METHOD_DISPLAY = {
     "ancestral_mc_td_lambda": "Ancestral MC-TD(λ)",
     "single_seed_mc":         "Single-Seed MC",
     "one_step_bootstrap":     "One-Step Bootstrap",
+    "fbrrt":                  "FBRRT",
+    "fbrrt_td_lambda":        "FBRRT-TD(λ)",
+    "fbrrt_cv":               "FBRRT-CV",
+    "fbrrt_mc_z":             "FBRRT-MCZ",
     "off_policy":             "Off-Policy",
 }
 
@@ -332,6 +368,74 @@ def collect_onpolicy(sampling_method, value_fn, smc_value_fn, lambda_eff,
         tgts.append(y.flatten())
         if i + 1 >= n_batches:
             break
+    return torch.cat(xs), torch.cat(ts), torch.cat(tgts)
+
+
+def collect_fbrrt_direct(v_fn, n_calls=10, n_steps=100, n_particles=10, branch=4,
+                          entropy_lambda=1.0, alpha=1.0):
+    """Collect (x, t, target) by calling fbrrt_smc_grad_control directly.
+    Mirrors collect_fbrrt_cv_direct so that branch / n_particles / n_steps can
+    be varied without going through OnPolicySMCDataset (which fixes branch=4)."""
+    from diffusion_rl.models.on_policy import fbrrt_smc_grad_control
+
+    xs, ts, tgts = [], [], []
+    for _ in range(n_calls):
+        out = fbrrt_smc_grad_control(
+            a=a, n_steps=n_steps, n_particles=n_particles, branch=branch,
+            f=base_drift, v_theta=v_fn, reward=reward,
+            d=D, alpha=alpha, entropy_lambda=entropy_lambda,
+            device=torch.device(DEVICE),
+        )
+        xs.append(out.x)
+        ts.append(out.t)
+        tgts.append(out.v_hat)
+    return torch.cat(xs), torch.cat(ts), torch.cat(tgts)
+
+
+def collect_fbrrt_mc_z_direct(v_policy_fn, v_target_fn, n_calls=10,
+                                n_steps=100, n_particles=10, branch=4,
+                                entropy_lambda=1.0, alpha=1.0):
+    """Collect (x, t, target) by calling fbrrt_smc_grad_mc_Z directly with
+    separate v_policy / v_target functions."""
+    from diffusion_rl.models.on_policy import fbrrt_smc_grad_mc_Z
+
+    xs, ts, tgts = [], [], []
+    for _ in range(n_calls):
+        out = fbrrt_smc_grad_mc_Z(
+            a=a, n_steps=n_steps, n_particles=n_particles, branch=branch,
+            f=base_drift, v_policy=v_policy_fn, v_target=v_target_fn,
+            reward=reward, d=D, alpha=alpha, entropy_lambda=entropy_lambda,
+            device=torch.device(DEVICE),
+        )
+        xs.append(out.x)
+        ts.append(out.t)
+        tgts.append(out.v_hat)
+    return torch.cat(xs), torch.cat(ts), torch.cat(tgts)
+
+
+def collect_fbrrt_cv_direct(v_policy_fn, v_target_fn, n_calls=10,
+                             n_steps=100, n_particles=10, branch=4,
+                             entropy_lambda=1.0, alpha=1.0):
+    """Collect (x, t, target) by calling fbrrt_smc_grad_control_variate directly
+    with separate v_policy / v_target functions.
+
+    The OnPolicySMCDataset wiring forces v_policy = v_target = self.value, which
+    zeroes out the residual control variate term.  This helper bypasses the
+    dataset so we can pass distinct functions and actually exercise the RCV.
+    """
+    from diffusion_rl.models.on_policy import fbrrt_smc_grad_control_variate
+
+    xs, ts, tgts = [], [], []
+    for _ in range(n_calls):
+        out = fbrrt_smc_grad_control_variate(
+            a=a, n_steps=n_steps, n_particles=n_particles, branch=branch,
+            f=base_drift, v_policy=v_policy_fn, v_target=v_target_fn,
+            reward=reward, d=D, alpha=alpha, entropy_lambda=entropy_lambda,
+            device=torch.device(DEVICE),
+        )
+        xs.append(out.x)
+        ts.append(out.t)
+        tgts.append(out.v_hat)
     return torch.cat(xs), torch.cat(ts), torch.cat(tgts)
 
 
@@ -519,6 +623,14 @@ REPLOT_ONLY  = "--replot" in sys.argv or (
     os.path.exists(RESULTS_JSON) and "--replot" in sys.argv
 )
 
+# Optional stage filter: DQ2_ONLY=stage11a,stage11b skips other stages and
+# merges new results into the existing JSON instead of clobbering it.
+_DQ2_ONLY = os.environ.get("DQ2_ONLY", "").strip()
+ONLY_STAGES = set(s.strip() for s in _DQ2_ONLY.split(",") if s.strip()) or None
+
+def _should_run(stage_key):
+    return ONLY_STAGES is None or stage_key in ONLY_STAGES
+
 STAGE_META = [
     ("stage1",  "Stage 1: Unbiased MC baseline\n(λ=1, uniform SMC, const V)",
                 "notebooks/dq2_stage1.png", False),
@@ -536,6 +648,34 @@ STAGE_META = [
                 "notebooks/dq2_stage7a.png", True),
     ("stage7b", "Stage 7b: Self-consistent mid\n(mid ckpt V + mid ckpt SMC)",
                 "notebooks/dq2_stage7b.png", True),
+    # --- Reward SMC + raw value at different checkpoints ---
+    ("stage8a", "Stage 8a: Reward SMC + early V\n(early ckpt V + reward SMC)",
+                "notebooks/dq2_stage8a.png", True),
+    ("stage8b", "Stage 8b: Reward SMC + mid V\n(mid ckpt V + reward SMC)",
+                "notebooks/dq2_stage8b.png", True),
+    ("stage8c", "Stage 8c: Reward SMC + best V\n(best model V + reward SMC)",
+                "notebooks/dq2_stage8c.png", True),
+    # --- Reward SMC + blended value ---
+    ("stage9a", "Stage 9a: Reward SMC + blended early V\n(t*r+(1-t)*V_early + reward SMC)",
+                "notebooks/dq2_stage9a.png", True),
+    ("stage9b", "Stage 9b: Reward SMC + blended mid V\n(t*r+(1-t)*V_mid + reward SMC)",
+                "notebooks/dq2_stage9b.png", True),
+    ("stage9c", "Stage 9c: Reward SMC + blended best V\n(t*r+(1-t)*V_best + reward SMC)",
+                "notebooks/dq2_stage9c.png", True),
+    # --- Blended value for both V and SMC ---
+    ("stage10a", "Stage 10a: Blended early for V and SMC\n(blended V_early for both value & smc)",
+                 "notebooks/dq2_stage10a.png", True),
+    ("stage10b", "Stage 10b: Blended mid for V and SMC\n(blended V_mid for both value & smc)",
+                 "notebooks/dq2_stage10b.png", True),
+    ("stage10c", "Stage 10c: Blended best for V and SMC\n(blended V_best for both value & smc)",
+                 "notebooks/dq2_stage10c.png", True),
+    # --- FBRRT-CV with lagged v_policy / live v_target ---
+    ("stage11a", "Stage 11a: FBRRT-CV lagged\n(v_policy=early, v_target=mid)",
+                 "notebooks/dq2_stage11a.png", False),
+    ("stage11b", "Stage 11b: FBRRT-CV lagged\n(v_policy=mid, v_target=best)",
+                 "notebooks/dq2_stage11b.png", False),
+    ("stage11c", "Stage 11c: FBRRT-CV lagged\n(v_policy=best, v_target=oracle)",
+                 "notebooks/dq2_stage11c.png", False),
 ]
 
 
@@ -568,90 +708,94 @@ if REPLOT_ONLY:
 # value_const ensures the one-step bootstrap plays no role (it is also
 # overridden by lam=1, which skips the blend entirely).
 # ===========================================================================
-print("\n" + "=" * 70)
-print("STAGE 1: lambda=1, smc=constant (uniform resampling), value=const")
-print("=" * 70)
+if _should_run("stage1"):
+    print("\n" + "=" * 70)
+    print("STAGE 1: lambda=1, smc=constant (uniform resampling), value=const")
+    print("=" * 70)
 
-stage1_results = []
+    stage1_results = []
 
-# Off-policy baseline
-print("  [off_policy] collecting...")
-x, t, tgt = collect_offpolicy()
-s = binned_stats(x, t, tgt)
-stage1_results.append({
-    "label": "Off-Policy (baseline)", "method": "off_policy",
-    "stats": s, "is_offpolicy": True
-})
-print_stats_table("off_policy", s)
-
-# On-policy methods with smc_const, lambda=1, value=const
-for method in ["ancestral_td_lambda", "single_seed_td_lambda",
-               "single_seed_mc", "ancestral_mc_td_lambda", "one_step_bootstrap"]:
-    lam = 1.0
-    label = f"{METHOD_DISPLAY[method]} (λ=1, smc=const)"
-    print(f"  [{method}] collecting with λ=1, smc=const, value=const...")
-    try:
-        x, t, tgt = collect_onpolicy(method, value_const, smc_const, lam)
-        s = binned_stats(x, t, tgt)
-    except Exception as e:
-        print(f"    ERROR: {e}")
-        s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"), "var": float("nan")}
-             for b in BIN_NAMES}
+    # Off-policy baseline
+    print("  [off_policy] collecting...")
+    x, t, tgt = collect_offpolicy()
+    s = binned_stats(x, t, tgt)
     stage1_results.append({
-        "label": label, "method": method,
-        "lambda_idx": len(LAMBDA_VALUES) - 1,  # λ=1
-        "stats": s, "is_offpolicy": False
+        "label": "Off-Policy (baseline)", "method": "off_policy",
+        "stats": s, "is_offpolicy": True
     })
-    print_stats_table(label, s)
+    print_stats_table("off_policy", s)
 
-ALL_RESULTS["stage1"] = stage1_results
-_key, _title, _path, _sc = STAGE_META[0]
-plot_variance_bias(stage1_results, _title, _path, include_scatter=_sc)
+    # On-policy methods with smc_const, lambda=1, value=const
+    for method in ["ancestral_td_lambda", "single_seed_td_lambda",
+                   "single_seed_mc", "ancestral_mc_td_lambda", "one_step_bootstrap",
+                   "fbrrt", "fbrrt_cv", "fbrrt_mc_z"]:
+        lam = 1.0
+        label = f"{METHOD_DISPLAY[method]} (λ=1, smc=const)"
+        print(f"  [{method}] collecting with λ=1, smc=const, value=const...")
+        try:
+            x, t, tgt = collect_onpolicy(method, value_const, smc_const, lam)
+            s = binned_stats(x, t, tgt)
+        except Exception as e:
+            print(f"    ERROR: {e}")
+            s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"), "var": float("nan")}
+                 for b in BIN_NAMES}
+        stage1_results.append({
+            "label": label, "method": method,
+            "lambda_idx": len(LAMBDA_VALUES) - 1,  # λ=1
+            "stats": s, "is_offpolicy": False
+        })
+        print_stats_table(label, s)
+
+    ALL_RESULTS["stage1"] = stage1_results
+    _key, _title, _path, _sc = STAGE_META[0]
+    plot_variance_bias(stage1_results, _title, _path, include_scatter=_sc)
 
 # ===========================================================================
 # STAGE 2: lambda=1, smc=reward, value=const
 # Like stage 1 but with reward-based SMC twist (rudimentary importance
 # sampling).  Still pure MC (lam=1), still no oracle V bootstrap.
 # ===========================================================================
-print("\n" + "=" * 70)
-print("STAGE 2: lambda=1, smc=reward, value=const")
-print("=" * 70)
+if _should_run("stage2"):
+    print("\n" + "=" * 70)
+    print("STAGE 2: lambda=1, smc=reward, value=const")
+    print("=" * 70)
 
-stage2_results = []
+    stage2_results = []
 
-# Off-policy baseline (same as stage 1)
-print("  [off_policy] collecting...")
-x, t, tgt = collect_offpolicy()
-s = binned_stats(x, t, tgt)
-stage2_results.append({
-    "label": "Off-Policy (baseline)", "method": "off_policy",
-    "stats": s, "is_offpolicy": True
-})
-print_stats_table("off_policy", s)
-
-# On-policy methods with smc_reward, lambda=1, value=const
-for method in ["ancestral_td_lambda", "single_seed_td_lambda",
-               "single_seed_mc", "ancestral_mc_td_lambda", "one_step_bootstrap"]:
-    lam = 1.0
-    label = f"{METHOD_DISPLAY[method]} (λ=1, smc=reward)"
-    print(f"  [{method}] collecting with λ=1, smc=reward, value=const...")
-    try:
-        x, t, tgt = collect_onpolicy(method, value_const, smc_reward, lam)
-        s = binned_stats(x, t, tgt)
-    except Exception as e:
-        print(f"    ERROR: {e}")
-        s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"), "var": float("nan")}
-             for b in BIN_NAMES}
+    # Off-policy baseline (same as stage 1)
+    print("  [off_policy] collecting...")
+    x, t, tgt = collect_offpolicy()
+    s = binned_stats(x, t, tgt)
     stage2_results.append({
-        "label": label, "method": method,
-        "lambda_idx": len(LAMBDA_VALUES) - 1,  # λ=1
-        "stats": s, "is_offpolicy": False
+        "label": "Off-Policy (baseline)", "method": "off_policy",
+        "stats": s, "is_offpolicy": True
     })
-    print_stats_table(label, s)
+    print_stats_table("off_policy", s)
 
-ALL_RESULTS["stage2"] = stage2_results
-_key, _title, _path, _sc = STAGE_META[1]
-plot_variance_bias(stage2_results, _title, _path, include_scatter=_sc)
+    # On-policy methods with smc_reward, lambda=1, value=const
+    for method in ["ancestral_td_lambda", "single_seed_td_lambda",
+                   "single_seed_mc", "ancestral_mc_td_lambda", "one_step_bootstrap",
+                   "fbrrt", "fbrrt_cv", "fbrrt_mc_z"]:
+        lam = 1.0
+        label = f"{METHOD_DISPLAY[method]} (λ=1, smc=reward)"
+        print(f"  [{method}] collecting with λ=1, smc=reward, value=const...")
+        try:
+            x, t, tgt = collect_onpolicy(method, value_const, smc_reward, lam)
+            s = binned_stats(x, t, tgt)
+        except Exception as e:
+            print(f"    ERROR: {e}")
+            s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"), "var": float("nan")}
+                 for b in BIN_NAMES}
+        stage2_results.append({
+            "label": label, "method": method,
+            "lambda_idx": len(LAMBDA_VALUES) - 1,  # λ=1
+            "stats": s, "is_offpolicy": False
+        })
+        print_stats_table(label, s)
+
+    ALL_RESULTS["stage2"] = stage2_results
+    _key, _title, _path, _sc = STAGE_META[1]
+    plot_variance_bias(stage2_results, _title, _path, include_scatter=_sc)
 
 
 # ===========================================================================
@@ -685,7 +829,8 @@ def run_lambda_sweep(value_fn, smc_fn, stage_name, stage_key,
     print_stats_table("off_policy", s)
 
     # TD-lambda methods with lambda sweep
-    td_methods = ["ancestral_td_lambda", "single_seed_td_lambda", "ancestral_mc_td_lambda"]
+    td_methods = ["ancestral_td_lambda", "single_seed_td_lambda", "ancestral_mc_td_lambda",
+                  "fbrrt_td_lambda"]
     for method in td_methods:
         for lam_idx, (lam, lam_label) in enumerate(zip(LAMBDA_VALUES, LAMBDA_LABELS)):
             label = f"{METHOD_DISPLAY[method]} ({lam_label})"
@@ -749,6 +894,69 @@ def run_lambda_sweep(value_fn, smc_fn, stage_name, stage_key,
     })
     print_stats_table("one_step_bootstrap", s)
 
+    # FBRRT (equivalent to fbrrt_td_lambda at λ=0)
+    print(f"  [fbrrt] collecting...")
+    try:
+        x, t, tgt = collect_onpolicy(
+            "fbrrt", value_fn, smc_fn, 0.0, n_batches=n_batches
+        )
+        s = binned_stats(x, t, tgt)
+    except Exception as e:
+        print(f"    ERROR: {e}")
+        s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"),
+                  "var": float("nan")} for b in BIN_NAMES}
+    results.append({
+        "label": METHOD_DISPLAY["fbrrt"],
+        "method": "fbrrt",
+        "lambda_idx": 0,  # visual: treat as λ=0
+        "stats": s,
+        "is_offpolicy": False,
+    })
+    print_stats_table("fbrrt", s)
+
+    # FBRRT-CV (residual control variate; v_policy=v_target=value_fn here, so
+    # the residual term is identically zero and FBRRT-CV should match FBRRT
+    # up to RNG noise.  This collects baseline numbers for the CV variant.)
+    print(f"  [fbrrt_cv] collecting...")
+    try:
+        x, t, tgt = collect_onpolicy(
+            "fbrrt_cv", value_fn, smc_fn, 0.0, n_batches=n_batches
+        )
+        s = binned_stats(x, t, tgt)
+    except Exception as e:
+        print(f"    ERROR: {e}")
+        s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"),
+                  "var": float("nan")} for b in BIN_NAMES}
+    results.append({
+        "label": METHOD_DISPLAY["fbrrt_cv"],
+        "method": "fbrrt_cv",
+        "lambda_idx": 0,
+        "stats": s,
+        "is_offpolicy": False,
+    })
+    print_stats_table("fbrrt_cv", s)
+
+    # FBRRT-MCZ (MC estimate of Z via Z = (1/dt)*mean[Y dW];
+    # v_policy=v_target=value_fn here, so this is the single-V "MC-Z" baseline.)
+    print(f"  [fbrrt_mc_z] collecting...")
+    try:
+        x, t, tgt = collect_onpolicy(
+            "fbrrt_mc_z", value_fn, smc_fn, 0.0, n_batches=n_batches
+        )
+        s = binned_stats(x, t, tgt)
+    except Exception as e:
+        print(f"    ERROR: {e}")
+        s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"),
+                  "var": float("nan")} for b in BIN_NAMES}
+    results.append({
+        "label": METHOD_DISPLAY["fbrrt_mc_z"],
+        "method": "fbrrt_mc_z",
+        "lambda_idx": 0,
+        "stats": s,
+        "is_offpolicy": False,
+    })
+    print_stats_table("fbrrt_mc_z", s)
+
     ALL_RESULTS[stage_key] = results
     plot_variance_bias(results, stage_name, output_path, include_scatter=True)
 
@@ -758,56 +966,424 @@ def run_lambda_sweep(value_fn, smc_fn, stage_name, stage_key,
 # ===========================================================================
 # STAGE 3: oracle V + oracle SMC, lambda sweep
 # ===========================================================================
-stage3_results = run_lambda_sweep(
-    value_fn=anal_fn, smc_fn=smc_anal,
-    stage_name=STAGE_META[2][1], stage_key="stage3",
-    output_path=STAGE_META[2][2],
-)
+if _should_run("stage3"):
+    stage3_results = run_lambda_sweep(
+        value_fn=anal_fn, smc_fn=smc_anal,
+        stage_name=STAGE_META[2][1], stage_key="stage3",
+        output_path=STAGE_META[2][2],
+    )
 
 # ===========================================================================
 # STAGE 4: oracle SMC + best model V, lambda sweep
 # ===========================================================================
-stage4_results = run_lambda_sweep(
-    value_fn=best_model_fn, smc_fn=smc_anal,
-    stage_name=STAGE_META[3][1], stage_key="stage4",
-    output_path=STAGE_META[3][2],
-)
+if _should_run("stage4"):
+    stage4_results = run_lambda_sweep(
+        value_fn=best_model_fn, smc_fn=smc_anal,
+        stage_name=STAGE_META[3][1], stage_key="stage4",
+        output_path=STAGE_META[3][2],
+    )
 
 # ===========================================================================
 # STAGE 5: reward SMC + best model V, lambda sweep
 # ===========================================================================
-stage5_results = run_lambda_sweep(
-    value_fn=best_model_fn, smc_fn=smc_reward,
-    stage_name=STAGE_META[4][1], stage_key="stage5",
-    output_path=STAGE_META[4][2],
-)
+if _should_run("stage5"):
+    stage5_results = run_lambda_sweep(
+        value_fn=best_model_fn, smc_fn=smc_reward,
+        stage_name=STAGE_META[4][1], stage_key="stage5",
+        output_path=STAGE_META[4][2],
+    )
 
 # ===========================================================================
 # STAGE 6: best model for both V and SMC, lambda sweep
 # ===========================================================================
-stage6_results = run_lambda_sweep(
-    value_fn=best_model_fn, smc_fn=best_smc_fn,
-    stage_name=STAGE_META[5][1], stage_key="stage6",
-    output_path=STAGE_META[5][2],
-)
+if _should_run("stage6"):
+    stage6_results = run_lambda_sweep(
+        value_fn=best_model_fn, smc_fn=best_smc_fn,
+        stage_name=STAGE_META[5][1], stage_key="stage6",
+        output_path=STAGE_META[5][2],
+    )
 
 # ===========================================================================
 # STAGE 7a: early model for both V and SMC, lambda sweep
 # ===========================================================================
-stage7a_results = run_lambda_sweep(
-    value_fn=early_model_fn, smc_fn=early_smc_fn,
-    stage_name=STAGE_META[6][1], stage_key="stage7a",
-    output_path=STAGE_META[6][2],
-)
+if _should_run("stage7a"):
+    stage7a_results = run_lambda_sweep(
+        value_fn=early_model_fn, smc_fn=early_smc_fn,
+        stage_name=STAGE_META[6][1], stage_key="stage7a",
+        output_path=STAGE_META[6][2],
+    )
 
 # ===========================================================================
 # STAGE 7b: mid model for both V and SMC, lambda sweep
 # ===========================================================================
-stage7b_results = run_lambda_sweep(
-    value_fn=mid_model_fn, smc_fn=mid_smc_fn,
-    stage_name=STAGE_META[7][1], stage_key="stage7b",
-    output_path=STAGE_META[7][2],
-)
+if _should_run("stage7b"):
+    stage7b_results = run_lambda_sweep(
+        value_fn=mid_model_fn, smc_fn=mid_smc_fn,
+        stage_name=STAGE_META[7][1], stage_key="stage7b",
+        output_path=STAGE_META[7][2],
+    )
+
+# ===========================================================================
+# STAGES 8a-c: Reward SMC + raw value at different checkpoints
+# Isolates the impact of reward SMC guidance with value functions of
+# varying quality.
+# ===========================================================================
+if _should_run("stage8a"):
+    stage8a_results = run_lambda_sweep(
+        value_fn=early_model_fn, smc_fn=smc_reward,
+        stage_name=STAGE_META[8][1], stage_key="stage8a",
+        output_path=STAGE_META[8][2],
+    )
+
+if _should_run("stage8b"):
+    stage8b_results = run_lambda_sweep(
+        value_fn=mid_model_fn, smc_fn=smc_reward,
+        stage_name=STAGE_META[9][1], stage_key="stage8b",
+        output_path=STAGE_META[9][2],
+    )
+
+if _should_run("stage8c"):
+    stage8c_results = run_lambda_sweep(
+        value_fn=best_model_fn, smc_fn=smc_reward,
+        stage_name=STAGE_META[10][1], stage_key="stage8c",
+        output_path=STAGE_META[10][2],
+    )
+
+# ===========================================================================
+# STAGES 9a-c: Reward SMC + blended value (t*r + (1-t)*V)
+# Tests whether the reward blend improves target quality.
+# ===========================================================================
+if _should_run("stage9a"):
+    stage9a_results = run_lambda_sweep(
+        value_fn=early_blended_fn, smc_fn=smc_reward,
+        stage_name=STAGE_META[11][1], stage_key="stage9a",
+        output_path=STAGE_META[11][2],
+    )
+
+if _should_run("stage9b"):
+    stage9b_results = run_lambda_sweep(
+        value_fn=mid_blended_fn, smc_fn=smc_reward,
+        stage_name=STAGE_META[12][1], stage_key="stage9b",
+        output_path=STAGE_META[12][2],
+    )
+
+if _should_run("stage9c"):
+    stage9c_results = run_lambda_sweep(
+        value_fn=best_blended_fn, smc_fn=smc_reward,
+        stage_name=STAGE_META[13][1], stage_key="stage9c",
+        output_path=STAGE_META[13][2],
+    )
+
+# ===========================================================================
+# STAGES 10a-c: Blended value for BOTH V and SMC
+# Tests whether using the blend for SMC resampling also helps.
+# ===========================================================================
+if _should_run("stage10a"):
+    stage10a_results = run_lambda_sweep(
+        value_fn=early_blended_fn, smc_fn=early_blended_fn,
+        stage_name=STAGE_META[14][1], stage_key="stage10a",
+        output_path=STAGE_META[14][2],
+    )
+
+if _should_run("stage10b"):
+    stage10b_results = run_lambda_sweep(
+        value_fn=mid_blended_fn, smc_fn=mid_blended_fn,
+        stage_name=STAGE_META[15][1], stage_key="stage10b",
+        output_path=STAGE_META[15][2],
+    )
+
+if _should_run("stage10c"):
+    stage10c_results = run_lambda_sweep(
+        value_fn=best_blended_fn, smc_fn=best_blended_fn,
+        stage_name=STAGE_META[16][1], stage_key="stage10c",
+        output_path=STAGE_META[16][2],
+    )
+
+# ===========================================================================
+# STAGE 11: FBRRT-CV with lagged v_policy / live v_target
+# We have four value functions of decreasing error:
+#   early < mid < best < oracle (anal_fn)
+# Treat each as a "lagged" copy of the next:
+#   11a: v_policy=early, v_target=mid
+#   11b: v_policy=mid,   v_target=best
+#   11c: v_policy=best,  v_target=oracle (anal_fn)
+# For each pairing we compare:
+#   - FBRRT-CV (v_pol=lagged, v_tgt=live)  -- the intended use
+#   - FBRRT-CV (v_pol=v_tgt=live)          -- collapses to FBRRT (sanity)
+#   - FBRRT (v=v_target only, no lag)      -- naive baseline
+#   - FBRRT (v=v_policy only, lagged)      -- naive baseline w/ stable drift
+# ===========================================================================
+
+def run_fbrrt_cv_lagged_stage(v_policy_fn, v_policy_label,
+                               v_target_fn, v_target_label,
+                               stage_name, stage_key, output_path,
+                               n_calls=10, n_batches=10):
+    print(f"\n{'=' * 70}")
+    print(stage_name)
+    print("=" * 70)
+
+    results = []
+
+    # 1) FBRRT-CV with lagged v_policy / live v_target  (intended use)
+    print(f"  [fbrrt_cv  v_pol={v_policy_label}, v_tgt={v_target_label}] collecting...")
+    try:
+        x, t, tgt = collect_fbrrt_cv_direct(v_policy_fn, v_target_fn, n_calls=n_calls)
+        s = binned_stats(x, t, tgt)
+    except Exception as e:
+        print(f"    ERROR: {e}")
+        s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"),
+                 "var": float("nan")} for b in BIN_NAMES}
+    results.append({
+        "label": f"FBRRT-CV (v_pol={v_policy_label}, v_tgt={v_target_label})",
+        "method": "fbrrt_cv", "lambda_idx": 0,
+        "stats": s, "is_offpolicy": False,
+    })
+    print_stats_table(f"fbrrt_cv  v_pol={v_policy_label}, v_tgt={v_target_label}", s)
+
+    # 2) FBRRT-CV with v_policy = v_target = live (collapse: should match FBRRT)
+    print(f"  [fbrrt_cv  v_pol=v_tgt={v_target_label}] collecting...")
+    try:
+        x, t, tgt = collect_fbrrt_cv_direct(v_target_fn, v_target_fn, n_calls=n_calls)
+        s = binned_stats(x, t, tgt)
+    except Exception as e:
+        print(f"    ERROR: {e}")
+        s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"),
+                 "var": float("nan")} for b in BIN_NAMES}
+    results.append({
+        "label": f"FBRRT-CV (v_pol=v_tgt={v_target_label})",
+        "method": "fbrrt_cv", "lambda_idx": 0,
+        "stats": s, "is_offpolicy": False,
+    })
+    print_stats_table(f"fbrrt_cv  v_pol=v_tgt={v_target_label}", s)
+
+    # 3) FBRRT with v=v_target only (live network alone)
+    print(f"  [fbrrt  v={v_target_label}] collecting...")
+    try:
+        x, t, tgt = collect_onpolicy("fbrrt", v_target_fn, smc_reward, 0.0,
+                                       n_batches=n_batches)
+        s = binned_stats(x, t, tgt)
+    except Exception as e:
+        print(f"    ERROR: {e}")
+        s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"),
+                 "var": float("nan")} for b in BIN_NAMES}
+    results.append({
+        "label": f"FBRRT (v={v_target_label})",
+        "method": "fbrrt", "lambda_idx": 0,
+        "stats": s, "is_offpolicy": False,
+    })
+    print_stats_table(f"fbrrt v={v_target_label}", s)
+
+    # 4) FBRRT with v=v_policy only (lagged network alone)
+    print(f"  [fbrrt  v={v_policy_label}] collecting...")
+    try:
+        x, t, tgt = collect_onpolicy("fbrrt", v_policy_fn, smc_reward, 0.0,
+                                       n_batches=n_batches)
+        s = binned_stats(x, t, tgt)
+    except Exception as e:
+        print(f"    ERROR: {e}")
+        s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"),
+                 "var": float("nan")} for b in BIN_NAMES}
+    results.append({
+        "label": f"FBRRT (v={v_policy_label})",
+        "method": "fbrrt", "lambda_idx": 0,
+        "stats": s, "is_offpolicy": False,
+    })
+    print_stats_table(f"fbrrt v={v_policy_label}", s)
+
+    # 5) FBRRT-MCZ with lagged v_policy / live v_target (intended use)
+    print(f"  [fbrrt_mc_z  v_pol={v_policy_label}, v_tgt={v_target_label}] collecting...")
+    try:
+        x, t, tgt = collect_fbrrt_mc_z_direct(v_policy_fn, v_target_fn, n_calls=n_calls)
+        s = binned_stats(x, t, tgt)
+    except Exception as e:
+        print(f"    ERROR: {e}")
+        s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"),
+                 "var": float("nan")} for b in BIN_NAMES}
+    results.append({
+        "label": f"FBRRT-MCZ (v_pol={v_policy_label}, v_tgt={v_target_label})",
+        "method": "fbrrt_mc_z", "lambda_idx": 0,
+        "stats": s, "is_offpolicy": False,
+    })
+    print_stats_table(f"fbrrt_mc_z  v_pol={v_policy_label}, v_tgt={v_target_label}", s)
+
+    # 6) FBRRT-MCZ with v_policy = v_target = live (single-V baseline of MCZ)
+    print(f"  [fbrrt_mc_z  v_pol=v_tgt={v_target_label}] collecting...")
+    try:
+        x, t, tgt = collect_fbrrt_mc_z_direct(v_target_fn, v_target_fn, n_calls=n_calls)
+        s = binned_stats(x, t, tgt)
+    except Exception as e:
+        print(f"    ERROR: {e}")
+        s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"),
+                 "var": float("nan")} for b in BIN_NAMES}
+    results.append({
+        "label": f"FBRRT-MCZ (v_pol=v_tgt={v_target_label})",
+        "method": "fbrrt_mc_z", "lambda_idx": 0,
+        "stats": s, "is_offpolicy": False,
+    })
+    print_stats_table(f"fbrrt_mc_z  v_pol=v_tgt={v_target_label}", s)
+
+    ALL_RESULTS[stage_key] = results
+    plot_variance_bias(results, stage_name, output_path, include_scatter=False)
+    return results
+
+
+if _should_run("stage11a"):
+    stage11a_results = run_fbrrt_cv_lagged_stage(
+        v_policy_fn=early_model_fn, v_policy_label="early",
+        v_target_fn=mid_model_fn,   v_target_label="mid",
+        stage_name=STAGE_META[17][1], stage_key="stage11a",
+        output_path=STAGE_META[17][2],
+    )
+
+if _should_run("stage11b"):
+    stage11b_results = run_fbrrt_cv_lagged_stage(
+        v_policy_fn=mid_model_fn,  v_policy_label="mid",
+        v_target_fn=best_model_fn, v_target_label="best",
+        stage_name=STAGE_META[18][1], stage_key="stage11b",
+        output_path=STAGE_META[18][2],
+    )
+
+if _should_run("stage11c"):
+    stage11c_results = run_fbrrt_cv_lagged_stage(
+        v_policy_fn=best_model_fn, v_policy_label="best",
+        v_target_fn=anal_fn,       v_target_label="oracle",
+        stage_name=STAGE_META[19][1], stage_key="stage11c",
+        output_path=STAGE_META[19][2],
+    )
+
+# ===========================================================================
+# STAGE 12: Branch-factor sweep for FBRRT and FBRRT-CV
+# Theory says Var[Z_RCV] ~ |eps|^2 / (B * dt). Stage 11 used B=4 and saw a
+# 5-40x variance penalty for FBRRT-CV.  Sweep B in {4, 10, 30, 100} for the
+# same three pairings and check whether the residual term attenuates.
+# ===========================================================================
+if _should_run("stage12"):
+    print(f"\n{'=' * 70}")
+    print("STAGE 12: Branch-factor sweep B in {4, 10, 30, 100}")
+    print("=" * 70)
+
+    BRANCHES = [4, 10, 30, 100]
+    PAIRINGS = [
+        ("11a", early_model_fn, "early", mid_model_fn,  "mid"),
+        ("11b", mid_model_fn,   "mid",   best_model_fn, "best"),
+        ("11c", best_model_fn,  "best",  anal_fn,       "oracle"),
+    ]
+    N_CALLS_S12 = 5
+
+    stage12_results = []
+    for pair_label, v_pol_fn, pol_label, v_tgt_fn, tgt_label in PAIRINGS:
+        print(f"\n--- Pairing {pair_label}: v_pol={pol_label}, v_tgt={tgt_label} ---")
+        for B in BRANCHES:
+            # FBRRT-CV with lagged v_policy / live v_target
+            tag_cv = f"{pair_label} CV B={B:3d}"
+            print(f"  [{tag_cv}] collecting...")
+            try:
+                x, t, tgt = collect_fbrrt_cv_direct(
+                    v_pol_fn, v_tgt_fn, n_calls=N_CALLS_S12, branch=B,
+                )
+                s = binned_stats(x, t, tgt)
+            except Exception as e:
+                print(f"    ERROR: {e}")
+                s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"),
+                         "var": float("nan")} for b in BIN_NAMES}
+            stage12_results.append({
+                "label": f"FBRRT-CV {pair_label} (v_pol={pol_label}, v_tgt={tgt_label}) B={B}",
+                "method": "fbrrt_cv", "pairing": pair_label, "branch": B,
+                "stats": s, "is_offpolicy": False, "lambda_idx": 0,
+            })
+            print_stats_table(tag_cv, s)
+
+            # FBRRT with v=v_target only
+            tag_fb = f"{pair_label} FB B={B:3d}"
+            print(f"  [{tag_fb}] collecting...")
+            try:
+                x, t, tgt = collect_fbrrt_direct(
+                    v_tgt_fn, n_calls=N_CALLS_S12, branch=B,
+                )
+                s = binned_stats(x, t, tgt)
+            except Exception as e:
+                print(f"    ERROR: {e}")
+                s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"),
+                         "var": float("nan")} for b in BIN_NAMES}
+            stage12_results.append({
+                "label": f"FBRRT {pair_label} (v={tgt_label}) B={B}",
+                "method": "fbrrt", "pairing": pair_label, "branch": B,
+                "stats": s, "is_offpolicy": False, "lambda_idx": 0,
+            })
+            print_stats_table(tag_fb, s)
+
+            # FBRRT-MCZ with lagged v_policy / live v_target
+            tag_mcz = f"{pair_label} MCZ B={B:3d}"
+            print(f"  [{tag_mcz}] collecting...")
+            try:
+                x, t, tgt = collect_fbrrt_mc_z_direct(
+                    v_pol_fn, v_tgt_fn, n_calls=N_CALLS_S12, branch=B,
+                )
+                s = binned_stats(x, t, tgt)
+            except Exception as e:
+                print(f"    ERROR: {e}")
+                s = {b: {"n": 0, "mean": float("nan"), "std": float("nan"),
+                         "var": float("nan")} for b in BIN_NAMES}
+            stage12_results.append({
+                "label": f"FBRRT-MCZ {pair_label} (v_pol={pol_label}, v_tgt={tgt_label}) B={B}",
+                "method": "fbrrt_mc_z", "pairing": pair_label, "branch": B,
+                "stats": s, "is_offpolicy": False, "lambda_idx": 0,
+            })
+            print_stats_table(tag_mcz, s)
+
+    ALL_RESULTS["stage12"] = stage12_results
+
+    # ----- Plot stage 12 -----
+    fig, axes = plt.subplots(2, 3, figsize=(15, 8))
+    pair_titles = {
+        "11a": "11a (early → mid)",
+        "11b": "11b (mid → best)",
+        "11c": "11c (best → oracle)",
+    }
+    for col, (pair_label, _, pol_label, _, tgt_label) in enumerate(PAIRINGS):
+        rows = [r for r in stage12_results if r.get("pairing") == pair_label]
+        cv_rows  = sorted([r for r in rows if r["method"] == "fbrrt_cv"],   key=lambda r: r["branch"])
+        fb_rows  = sorted([r for r in rows if r["method"] == "fbrrt"],      key=lambda r: r["branch"])
+        mcz_rows = sorted([r for r in rows if r["method"] == "fbrrt_mc_z"], key=lambda r: r["branch"])
+        Bs        = [r["branch"] for r in cv_rows]
+        cv_var    = [avg_stats(r["stats"])[0] for r in cv_rows]
+        fb_var    = [avg_stats(r["stats"])[0] for r in fb_rows]
+        mcz_var   = [avg_stats(r["stats"])[0] for r in mcz_rows]
+        cv_bias   = [avg_stats(r["stats"])[1] for r in cv_rows]
+        fb_bias   = [avg_stats(r["stats"])[1] for r in fb_rows]
+        mcz_bias  = [avg_stats(r["stats"])[1] for r in mcz_rows]
+
+        ax = axes[0, col]
+        ax.loglog(Bs, fb_var, "o-", color=METHOD_COLORS["fbrrt"],
+                  label=f"FBRRT (v={tgt_label})", markersize=7)
+        ax.loglog(Bs, cv_var, "s-", color=METHOD_COLORS["fbrrt_cv"],
+                  label=f"FBRRT-CV (v_pol={pol_label})", markersize=7)
+        ax.loglog(Bs, mcz_var, "v-", color=METHOD_COLORS["fbrrt_mc_z"],
+                  label=f"FBRRT-MCZ (v_pol={pol_label})", markersize=7)
+        # 1/B reference line (theory for residual)
+        ref = cv_var[0] * (Bs[0] / np.array(Bs))
+        ax.loglog(Bs, ref, "k:", alpha=0.4, label="∝ 1/B")
+        ax.set_xlabel("branch B"); ax.set_ylabel("avg variance")
+        ax.set_title(f"{pair_titles[pair_label]} — variance")
+        ax.grid(True, alpha=0.3, which="both")
+        if col == 0: ax.legend(fontsize=8)
+
+        ax = axes[1, col]
+        ax.loglog(Bs, fb_bias, "o-", color=METHOD_COLORS["fbrrt"],
+                  label=f"FBRRT (v={tgt_label})", markersize=7)
+        ax.loglog(Bs, cv_bias, "s-", color=METHOD_COLORS["fbrrt_cv"],
+                  label=f"FBRRT-CV (v_pol={pol_label})", markersize=7)
+        ax.loglog(Bs, mcz_bias, "v-", color=METHOD_COLORS["fbrrt_mc_z"],
+                  label=f"FBRRT-MCZ (v_pol={pol_label})", markersize=7)
+        ax.set_xlabel("branch B"); ax.set_ylabel("avg |bias|")
+        ax.set_title(f"{pair_titles[pair_label]} — |bias|")
+        ax.grid(True, alpha=0.3, which="both")
+        if col == 0: ax.legend(fontsize=8)
+
+    plt.tight_layout()
+    fig.savefig("notebooks/dq2_stage12_branch_sweep.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print("  Saved plot: notebooks/dq2_stage12_branch_sweep.png")
 
 # ===========================================================================
 # Save all results to JSON
@@ -825,6 +1401,8 @@ def results_to_json(all_results):
                 "is_offpolicy": entry.get("is_offpolicy", False),
                 "lambda_idx":  entry.get("lambda_idx", None),
                 "lambda_val":  entry.get("lambda_val", None),
+                "pairing":     entry.get("pairing", None),
+                "branch":      entry.get("branch", None),
                 "stats":       entry["stats"],
             }
             avg_var, avg_bias = avg_stats(entry["stats"])
@@ -835,7 +1413,17 @@ def results_to_json(all_results):
 
 
 json_out = results_to_json(ALL_RESULTS)
-with open("notebooks/data_quality_v2_results.json", "w") as f:
+
+# When running with DQ2_ONLY, merge new stage results into the existing JSON
+# instead of clobbering stages we deliberately skipped.
+if ONLY_STAGES is not None and os.path.exists(RESULTS_JSON):
+    with open(RESULTS_JSON) as f:
+        existing = json.load(f)
+    existing.update(json_out)
+    json_out = existing
+    print(f"\nMerged {len(ALL_RESULTS)} stage(s) into existing JSON.")
+
+with open(RESULTS_JSON, "w") as f:
     json.dump(json_out, f, indent=2)
 print("\nAll results saved to notebooks/data_quality_v2_results.json")
 
@@ -880,6 +1468,9 @@ stage_titles = {
     "stage6":  "Stage 6: Best Model V + Best Model SMC, lambda sweep",
     "stage7a": "Stage 7a: Early Model (V + SMC), lambda sweep",
     "stage7b": "Stage 7b: Mid Model (V + SMC), lambda sweep",
+    "stage11a": "Stage 11a: FBRRT-CV lagged (v_policy=early, v_target=mid)",
+    "stage11b": "Stage 11b: FBRRT-CV lagged (v_policy=mid, v_target=best)",
+    "stage11c": "Stage 11c: FBRRT-CV lagged (v_policy=best, v_target=oracle)",
 }
 
 for stage_key, title in stage_titles.items():

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python notebooks/fbrrt_alpha_sweep.py)",
+      "Bash(echo \"EXIT=$?\")",
+      "Read(//tmp/**)",
+      "Read(//private/tmp/**)",
+      "Bash(DQ2_ONLY=stage12 python notebooks/data_quality_v2.py)",
+      "Bash(DQ2_ONLY=stage3,stage4,stage5,stage6,stage7a,stage7b,stage8a,stage8b,stage8c,stage9a,stage9b,stage9c,stage10a,stage10b,stage10c,stage11a,stage11b,stage11c,stage12 python notebooks/data_quality_v2.py)"
+    ],
+    "additionalDirectories": [
+      "/tmp"
+    ]
+  }
+}

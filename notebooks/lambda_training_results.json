@@ -1,0 +1,85 @@
+{
+  "E_OPT": -2.5872042368695656,
+  "runs": {
+    "offpolicy": {
+      "method": "offpolicy",
+      "lambda": null,
+      "best_reward": -4.08958101272583,
+      "final_reward": -6.718209266662598,
+      "p1_mae": 1.0410081446170807,
+      "qs_mae": 0.37599894106388093,
+      "p1_bias": 0.17833590805530547,
+      "qs_bias": -0.3510255739092827
+    },
+    "osb": {
+      "method": "one_step_bootstrap",
+      "lambda": 0.0,
+      "best_reward": -4.951564311981201,
+      "final_reward": -6.3673481941223145,
+      "p1_mae": 2.7000690937042235,
+      "qs_mae": 1.6224966287612914,
+      "p1_bias": 2.6973830699920653,
+      "qs_bias": 1.6050699949264526
+    },
+    "atd_lam0.0": {
+      "method": "ancestral_td_lambda",
+      "lambda": 0.0,
+      "best_reward": -10.26314926147461,
+      "final_reward": -30.468278884887695,
+      "p1_mae": 2.9932639837265014,
+      "qs_mae": 2.105853283405304,
+      "p1_bias": -0.9983241558074951,
+      "qs_bias": -2.031866854429245
+    },
+    "atd_lam0.03": {
+      "method": "ancestral_td_lambda",
+      "lambda": 0.03,
+      "best_reward": -18.363540649414062,
+      "final_reward": -43.12952423095703,
+      "p1_mae": 3.162648057937622,
+      "qs_mae": 3.0557671070098875,
+      "p1_bias": -1.6975563526153565,
+      "qs_bias": -3.0543019771575928
+    },
+    "atd_lam0.1": {
+      "method": "ancestral_td_lambda",
+      "lambda": 0.1,
+      "best_reward": -26.540363311767575,
+      "final_reward": -27.376802444458008,
+      "p1_mae": 1.8998535037040711,
+      "qs_mae": 0.7393275380134583,
+      "p1_bias": 1.6489556074142455,
+      "qs_bias": 0.09690585434436798
+    },
+    "amctd_lam0.0": {
+      "method": "ancestral_mc_td_lambda",
+      "lambda": 0.0,
+      "best_reward": -9.437625885009766,
+      "final_reward": -21.8011417388916,
+      "p1_mae": 3.8574473381042482,
+      "qs_mae": 2.6714077472686766,
+      "p1_bias": 3.8574473381042482,
+      "qs_bias": 2.6714077472686766
+    },
+    "amctd_lam0.03": {
+      "method": "ancestral_mc_td_lambda",
+      "lambda": 0.03,
+      "best_reward": -28.59006118774414,
+      "final_reward": -28.59006118774414,
+      "p1_mae": 18.19790687561035,
+      "qs_mae": 16.545753288269044,
+      "p1_bias": 18.19790687561035,
+      "qs_bias": 16.545753288269044
+    },
+    "amctd_lam0.1": {
+      "method": "ancestral_mc_td_lambda",
+      "lambda": 0.1,
+      "best_reward": -15.807744026184082,
+      "final_reward": -27.52483367919922,
+      "p1_mae": 3.775505256652832,
+      "qs_mae": 2.656617259979248,
+      "p1_bias": 3.769722509384155,
+      "qs_bias": 2.6511374950408935
+    }
+  }
+}
