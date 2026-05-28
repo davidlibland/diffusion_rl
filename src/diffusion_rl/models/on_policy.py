@@ -73,6 +73,9 @@ class OnPolicySMCDataset(IterableDataset):
         fbrrt_alpha=1.0,
         off_policy_frac: float = 0.0,
         generating_function: callable[[int], "np.ndarray"] | None = None,
+        random_t: bool = False,
+        include_t_zero: bool = True,
+        shuffle=True,
     ):
         self.drift = drift
         self.value = value
@@ -100,6 +103,9 @@ class OnPolicySMCDataset(IterableDataset):
         # base distribution with reward targets (stabilizing anchor).
         self.off_policy_frac = off_policy_frac
         self.generating_function = generating_function
+        self.random_t = random_t
+        self.include_t_zero = include_t_zero
+        self.shuffle = shuffle
 
     def drift_fn(self, x, t):
         """This just computes the drift function on x extended by mc samples"""
@@ -207,6 +213,8 @@ class OnPolicySMCDataset(IterableDataset):
                             dim=self.dim,
                             n_steps=self.n_steps,
                             device=self.device,
+                            random_t=self.random_t,
+                            include_t_zero=self.include_t_zero,
                         )
                 elif self.sampling_method == "single_seed_mc":
                     with torch.no_grad():
@@ -221,6 +229,8 @@ class OnPolicySMCDataset(IterableDataset):
                             dim=self.dim,
                             n_steps=self.n_steps,
                             device=self.device,
+                            random_t=self.random_t,
+                            include_t_zero=self.include_t_zero,
                         )
                 elif self.sampling_method == "ancestral_mc_td_lambda":
                     with torch.no_grad():
@@ -290,21 +300,19 @@ class OnPolicySMCDataset(IterableDataset):
                         )
                 elif self.sampling_method == "fbrrt_mc_z":
                     with torch.no_grad():
-                        all_x, all_t, all_tgt, all_weights = (
-                            fbrrt_smc_grad_mc_Z(
-                                a=self.a,
-                                n_steps=self.n_steps,
-                                n_particles=self.mc_samples_per_step,
-                                branch=self.branch,
-                                f=self.drift,
-                                v_policy=self.value,
-                                v_target=self.value,
-                                reward=self.reward,
-                                d=self.dim,
-                                entropy_lambda=self.entropy_lambda,
-                                alpha=self.fbrrt_alpha,
-                                device=self.device,
-                            )
+                        all_x, all_t, all_tgt, all_weights = fbrrt_smc_grad_mc_Z(
+                            a=self.a,
+                            n_steps=self.n_steps,
+                            n_particles=self.mc_samples_per_step,
+                            branch=self.branch,
+                            f=self.drift,
+                            v_policy=self.value,
+                            v_target=self.value,
+                            reward=self.reward,
+                            d=self.dim,
+                            entropy_lambda=self.entropy_lambda,
+                            alpha=self.fbrrt_alpha,
+                            device=self.device,
                         )
                 # Splice in off-policy samples by overwriting a random subset of indices
                 n_total = all_x.shape[0]
@@ -326,7 +334,10 @@ class OnPolicySMCDataset(IterableDataset):
                     all_x[off_idx] = x_off
                     all_t[off_idx] = t_off.reshape((n_off,) + all_t.shape[1:])
                     all_tgt[off_idx] = y_off.reshape((n_off,) + all_tgt.shape[1:])
-                perm = torch.randperm(n_total)
+                if self.shuffle:
+                    perm = torch.randperm(n_total)
+                else:
+                    perm = torch.arange(n_total)
                 self._x = all_x[perm]
                 self._t = all_t[perm].unsqueeze(-1)
                 self._y = all_tgt[perm].unsqueeze(-1)
@@ -902,29 +913,53 @@ def _single_seed_forward(
     n_steps,
     device,
     dtype,
+    random_t: bool = False,
 ):
     """
     Single-seed SMC forward pass shared by both single-seed algorithms.
 
-    At each step a batch of seeds x (B, dim) is propagated; mc_samples
-    proposals are drawn from each seed independently giving (B, N, dim).
+    At each step k (k=0..n_steps-1) a batch of seeds x (B, dim) at time
+    ``t_k`` is propagated to ``t_{k+1}``; ``mc_samples`` proposals are
+    drawn from each seed independently giving (B, N, dim).
 
-    Returns lists of length n_steps:
-        xs_list:          (B, dim)  seed particle at t_next (post-resample)
-        ts_list:          float     time of seed (t_next)
-        log_z_list:       (B,)      log(1/N sum_i w_i)
-        log_mean_v_list:  (B,)      log(1/N sum_i exp(v_i - log_tau_i))
-                                    bootstrap term: log mean F(x*)/tau(x*)
-        log_tau_list:     (B,)      log tau at seed after step
+    Time grid: if ``random_t`` is False (default), uniform with
+    ``dt = 1/n_steps``. If True, the grid is ``[0, sorted U(0,1) draws
+    (n_steps-1 of them), 1]``, so step sizes vary but endpoints are still
+    0 and 1.
+
+    Returns:
+        xs_list:          length n_steps + 1.  ``xs_list[j]`` is the seed
+                          at ``t_grid[j]``.  Index 0 is the initial seed
+                          (zeros) at t=0; index n_steps is the terminal
+                          seed at t=1.
+        ts_list:          length n_steps + 1.  ``ts_list[j] = t_grid[j]``.
+        log_z_list:       length n_steps.  ``log_z_list[k]`` is the log Z
+                          ratio for step k (transition t_k → t_{k+1}).
+        log_mean_v_list:  length n_steps.  ``log_mean_v_list[k]`` is the
+                          bootstrap term ``log(1/N sum_i exp(v_i - log_tau_i))``
+                          built from step k's proposals at ``t_{k+1}``,
+                          which estimates V at the *pre-step* seed
+                          ``xs_list[k]`` at time ``t_k``.  ``v_i`` is
+                          ``h(x*_i)`` at the terminal step (when ``h`` is
+                          provided), else ``value(x*_i, t_{k+1})``.
+        log_tau_list:     length n_steps + 1.  ``log_tau_list[j]`` is
+                          ``log tau(xs_list[j], t_grid[j])``.
     """
-    dt = 1.0 / n_steps
     N = mc_samples
 
+    if random_t:
+        inner = torch.rand(max(n_steps - 1, 0), dtype=dtype).sort().values
+        t_grid = torch.cat(
+            [
+                torch.zeros(1, dtype=dtype),
+                inner,
+                torch.ones(1, dtype=dtype),
+            ]
+        )
+    else:
+        t_grid = torch.linspace(0, 1, n_steps + 1, dtype=dtype)
+
     x = torch.zeros(batch_size, dim, dtype=dtype, device=device)
-    log_tau_x = log_tau(
-        x,
-        torch.full((batch_size, 1), 0.0, dtype=dtype, device=device),
-    ).reshape([-1, 1])  # (B, 1)
 
     xs_list = []
     ts_list = []
@@ -932,12 +967,23 @@ def _single_seed_forward(
     log_mean_v_list = []
     log_tau_list = []
 
-    for step_idx, _t in enumerate(torch.linspace(0, 1, n_steps + 1, dtype=dtype)[:-1]):
-        t_curr = float(_t)
-        t_next = t_curr + dt
+    log_tau_x = log_tau(
+        x,
+        torch.full((batch_size, 1), float(t_grid[0]), dtype=dtype, device=device),
+    ).reshape([-1, 1])  # (B, 1) — log tau at the initial seed (t=0)
 
-        # Expand seed to (B, N, dim) and draw N proposals
-        x_exp = x.unsqueeze(1).expand(batch_size, N, dim)  # (B, N, dim)
+    for step_idx in range(n_steps):
+        t_curr = float(t_grid[step_idx])
+        t_next = float(t_grid[step_idx + 1])
+        dt = t_next - t_curr
+
+        # Record PRE-step seed and its log_tau (paired with log_mean_v below).
+        xs_list.append(x.clone())
+        ts_list.append(t_curr)
+        log_tau_list.append(log_tau_x.squeeze(-1))
+
+        # Expand seed to (B, N, dim) and draw N proposals at t_next.
+        x_exp = x.unsqueeze(1).expand(batch_size, N, dim)
         x_exp_flat = x_exp.reshape(batch_size * N, dim)
 
         t_curr_vec = _tvec(t_curr, batch_size, N, dtype, device)
@@ -950,20 +996,17 @@ def _single_seed_forward(
         log_tau_next = log_tau(x_next_flat, t_next_vec).reshape(batch_size, N, 1)
 
         # Incremental weights: w_i = tau(x*_i, t_next) / tau(x_seed, t_curr)
-        # log_tau_x is (B,1); broadcast over N
         log_w = log_tau_next - log_tau_x.unsqueeze(1)  # (B, N, 1)
-
-        # log Z ratio: log(1/N sum_i w_i)
         log_z_ratio = torch.logsumexp(log_w.squeeze(-1), dim=1) - log(N)  # (B,)
 
-        # Value at proposals
+        # Value at proposals (h at terminal step if provided).
         is_terminal = step_idx == n_steps - 1
         if is_terminal and h is not None:
             v = h(x_next_flat).reshape(batch_size, N, 1)
         else:
             v = value(x_next_flat, t_next_vec).reshape(batch_size, N, 1)
 
-        # Resample
+        # Resample.
         log_w_stable = log_w - log_w.amax(dim=1, keepdim=True)
         ix = torch.multinomial(
             log_w_stable.squeeze(-1).exp(),
@@ -971,12 +1014,15 @@ def _single_seed_forward(
             replacement=True,
         )  # (B, N)
 
-        # Bootstrap: log(1/N sum_i exp(v_i - log_tau_next_i)) over resampled
+        # Bootstrap term for step k, estimating V at the *pre-step* seed.
         v_r = torch.gather(v.squeeze(-1), 1, ix)  # (B, N)
         lt_r = torch.gather(log_tau_next.squeeze(-1), 1, ix)  # (B, N)
         log_mean_v = torch.logsumexp(v_r - lt_r, dim=1) - log(N)  # (B,)
 
-        # Advance seed: pick first resampled particle
+        log_z_list.append(log_z_ratio)
+        log_mean_v_list.append(log_mean_v)
+
+        # Advance seed: pick first resampled particle.
         x_next_r = torch.gather(
             x_next, 1, ix.unsqueeze(-1).expand(batch_size, N, dim)
         )  # (B, N, dim)
@@ -987,11 +1033,10 @@ def _single_seed_forward(
             torch.full((batch_size, 1), t_next, dtype=dtype, device=device),
         ).reshape([-1, 1])  # (B, 1)
 
-        xs_list.append(x.clone())
-        ts_list.append(t_next)
-        log_z_list.append(log_z_ratio)
-        log_mean_v_list.append(log_mean_v)
-        log_tau_list.append(log_tau_x.squeeze(-1))
+    # Append the terminal seed (post final step) at t=1.
+    xs_list.append(x.clone())
+    ts_list.append(float(t_grid[-1]))
+    log_tau_list.append(log_tau_x.squeeze(-1))
 
     return xs_list, ts_list, log_z_list, log_mean_v_list, log_tau_list
 
@@ -1014,6 +1059,8 @@ def single_seed_td_lambda(
     n_steps,
     device,
     dtype=torch.float32,
+    random_t: bool = False,
+    include_t_zero: bool = True,
 ):
     """
     Single-Seed TD(λ).
@@ -1024,9 +1071,10 @@ def single_seed_td_lambda(
 
         log_target = log( (1-λ)*exp(one_step) + λ*exp(multi_step) )
 
-    where:
-        one_step  = log_tau(x) + log_mean_v      (bootstrap from F)
-        multi_step = log_tau(x) + log_z + log_target_next - log_tau_next
+    where, for the pre-step seed x_j at t_j:
+        one_step_j  = log_tau(x_j, t_j) + log_mean_v[j]
+        multi_step_j = log_tau(x_j, t_j) + log_z[j]
+                       - log_tau(x_{j+1}, t_{j+1}) + log_target[j+1]
 
     λ per step = lambda_eff^(1/n_steps).
 
@@ -1034,9 +1082,10 @@ def single_seed_td_lambda(
     ONE seed particle is kept per batch element per step.
 
     Returns:
-        all_x:   (batch_size * n_steps, dim)   -- seeds at t = dt, 2*dt, ..., 1
-        all_t:   (batch_size * n_steps,)
-        all_tgt: (batch_size * n_steps,)
+        all_x:   (batch_size * (n_steps + 1), dim)
+                 seeds at t = 0, t_1, ..., t_{n_steps-1}, 1
+        all_t:   (batch_size * (n_steps + 1),)
+        all_tgt: (batch_size * (n_steps + 1),)
     """
     lam = lambda_eff ** (1.0 / n_steps)
 
@@ -1052,52 +1101,53 @@ def single_seed_td_lambda(
         n_steps,
         device,
         dtype,
+        random_t=random_t,
     )
 
     T = n_steps
-    # We compute targets for xs_list[0..T-1], which are seeds at t_1..t_T
-    # Target at step j estimates H(x_{j-1}, t_{j-1}) -- the seed BEFORE the step.
-    # However for simplicity we attach the target to the seed AFTER the step,
-    # i.e. xs_list[j] at ts_list[j], matching the bootstrap definition:
-    #   H(x, t_j) ~ tau(x, t_j) * 1/N sum_i F(x*_i, t_{j+1}) / tau(x*_i, t_{j+1})
-    # which uses log_mean_v_list[j] and log_tau_list[j].
 
-    # Initialise at last step: pure one-step bootstrap
-    #   log_target = log_tau[T-1] + log_mean_v[T-1]
-    log_target = log_tau_list[-1] + log_mean_v_list[-1]  # (B,)
-    log_tau_curr = log_tau_list[-1]  # (B,)
-    log_targets = [log_target]
+    # Exact terminal target at t=1.
+    x_terminal = xs_list[T]
+    if h is not None:
+        terminal_target = h(x_terminal).reshape(batch_size)
+    else:
+        t_terminal_vec = torch.full(
+            (batch_size, 1), 1.0, dtype=dtype, device=device
+        )
+        terminal_target = value(x_terminal, t_terminal_vec).reshape(batch_size)
 
-    for j in range(T - 2, -1, -1):
-        log_z = log_z_list[j + 1]  # Z ratio for step j -> j+1
-        log_mv = log_mean_v_list[j]  # one-step bootstrap at j
-        new_log_tau = log_tau_list[j]  # log tau at seed x_j
-
-        # One-step estimate at step j:
-        #   log H_hat^(1)(x_j) = new_log_tau + log_mv
-        log_one_step = new_log_tau + log_mv
-
-        # Multi-step estimate propagated from j+1 back to j:
-        #   log H_hat^(k)(x_j) = new_log_tau + log_z + log_target - log_tau_curr
-        log_multi_step = new_log_tau + log_z + log_target - log_tau_curr
-
-        # TD(λ) blend: log( (1-λ)*exp(one_step) + λ*exp(multi_step) )
+    # Backward blend over pre-step seeds at t_0..t_{T-1}.
+    log_target = terminal_target  # seed the recursion with the exact terminal
+    log_targets = []
+    for j in range(T - 1, -1, -1):
+        new_log_tau = log_tau_list[j]
+        log_one_step = new_log_tau + log_mean_v_list[j]
+        log_multi_step = (
+            new_log_tau + log_z_list[j] + log_target - log_tau_list[j + 1]
+        )
         log_target = _log_td_blend(log_one_step, log_multi_step, lam)
-        log_tau_curr = new_log_tau
         log_targets.append(log_target)
 
-    # log_targets was built back-to-front
-    log_targets = log_targets[::-1]
+    log_targets = log_targets[::-1]  # length T, paired with xs_list[0..T-1]
+    log_targets.append(terminal_target)
 
-    # Stack and return; xs_list[j] is the seed at ts_list[j]
-    all_x = torch.stack(xs_list, dim=1).reshape(batch_size * T, dim)
+    # Optionally drop the t=0 endpoint (degenerate point since x_0 is always
+    # the same initial seed; with high-variance labels this can destabilize
+    # training).
+    if not include_t_zero:
+        xs_list = xs_list[1:]
+        ts_list = ts_list[1:]
+        log_targets = log_targets[1:]
+
+    T_out = len(xs_list)
+    all_x = torch.stack(xs_list, dim=1).reshape(batch_size * T_out, dim)
     all_t = (
         torch.tensor(ts_list, dtype=dtype, device=device)
         .unsqueeze(0)
-        .expand(batch_size, T)
-        .reshape(batch_size * T)
+        .expand(batch_size, T_out)
+        .reshape(batch_size * T_out)
     )
-    all_tgt = torch.stack(log_targets, dim=1).reshape(batch_size * T)
+    all_tgt = torch.stack(log_targets, dim=1).reshape(batch_size * T_out)
     return all_x, all_t, all_tgt
 
 
@@ -1118,6 +1168,8 @@ def single_seed_mc(
     n_steps,
     device,
     dtype=torch.float32,
+    random_t: bool = False,
+    include_t_zero: bool = True,
 ):
     """
     Single-Seed Monte Carlo.
@@ -1125,17 +1177,21 @@ def single_seed_mc(
     Same forward pass as Single-Seed TD(λ) but the backward pass telescopes
     the full Z-product (equivalent to lambda_eff=1 but without log(0) issues).
 
-        log H_hat(x_j) = log_tau(x_j)
-                        + sum_{k=j}^{T-1} log_z_ratio_k
-                        + log_mean_v_T
+    For j in [0, n_steps-1]:
+        log H_hat(x_j, t_j) = log_tau(x_j, t_j)
+                            + sum_{k=j}^{T-1} log_z_ratio_k
+                            + log_mean_v_{T-1}
+    And at the terminal time t=1:
+        log H_hat(x_T, 1) = h(x_T)         (exact)
 
     NOTE: mc_samples proposals are used internally at each step but only
     ONE seed particle is kept per batch element per step.
 
     Returns:
-        all_x:   (batch_size * n_steps, dim)   -- seeds at t = dt, 2*dt, ..., 1
-        all_t:   (batch_size * n_steps,)
-        all_tgt: (batch_size * n_steps,)
+        all_x:   (batch_size * (n_steps + 1), dim)
+                 seeds at t = 0, t_1, ..., t_{n_steps-1}, 1
+        all_t:   (batch_size * (n_steps + 1),)
+        all_tgt: (batch_size * (n_steps + 1),)
     """
     xs_list, ts_list, log_z_list, log_mean_v_list, log_tau_list = _single_seed_forward(
         drift,
@@ -1149,34 +1205,53 @@ def single_seed_mc(
         n_steps,
         device,
         dtype,
+        random_t=random_t,
     )
 
     T = n_steps
 
-    # Initialise: terminal bootstrap
-    log_target = log_tau_list[-1] + log_mean_v_list[-1]  # (B,)
-    log_tau_curr = log_tau_list[-1]
+    # Backward telescoping over pre-step seeds at t_0..t_{T-1}.
+    #   target[T-1] = log_tau[T-1] + log_z[T-1] + log_mean_v[T-1]
+    #   target[j]   = log_tau[j]   + log_z[j]   + target[j+1] - log_tau[j+1]
+    log_target = log_tau_list[T - 1] + log_z_list[T - 1] + log_mean_v_list[T - 1]
     log_targets = [log_target]
 
     for j in range(T - 2, -1, -1):
-        log_z = log_z_list[j + 1]
-        new_log_tau = log_tau_list[j]
-
-        # Pure telescoping: no bootstrap blend
-        log_target = new_log_tau + log_z + log_target - log_tau_curr
-        log_tau_curr = new_log_tau
+        log_target = (
+            log_tau_list[j] + log_z_list[j] + log_target - log_tau_list[j + 1]
+        )
         log_targets.append(log_target)
 
-    log_targets = log_targets[::-1]
+    log_targets = log_targets[::-1]  # length T, paired with xs_list[0..T-1]
 
-    all_x = torch.stack(xs_list, dim=1).reshape(batch_size * T, dim)
+    # Exact terminal target: V(x_T, t=1) = h(x_T).
+    x_terminal = xs_list[T]
+    if h is not None:
+        terminal_target = h(x_terminal).reshape(batch_size)
+    else:
+        t_terminal_vec = torch.full(
+            (batch_size, 1), 1.0, dtype=dtype, device=device
+        )
+        terminal_target = value(x_terminal, t_terminal_vec).reshape(batch_size)
+    log_targets.append(terminal_target)
+
+    # Optionally drop the t=0 endpoint (degenerate point since x_0 is always
+    # the same initial seed; with high-variance labels this can destabilize
+    # training).
+    if not include_t_zero:
+        xs_list = xs_list[1:]
+        ts_list = ts_list[1:]
+        log_targets = log_targets[1:]
+
+    T_out = len(xs_list)
+    all_x = torch.stack(xs_list, dim=1).reshape(batch_size * T_out, dim)
     all_t = (
         torch.tensor(ts_list, dtype=dtype, device=device)
         .unsqueeze(0)
-        .expand(batch_size, T)
-        .reshape(batch_size * T)
+        .expand(batch_size, T_out)
+        .reshape(batch_size * T_out)
     )
-    all_tgt = torch.stack(log_targets, dim=1).reshape(batch_size * T)
+    all_tgt = torch.stack(log_targets, dim=1).reshape(batch_size * T_out)
     return all_x, all_t, all_tgt
 
 
@@ -2208,7 +2283,7 @@ def fbrrt_smc_grad_mc_Z(
 
             y_m = (
                 y_mb_.mean(dim=1)
-                + (1 / 2 * (Z**2) + alpha * sqrt(2 * a) * (grad_x_v_policy * Z)).sum(
+                + (1 / 2 * (Z**2) - alpha * sqrt(2 * a) * (grad_x_v_policy * Z)).sum(
                     dim=1
                 )
                 * dt

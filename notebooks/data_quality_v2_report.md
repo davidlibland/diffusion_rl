@@ -503,6 +503,130 @@ If MSE is the sole criterion, FBRRT(v=v_tgt) at `B = 4` is already excellent and
 
 ---
 
+## FBRRT-MCZ: MC Estimate of Z
+
+**FBRRT-MCZ** (`fbrrt_smc_grad_mc_Z` in [on_policy.py](../src/diffusion_rl/models/on_policy.py)) keeps the same `v_policy` / `v_target` split as FBRRT-CV, but replaces the analytic anchor with a **fully Monte-Carlo estimate of Z**:
+
+```
+Z_i = (1/dt) * mean_b [ Y_{i+1}^b * dW_b ]
+```
+
+`Y_{i+1}` is propagated *backward* through the trajectory: at the resampled indices it is the previously computed `y_m`, at the unselected children it is bootstrapped from `v_target(child)`. The driver is then
+
+```
+y_i = mean_b[Y_{i+1}^b] + (½ |Z_i|² − α · √(2a) · Z_i · grad_x v_policy) · dt
+```
+
+so the only place `grad_x v_policy` enters is as the control-drift correction; `Z` itself is gradient-free. The intent is a Malliavin-style estimator that doesn't need autograd through `v_policy`.
+
+In the deterministic limit `Z → √(2a)·grad_x v_target` and at α = 1, the driver collapses to `+a|grad_v|² − 2a|grad_v|² = −a|grad_v|²·dt`, the same expression FBRRT and FBRRT-CV use at α = 1.
+
+### Implementation fixes before it would run
+
+The submitted method had four small bugs that prevented it from executing or matching the documented BSDE. Minimal patches in [on_policy.py](../src/diffusion_rl/models/on_policy.py):
+
+1. **Malformed rearrange pattern**: `rearrange(y_mb, "(m b) d -> m b d)", ...)` — the trailing `)` made the pattern unparseable, and `y_mb` is `[M·B]` 1-D rather than 2-D. Fixed to `"(m b) -> m b"`.
+2. **Missing broadcast**: `y_mb_ * dW` multiplied a `[M, B]` scalar tensor by `[M, B, d]` — needed `y_mb_.unsqueeze(-1)` to broadcast over the spatial axis.
+3. **Terminal-state shape mismatch**: the initial output rows used `[children]` (shape `[M·B, d]`) which broke the trailing `rearrange("N M d -> (N M) d")` (other rows are `[M, d]`). Switched to the resampled `[x]` like the other FBRRT variants — small loss in sample count, but consistent shapes.
+4. **Sign on the α cross term**: the BSDE backward discretization of `dY = −½Z²·dt + α·√(2a)·Z·grad_v·dt + Z·dW` is `Y_i = E[Y_{i+1}|F_i] + ½|Z|²·dt − α·√(2a)·(Z·grad_v)·dt`. The original code had `+ α·√(2a)·(grad_v · Z)`, which made the deterministic driver `+3a|grad_v|²` at α=1 (three times the correct magnitude with the wrong sign). Fixed to `−`.
+
+After these fixes the function runs end-to-end and was hooked into `OnPolicySMCDataset` as the `"fbrrt_mc_z"` sampling method.
+
+### Single-V mode (stages 3–10c) at default `n_steps=100, B=4`
+
+Every single-V lambda-sweep stage produced **NaN** for FBRRT-MCZ except for two stage-9/10 outliers that were finite but useless. The gradient-based methods on the *exact same* runs produced clean numbers. The diagnosis is numerical:
+
+- `Y · dW` per-child has scale `|Y| · √(dt)`. With `|Y| ≈ |reward| ~ 10` and `dt = 0.01`, that's `~1` per child.
+- Variance of `Z = (1/dt) · mean_b[Y·dW]` is `Var(Y) / (B · dt)`. With `B = 4`, `dt = 0.01`, this gives `Z ~ √(Var(Y) / 0.04)` — already large.
+- The `+½ |Z|² · dt` contribution to the driver injects `O(Var(Y) / B²)` into `y_m` *every step*, regardless of the sign of the cross term. Across `n_steps = 100` this compounds: each step's `Y` becomes the input for the next step's `Z`, so the variance of `Y` itself grows.
+- Once `Y` overflows float32 anywhere along the backward pass, the whole trajectory NaN-poisons. At `B = 4` this happens within ~7 backward steps.
+
+This is a structural feature of small-`B` MC estimation of `Z`, not a bug. The same blow-up did not appear in a smoke test using `n_steps = 20` because there are far fewer compounding steps.
+
+### Stage 11 (lagged pairings, `n_steps = 100, B = 4`)
+
+| Pairing | Estimator | var | \|bias\| |
+|---------|-----------|----:|------:|
+| 11a (early → mid) | FBRRT-CV (v_pol=early, v_tgt=mid) | 0.255 | 0.61 |
+|  | FBRRT-CV (v_pol=v_tgt=mid) | 0.062 | 0.99 |
+|  | **FBRRT-MCZ (v_pol=early, v_tgt=mid)** | **NaN** | **NaN** |
+|  | **FBRRT-MCZ (v_pol=v_tgt=mid)** | **NaN** | **NaN** |
+| 11b (mid → best) | FBRRT-CV (v_pol=mid, v_tgt=best) | 0.332 | 0.39 |
+|  | FBRRT-CV (v_pol=v_tgt=best) | 0.0074 | 0.076 |
+|  | **FBRRT-MCZ (v_pol=mid, v_tgt=best)** | **NaN** | **NaN** |
+|  | **FBRRT-MCZ (v_pol=v_tgt=best)** | **NaN** | **NaN** |
+| 11c (best → oracle) | FBRRT-CV (v_pol=best, v_tgt=oracle) | 0.194 | 0.014 |
+|  | FBRRT-CV (v_pol=v_tgt=oracle) | 0.0093 | 0.015 |
+|  | **FBRRT-MCZ (v_pol=best, v_tgt=oracle)** | **NaN** | **NaN** |
+|  | **FBRRT-MCZ (v_pol=v_tgt=oracle)** | **NaN** | **NaN** |
+
+Same story as the single-V stages: `B = 4` is too small for the MC `Z` estimator over 100 timesteps. The lagged-vs-collapsed comparison can't be made at this `B` because both modes diverge.
+
+### Stage 12 (branch sweep) — where FBRRT-MCZ becomes tractable
+
+Re-running stage 12's `B ∈ {4, 10, 30, 100}` sweep with FBRRT-MCZ alongside FBRRT and FBRRT-CV reveals the full picture:
+
+![Branch sweep with FBRRT-MCZ](dq2_stage12_branch_sweep.png)
+
+**FBRRT-MCZ variance** (lagged pairings):
+
+| Pair | B=4 | B=10 | B=30 | B=100 |
+|------|----:|-----:|-----:|------:|
+| 11a (early → mid) | NaN | 1.67 | 0.34 | **0.110** |
+| 11b (mid → best) | NaN | 3.97 | 0.48 | **0.059** |
+| 11c (best → oracle) | NaN | 3.57 | 0.46 | **0.047** |
+
+**FBRRT-MCZ |bias|**:
+
+| Pair | B=4 | B=10 | B=30 | B=100 |
+|------|----:|-----:|-----:|------:|
+| 11a | NaN | 2.26 | 1.47 | **1.13** |
+| 11b | NaN | 2.14 | 0.72 | **0.24** |
+| 11c | NaN | 2.02 | 0.67 | **0.20** |
+
+Variance reductions from `B=10 → B=100` (10× `B` increase):
+
+- 11a: 1.67 → 0.110 = 15× (faster than 1/B)
+- 11b: 3.97 → 0.059 = 67× (much faster than 1/B)
+- 11c: 3.57 → 0.047 = 76× (close to 1/B²)
+
+The super-1/B scaling is consistent with the compounding mechanism described above: shrinking per-step `Z` variance shrinks the next step's `Y` variance multiplicatively, so the cumulative effect is super-linear in `1/B`. **The method is compute-bound, not structurally broken** — it just needs much larger `B` than the gradient-based methods to be useful.
+
+FBRRT(v=v_target)'s variance, by contrast, is essentially flat in `B` because it computes `Z = grad_x v_target` from a single autograd call with no children-averaged residual to attenuate.
+
+### Head-to-head at `B = 100`
+
+Pulling out the three estimators at `B = 100`, lined up with FBRRT (v=v_tgt) and FBRRT-CV (lagged):
+
+| Pair | FBRRT(v=tgt) (var, bias) | FBRRT-CV lagged (var, bias) | FBRRT-MCZ lagged (var, bias) |
+|------|------------------------:|----------------------------:|----------------------------:|
+| 11a | (0.069, 1.01) | (0.057, 0.98) | (0.110, 1.13) |
+| 11b | (0.0046, 0.073) | (0.0048, 0.072) | (0.059, 0.24) |
+| 11c | (0.0094, 0.020) | (0.023, 0.0073) | (0.047, 0.20) |
+
+- **vs FBRRT(v=v_tgt) at B=100**: MCZ has **1.6–13× higher variance** and **1.1–10× higher bias** across all three pairings. Worse on every axis.
+- **vs FBRRT-CV at B=100**: MCZ has **1.9–12× higher variance**. Bias is comparable in 11a (1.13 vs 0.98) but 3.3× and 27× worse in 11b/11c. Where FBRRT-CV's bias improvement at small `eps` (11c: 0.0073) was the headline of the previous section, FBRRT-MCZ has no such advantage — its bias *grows* relative to FBRRT-CV as `eps` shrinks.
+
+### Honest reading
+
+FBRRT-MCZ trades autograd through `v_policy` for a Monte-Carlo Z estimator. The trade is empirically bad at this codebase's scale:
+
+1. **Numerical fragility**: with `B = 4` (the FBRRT default) and `n_steps = 100`, every configuration produces NaN regardless of the sign of the α cross term. To run at all, `B ≥ 10` is needed; for stable results, `B ≥ 30`.
+2. **Variance penalty**: even at `B = 100` (25× the compute of `B = 4`), MCZ has 1.9–12× higher variance than FBRRT-CV and 1.6–13× higher than plain FBRRT. The 1/B² scaling means *very* large `B` would close the gap, but the compute multiplier scales the same way — for MCZ to match FBRRT-CV's variance at `B = 100`, you'd need `B ≈ 10³`–`10⁴`.
+3. **No bias advantage**: the bias improvement that FBRRT-CV showed in the small-`eps` regime (11c: 0.0073 vs FBRRT 0.020) is not reproduced by MCZ. MCZ's bias is **27× larger** than FBRRT-CV's in the same setting at `B = 100`.
+
+**The implementation is correct** (after the four fixes) and the variance does scale as theory predicts. But on a 2-D toy problem with `n_steps = 100` and a smooth value network, the gradient-based methods (which already give exact `Z = grad_x v` essentially for free) dominate.
+
+Possible regimes where FBRRT-MCZ could become competitive:
+
+- **Non-differentiable `v_policy`**: if `v_policy` is e.g. a tabular value, an environment-coupled lookup, or something else that breaks autograd, MCZ is a workable fallback while gradient methods fail outright.
+- **High dimension `d`**: gradient computation cost scales with `d`; the MC estimator's per-step cost is `O(M·B)` regardless. At very large `d`, the MC route may eventually be cheaper per unit variance.
+- **Larger `n_particles M` instead of `B`**: MCZ's variance only depends on `B`, but `M` interacts with the SMC resampling. Some `(M, B)` tradeoffs may favour MCZ that we haven't explored here.
+
+For now the recommendation stands at **FBRRT** (or **FBRRT-CV** when an EMA `v_policy` is available). FBRRT-MCZ is wired up as `sampling_method="fbrrt_mc_z"` if you want to revisit it under different conditions.
+
+---
+
 ## Equivalence Verification: ATD(λ=0) ≡ OSB
 
 With all fixes applied, ATD(λ=0) and OSB produce identical targets given the same seed. Across stages, they agree closely (differences are sampling noise from different seeds):

@@ -1,0 +1,106 @@
+{
+  "config": {
+    "TOTAL_STEPS": 1000,
+    "BS": 256,
+    "LR": 0.001,
+    "N_STEPS": 100,
+    "MC_SAMPLES": 10,
+    "DS_BATCH": 8,
+    "N_SEEDS": 1,
+    "include_t_zero": false,
+    "use_ema": false,
+    "smc_value": "k * value(x, t)",
+    "k_values": [
+      0.1,
+      0.3,
+      1.0
+    ],
+    "off_fracs": [
+      0.0,
+      0.1,
+      0.3
+    ],
+    "E_OPT": -2.5872042368695656
+  },
+  "by_cell": {
+    "k=0.1_f=0.0": {
+      "best_reward_values": [
+        -14.765254974365234
+      ],
+      "final_guided_mae_values": [
+        1.2712090015411377
+      ]
+    },
+    "k=0.1_f=0.1": {
+      "best_reward_values": [
+        -16.84429168701172
+      ],
+      "final_guided_mae_values": [
+        1.4557733535766602
+      ]
+    },
+    "k=0.1_f=0.3": {
+      "best_reward_values": [
+        -13.431660652160645
+      ],
+      "final_guided_mae_values": [
+        1.311307430267334
+      ]
+    },
+    "k=0.3_f=0.0": {
+      "best_reward_values": [
+        -12.480823516845703
+      ],
+      "final_guided_mae_values": [
+        1.6500177383422852
+      ]
+    },
+    "k=0.3_f=0.1": {
+      "best_reward_values": [
+        -14.475688934326172
+      ],
+      "final_guided_mae_values": [
+        2.028362274169922
+      ]
+    },
+    "k=0.3_f=0.3": {
+      "best_reward_values": [
+        -11.227042198181152
+      ],
+      "final_guided_mae_values": [
+        1.6185269355773926
+      ]
+    },
+    "k=1.0_f=0.0": {
+      "best_reward_values": [
+        -16.186748504638672
+      ],
+      "final_guided_mae_values": [
+        1.7527326345443726
+      ]
+    },
+    "k=1.0_f=0.1": {
+      "best_reward_values": [
+        -14.19450855255127
+      ],
+      "final_guided_mae_values": [
+        1.7951055765151978
+      ]
+    },
+    "k=1.0_f=0.3": {
+      "best_reward_values": [
+        -9.345006942749023
+      ],
+      "final_guided_mae_values": [
+        0.7259287238121033
+      ]
+    }
+  },
+  "off_policy_baseline": {
+    "best_reward_mean": -4.4697260618209835,
+    "best_reward_sd": 0.438684957232027,
+    "final_guided_mae_mean": 0.41762825548648835,
+    "final_guided_mae_sd": 0.1730775602841581,
+    "n_seeds": 10
+  }
+}

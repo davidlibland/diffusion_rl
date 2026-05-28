@@ -1,0 +1,26 @@
+{
+  "config": {
+    "TOTAL_STEPS": 3000,
+    "BS": 256,
+    "LR": 0.001,
+    "N_STEPS": 100,
+    "MC_SAMPLES": 10,
+    "OFF_POLICY_FRAC": 0.0,
+    "EMA_DECAY": 0.999,
+    "E_OPT": -2.5872042368695656
+  },
+  "summary": {
+    "offpolicy": {
+      "best_reward": -3.6532230377197266,
+      "final_reward": -5.766942024230957,
+      "final_guided_mae": 0.1889988332986831,
+      "final_base_mae": 0.9845564365386964
+    },
+    "single_seed_mc": {
+      "best_reward": -6.993804454803467,
+      "final_reward": -31.787023544311523,
+      "final_guided_mae": 3.762927770614624,
+      "final_base_mae": 3.533029079437256
+    }
+  }
+}

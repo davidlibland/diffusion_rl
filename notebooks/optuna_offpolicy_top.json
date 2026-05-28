@@ -1,0 +1,30 @@
+[
+  {
+    "trial": 0,
+    "lcb": -19.99856523650995,
+    "params": {
+      "lr": 0.00035747129226002455,
+      "loss_type": "quad",
+      "use_grad_decay": true,
+      "grad_decay": 4.207053950287933e-05
+    }
+  },
+  {
+    "trial": 6,
+    "lcb": -21.692413388102015,
+    "params": {
+      "lr": 0.0026690431824362526,
+      "loss_type": "quad",
+      "use_grad_decay": false
+    }
+  },
+  {
+    "trial": 14,
+    "lcb": -21.89823785617052,
+    "params": {
+      "lr": 0.0006495873533684493,
+      "loss_type": "quad",
+      "use_grad_decay": false
+    }
+  }
+]

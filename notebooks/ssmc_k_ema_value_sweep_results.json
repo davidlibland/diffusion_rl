@@ -1,0 +1,107 @@
+{
+  "config": {
+    "TOTAL_STEPS": 1000,
+    "BS": 256,
+    "LR": 0.001,
+    "N_STEPS": 100,
+    "MC_SAMPLES": 10,
+    "DS_BATCH": 8,
+    "N_SEEDS": 1,
+    "include_t_zero": false,
+    "use_ema_for_smc_value": true,
+    "ema_decay": 0.99,
+    "smc_value": "k * ema_value(x, t)",
+    "k_values": [
+      0.1,
+      0.3,
+      1.0
+    ],
+    "off_fracs": [
+      0.0,
+      0.1,
+      0.3
+    ],
+    "E_OPT": -2.5872042368695656
+  },
+  "by_cell": {
+    "k=0.1_f=0.0": {
+      "best_reward_values": [
+        -13.734512329101562
+      ],
+      "final_guided_mae_values": [
+        1.4775770902633667
+      ]
+    },
+    "k=0.1_f=0.1": {
+      "best_reward_values": [
+        -13.62895393371582
+      ],
+      "final_guided_mae_values": [
+        1.0618886947631836
+      ]
+    },
+    "k=0.1_f=0.3": {
+      "best_reward_values": [
+        -13.691314697265623
+      ],
+      "final_guided_mae_values": [
+        1.2922115325927734
+      ]
+    },
+    "k=0.3_f=0.0": {
+      "best_reward_values": [
+        -11.486084938049316
+      ],
+      "final_guided_mae_values": [
+        1.1770164966583252
+      ]
+    },
+    "k=0.3_f=0.1": {
+      "best_reward_values": [
+        -10.665786743164062
+      ],
+      "final_guided_mae_values": [
+        1.6924054622650146
+      ]
+    },
+    "k=0.3_f=0.3": {
+      "best_reward_values": [
+        -14.529836654663086
+      ],
+      "final_guided_mae_values": [
+        1.8120157718658447
+      ]
+    },
+    "k=1.0_f=0.0": {
+      "best_reward_values": [
+        -12.366422653198242
+      ],
+      "final_guided_mae_values": [
+        1.9537769556045532
+      ]
+    },
+    "k=1.0_f=0.1": {
+      "best_reward_values": [
+        -11.9761962890625
+      ],
+      "final_guided_mae_values": [
+        1.5221388339996338
+      ]
+    },
+    "k=1.0_f=0.3": {
+      "best_reward_values": [
+        -10.77912139892578
+      ],
+      "final_guided_mae_values": [
+        0.9829570055007936
+      ]
+    }
+  },
+  "off_policy_baseline": {
+    "best_reward_mean": -4.4697260618209835,
+    "best_reward_sd": 0.438684957232027,
+    "final_guided_mae_mean": 0.41762825548648835,
+    "final_guided_mae_sd": 0.1730775602841581,
+    "n_seeds": 10
+  }
+}

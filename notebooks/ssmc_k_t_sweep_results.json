@@ -1,0 +1,70 @@
+{
+  "config": {
+    "TOTAL_STEPS": 1000,
+    "BS": 256,
+    "LR": 0.001,
+    "N_STEPS": 100,
+    "MC_SAMPLES": 10,
+    "N_TRAJ": 2000,
+    "N_SEEDS": 2,
+    "include_t_zero": false,
+    "use_ema": false,
+    "smc_value": "k * h(x) * t",
+    "k_values": [
+      0.0,
+      0.03,
+      0.1,
+      0.3
+    ],
+    "E_OPT": -2.5872042368695656
+  },
+  "by_k": {
+    "0.0": {
+      "best_reward_values": [
+        -4.421758651733398,
+        -4.287142753601074
+      ],
+      "final_guided_mae_values": [
+        0.4985776841640472,
+        0.6241706013679504
+      ]
+    },
+    "0.03": {
+      "best_reward_values": [
+        -4.699328422546387,
+        -4.23097562789917
+      ],
+      "final_guided_mae_values": [
+        0.46565842628479,
+        0.5535550117492676
+      ]
+    },
+    "0.1": {
+      "best_reward_values": [
+        -5.83367919921875,
+        -8.29596996307373
+      ],
+      "final_guided_mae_values": [
+        0.6675823926925659,
+        0.8899575471878052
+      ]
+    },
+    "0.3": {
+      "best_reward_values": [
+        -10.716891288757324,
+        -9.156696319580078
+      ],
+      "final_guided_mae_values": [
+        0.918696939945221,
+        0.7429854273796082
+      ]
+    }
+  },
+  "off_policy_baseline": {
+    "best_reward_mean": -4.4697260618209835,
+    "best_reward_sd": 0.438684957232027,
+    "final_guided_mae_mean": 0.41762825548648835,
+    "final_guided_mae_sd": 0.1730775602841581,
+    "n_seeds": 10
+  }
+}

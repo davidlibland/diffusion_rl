@@ -1,0 +1,17 @@
+{
+  "config": {
+    "TOTAL_STEPS": 1000,
+    "BS": 256,
+    "LR": 0.001,
+    "MC_SAMPLES": 10,
+    "N_TRAJ_BIG": 256000,
+    "E_OPT": -2.5872042368695656,
+    "use_ema": false,
+    "seed": 0
+  },
+  "best_reward": -5.071146011352539,
+  "final_reward": -12.688013076782228,
+  "final_guided_mae": 0.5639494061470032,
+  "z_best_vs_offpolicy": -1.3709609586942266,
+  "z_mae_vs_offpolicy": 0.8454079802158367
+}
