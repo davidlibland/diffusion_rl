@@ -1,11 +1,12 @@
 from math import sqrt
 
 import torch
+from typing import Callable
 
 
 def integrate_sde(
     x0: float | torch.Tensor,
-    drift: callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+    drift: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
     a: float,
     n_steps: int = 1000,
 ):

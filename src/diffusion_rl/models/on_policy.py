@@ -57,10 +57,10 @@ class OnPolicySMCDataset(IterableDataset):
     def __init__(
         self,
         dim: int,
-        drift: callable[[torch.Tensor, torch.Tensor], torch.Tensor],
-        value: callable[[torch.Tensor, torch.Tensor], torch.Tensor],
-        smc_value: callable[[torch.Tensor, torch.Tensor], torch.Tensor],
-        reward: callable[[torch.Tensor], torch.Tensor],
+        drift: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+        value: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+        smc_value: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+        reward: Callable[[torch.Tensor], torch.Tensor],
         device,
         sampling_method,
         a: float = 1,
@@ -72,7 +72,7 @@ class OnPolicySMCDataset(IterableDataset):
         entropy_lambda=1.0,
         fbrrt_alpha=1.0,
         off_policy_frac: float = 0.0,
-        generating_function: callable[[int], "np.ndarray"] | None = None,
+        generating_function: Callable[[int], "np.ndarray"] | None = None,
         random_t: bool = False,
         include_t_zero: bool = True,
         shuffle=True,
@@ -159,7 +159,10 @@ class OnPolicySMCDataset(IterableDataset):
         _first_on_policy = True
         while True:
             if self._x is None or self._loc >= self._x.shape[0]:
-                # Free old buffers and flush MPS cache before regenerating
+                # Free old buffers and flush the accelerator cache before
+                # regenerating.  Guard on backend *availability*: torch.mps and
+                # torch.cuda both expose empty_cache(), but calling the wrong
+                # one (e.g. torch.mps.empty_cache() on a CUDA box) raises.
                 if self._x is not None:
                     del self._x, self._t, self._y
                     self._x = self._t = self._y = None
@@ -167,7 +170,9 @@ class OnPolicySMCDataset(IterableDataset):
                     import gc
 
                     gc.collect()
-                    if hasattr(torch.mps, "empty_cache"):
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                    elif torch.backends.mps.is_available():
                         torch.mps.empty_cache()
                     _first_on_policy = False
                 if self.sampling_method == "one_step_bootstrap":
@@ -1284,10 +1289,18 @@ def ancestral_mc_td_lambda(
     The TD(λ) blend is performed in linear space before logging:
         R_i = log( (1-λ)*exp(O_i) + λ*exp(M_i) )
     where:
-        O_i = V_i - log_tau(x*_i, t)          one-step bootstrap
-        M_i = log_Z_i + log_mean_exp_R_children  multi-step return
+        O_i = V_i - log_tau(x_i, t)           one-step bootstrap
+        M_i = log mean_{c in children(i)} [ w_c * rho_hat(c) ]   multi-step return
 
-    and target_i = R_i + log_tau(x_i, t).
+    with w_c = tau(c, t+dt)/tau(x_i, t) the child's incremental weight and
+    rho_hat(c) = H(c, t+dt)/tau(c, t+dt) its downstream return estimate (the
+    mean over c's resampled copies).  M_i is a mean of PRODUCTS over the
+    children of x_i -- NOT a product of means: the recursion is
+    rho(x,t) = E_q[w(x') rho(x', t+dt) | x_t = x], a single expectation of a
+    product, so the weight and the return must be multiplied per child before
+    averaging.  children(i) are the copies sharing x_i as resampling source,
+    grouped by the resample indices that *created* x_i.  Finally
+    target_i = R_i + log_tau(x_i, t).
 
     The t=0 generation (all particles at x=0) is NOT included in the output;
     the earliest stored generation is the post-resample particles at t=dt.
@@ -1378,40 +1391,61 @@ def ancestral_mc_td_lambda(
     all_tgt_list = [(R + log_tau_final).reshape(BN)]
 
     for gen in range(n_steps - 1, 0, -1):
-        ix_gen = fwd_ix[gen]  # (B, N, 1)
-        log_w_gen = fwd_log_w[gen]  # (B, N, 1)
-        x_post_prev = fwd_x_post[gen - 1]  # (B, N, dim)
+        # Two distinct resample-index tensors are needed here, on two different
+        # index spaces (both length N, which is why mixing them up is a silent
+        # bug):
+        #   ix_next = fwd_ix[gen]   maps post-resample slots@gen -> child index@gen.
+        #             R lives on the post-resample cloud x_post[gen], so this is
+        #             how we aggregate a child's copies into its return estimate.
+        #   ix_prev = fwd_ix[gen-1] maps slots@gen-1 -> child index@gen-1, i.e. it
+        #             groups the copies of each distinct parent of generation gen-1
+        #             (the same grouping used to duplicate-average V below).
+        # log_w_gen is indexed by the *pre-resample* children of gen (one per
+        # parent slot), aligned with x_post_prev: child p == SDE(x_post_prev[p]).
+        ix_next = fwd_ix[gen]  # (B, N, 1) slots@gen -> child index@gen
+        ix_prev = fwd_ix[gen - 1]  # (B, N, 1) copies of each distinct parent@gen-1
+        log_w_gen = fwd_log_w[gen]  # (B, N, 1) weight of child p (parent slot p)
+        x_post_prev = fwd_x_post[gen - 1]  # (B, N, dim) parents @ t_{gen-1}
 
         log_tau_post_prev = log_tau(flat(x_post_prev), tvec(fwd_ts[gen - 1])).reshape(
             batch_size, N, 1
         )
 
-        # V_i = log F(x*_i, t_gen) -- value at pre-resample particles of gen
-        # fwd_log_v[gen] holds value at x_next for step gen,
-        # which are the pre-resample particles at generation gen.
-        # Already averaged across duplicates during the forward pass. ✓
+        # One-step term: O_i = V_i - log_tau(x_i, t_gen).
+        # V = fwd_log_v[gen] is value at the child of slot i, already averaged
+        # across a parent's copies during the forward pass (so O is constant
+        # across copies of the same distinct parent). ✓
         V = fwd_log_v[gen]  # (B, N, 1)
-
-        # One-step term: O_i = V_i - log_tau(x*_i, t_gen)
-        # x*_i at gen == x_post_prev (same particles), so:
         O = V - log_tau_post_prev  # (B, N, 1)
 
-        # log Z_i = log mean_{j in d(i)} w_j  (arithmetic mean of weights)
-        log_Z, has_children = _log_mean_exp_by_ancestor(log_w_gen, ix_gen)
+        # Per-child downstream return rho_hat(child_p) = H(child_p)/tau(child_p),
+        # obtained by averaging R over the child's resampled copies.  R lives on
+        # x_post[gen], so we group by ix_next; the result is indexed by child p.
+        # has_desc[p] is False iff child p was never resampled (no descendants).
+        log_mean_R, has_desc = _log_mean_exp_by_ancestor(R, ix_next)  # on child index
 
-        # log mean_{j in d(i)} exp(R_j)
-        log_mean_R, _ = _log_mean_exp_by_ancestor(R, ix_gen)
+        # Per-child PRODUCT  w(child_p) * rho_hat(child_p).  This is a mean-of-
+        # products, NOT a product-of-means: the recursion is
+        #   rho(x,t) = E_q[ w(x') rho(x', t+dt) | x_t = x ],
+        # a single expectation of the product w*rho, so w and rho must be
+        # multiplied per child before averaging.  A childless child falls back to
+        # its one-step value; the product then collapses to exp(O_p) (the same
+        # w*rho with rho taken from value(child_p) instead of its descendants).
+        log_prod = torch.where(has_desc > 0, log_w_gen + log_mean_R, O)  # (B, N, 1)
 
-        # Multi-step term: M_i = log_Z_i + log_mean_exp_R
-        M = log_Z + log_mean_R  # (B, N, 1)
+        # Multi-step term: M_i = log mean over i's children of the product.
+        # i's children are the copies of distinct parent i, i.e. the slots sharing
+        # i as resampling source -- grouped by ix_prev.  Average the products on
+        # the parent's source support, then scatter back to every copy's slot so
+        # duplicate slots receive the same (lower-variance) multi-step return.
+        M_src, _ = _log_mean_exp_by_ancestor(log_prod, ix_prev)
+        M = torch.gather(M_src, 1, ix_prev)  # (B, N, 1)
 
-        # TD(λ) blend: R = log( (1-λ)*exp(O) + λ*exp(M) )
-        # Fall back to O for childless particles
-        R = torch.where(
-            has_children > 0,
-            _log_td_blend(O, M, lam),
-            O,
-        )  # (B, N, 1)
+        # TD(λ) blend in linear space: R = log( (1-λ)exp(O) + λ exp(M) ).
+        # Every slot has at least one child (itself), so M is always defined --
+        # no childless fallback needed at this level (it is handled per child
+        # in log_prod above).
+        R = _log_td_blend(O, M, lam)  # (B, N, 1)
 
         target = (R + log_tau_post_prev).reshape(BN)
 
@@ -1426,7 +1460,7 @@ def ancestral_mc_td_lambda(
     # Use the backward-propagated R from gen=1 to compute the target
     # for the initial particles, just like the other generations.
     # ------------------------------------------------------------------
-    ix_gen0 = fwd_ix[0]  # resampling at step 0
+    ix_next0 = fwd_ix[0]  # slots@0 -> child index@0 (aggregates R's copies)
     log_w_gen0 = fwd_log_w[0]
     x_init = torch.zeros(batch_size, N, dim, dtype=dtype, device=device)
     log_tau_init = log_tau(flat(x_init), tvec(0.0)).reshape(batch_size, N, 1)
@@ -1434,15 +1468,14 @@ def ancestral_mc_td_lambda(
     V0 = fwd_log_v[0]  # value at children of initial particles
     O0 = V0 - log_tau_init
 
-    log_Z0, has_children0 = _log_mean_exp_by_ancestor(log_w_gen0, ix_gen0)
-    log_mean_R0, _ = _log_mean_exp_by_ancestor(R, ix_gen0)
-    M0 = log_Z0 + log_mean_R0
+    # Per-child return and product, exactly as in the loop.  The initial
+    # particles were not produced by any resampling, so they are all distinct
+    # (each is its own group): there are no copies to average over and the
+    # multi-step term is simply the per-child product (childless -> one-step).
+    log_mean_R0, has_desc0 = _log_mean_exp_by_ancestor(R, ix_next0)
+    M0 = torch.where(has_desc0 > 0, log_w_gen0 + log_mean_R0, O0)
 
-    R0 = torch.where(
-        has_children0 > 0,
-        _log_td_blend(O0, M0, lam),
-        O0,
-    )
+    R0 = _log_td_blend(O0, M0, lam)
     target0 = (R0 + log_tau_init).reshape(BN)
 
     all_x_list.append(flat(x_init))

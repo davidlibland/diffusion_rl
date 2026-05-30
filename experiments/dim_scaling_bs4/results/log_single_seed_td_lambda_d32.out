@@ -1,0 +1,1127 @@
+=== CELL single_seed_td_lambda_d32  device=cuda  hidden=256 ===
+  reward_scale=0.1064 gap≈6.00 V00=-6.00 bias=-6.00
+/home/dlibland/dev/diffusion_rl/experiments/dim_scaling_bs4/sweep.py:325: ExperimentalWarning: Argument ``multivariate`` is an experimental feature. The interface can change in the future.
+  sampler = TPESampler(multivariate=True, group=True, seed=42)
+/home/dlibland/dev/diffusion_rl/experiments/dim_scaling_bs4/sweep.py:325: ExperimentalWarning: Argument ``group`` is an experimental feature. The interface can change in the future.
+  sampler = TPESampler(multivariate=True, group=True, seed=42)
+[I 2026-05-29 16:06:29,141] A new study created in RDB with name: single_seed_td_lambda_d32
+  PHASE 1 sweep: done=0 remaining=40
+Seed set to 1234
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+You are using a CUDA device ('NVIDIA GeForce RTX 3090 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  trial_0000: LCB=-6.582 [lr=3.6e-04 gd=2.5e-03 ns=17 mc=1 ofp=0.08 smc=kV_plus_ltr k=0.314 lam=0.30 rt=0] 1.3m
+[I 2026-05-29 16:07:47,906] Trial 0 finished with value: -6.5816345344109735 and parameters: {'lr': 0.0003574712922600243, 'use_grad_decay': True, 'grad_decay': 0.0024810409748678114, 'n_steps': 17, 'off_policy_frac': 0.07799726016810132, 'mc_samples': 1, 'smc_type': 'kV_plus_ltr', 'k': 0.31428808908401085, 'l': 0.004335281794951566, 'random_t': False, 'lambda_eff': 0.3042422429595377}. Best is trial 0 with value: -6.5816345344109735.
+Seed set to 1235
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  trial_0001: LCB=-6.814 [lr=6.0e-04 gd=2.8e-03 ns=17 mc=2 ofp=0.15 smc=k_r k=0.001 lam=0.07 rt=1] 1.3m
+[I 2026-05-29 16:09:05,514] Trial 1 finished with value: -6.814223464230645 and parameters: {'lr': 0.0005958389350068958, 'use_grad_decay': True, 'grad_decay': 0.0028016351587162596, 'n_steps': 17, 'off_policy_frac': 0.14607232426760908, 'mc_samples': 2, 'smc_type': 'k_r', 'k': 0.001378323745500718, 'random_t': True, 'lambda_eff': 0.06505159298527952}. Best is trial 0 with value: -6.5816345344109735.
+Seed set to 1236
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+[I 2026-05-29 16:09:13,774] Trial 2 pruned. 
+Seed set to 1237
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:09:22,072] Trial 3 pruned. 
+Seed set to 1238
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:09:46,683] Trial 4 pruned. 
+Seed set to 1239
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  trial_0005: LCB=-6.172 [lr=3.1e-04 gd=off ns=26 mc=6 ofp=0.36 smc=kt_r k=0.048 lam=0.52 rt=1] 1.2m
+[I 2026-05-29 16:10:57,976] Trial 5 finished with value: -6.1720372635770815 and parameters: {'lr': 0.0003081601704446808, 'use_grad_decay': False, 'n_steps': 26, 'off_policy_frac': 0.36480308916903204, 'mc_samples': 6, 'smc_type': 'kt_r', 'k': 0.0482871521617921, 'random_t': True, 'lambda_eff': 0.5227328293819941}. Best is trial 5 with value: -6.1720372635770815.
+Seed set to 1240
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+[I 2026-05-29 16:12:00,343] Trial 6 pruned. 
+Seed set to 1241
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  trial_0007: LCB=-6.785 [lr=2.4e-03 gd=3.1e-02 ns=50 mc=16 ofp=0.09 smc=k_Vema k=0.005 lam=0.01 rt=0] 1.3m
+[I 2026-05-29 16:13:19,166] Trial 7 finished with value: -6.7848351430293485 and parameters: {'lr': 0.0023619797107806506, 'use_grad_decay': True, 'grad_decay': 0.030608522106722488, 'n_steps': 50, 'off_policy_frac': 0.09328502944301792, 'mc_samples': 16, 'smc_type': 'k_Vema', 'k': 0.004828424974818324, 'ema_decay': 0.9422836710739994, 'random_t': False, 'lambda_eff': 0.006952130531190703}. Best is trial 5 with value: -6.1720372635770815.
+Seed set to 1242
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+[I 2026-05-29 16:13:44,070] Trial 8 pruned. 
+Seed set to 1243
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:14:56,430] Trial 9 pruned. 
+Seed set to 1244
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:16:03,117] Trial 10 pruned. 
+Seed set to 1245
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  trial_0011: LCB=-6.383 [lr=4.0e-04 gd=1.4e-03 ns=26 mc=1 ofp=0.05 smc=k_Vnograd k=0.347 lam=0.57 rt=0] 1.3m
+[I 2026-05-29 16:17:22,847] Trial 11 finished with value: -6.383097797903553 and parameters: {'lr': 0.000397146095059351, 'use_grad_decay': True, 'grad_decay': 0.0013883438990307452, 'n_steps': 26, 'off_policy_frac': 0.04685672973107821, 'mc_samples': 1, 'smc_type': 'k_Vnograd', 'k': 0.3469171436121372, 'random_t': False, 'lambda_eff': 0.5678394116103133}. Best is trial 5 with value: -6.1720372635770815.
+Seed set to 1246
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  trial_0012: LCB=-6.220 [lr=2.3e-04 gd=2.7e-04 ns=21 mc=3 ofp=0.27 smc=k_Vnograd k=0.250 lam=0.74 rt=0] 1.3m
+[I 2026-05-29 16:18:41,363] Trial 12 finished with value: -6.219621248450344 and parameters: {'lr': 0.0002266084883138238, 'use_grad_decay': True, 'grad_decay': 0.0002659787410273229, 'n_steps': 21, 'off_policy_frac': 0.2654252646716555, 'mc_samples': 3, 'smc_type': 'k_Vnograd', 'k': 0.24974197003592086, 'random_t': False, 'lambda_eff': 0.7421792496143593}. Best is trial 5 with value: -6.1720372635770815.
+Seed set to 1247
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+[I 2026-05-29 16:19:05,900] Trial 13 pruned. 
+Seed set to 1248
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  trial_0014: LCB=-6.270 [lr=4.7e-04 gd=2.0e-04 ns=16 mc=3 ofp=0.38 smc=kt_r k=0.520 lam=0.89 rt=0] 1.3m
+[I 2026-05-29 16:20:25,074] Trial 14 finished with value: -6.269881767019462 and parameters: {'lr': 0.0004683756894025495, 'use_grad_decay': True, 'grad_decay': 0.00019522436967428294, 'n_steps': 16, 'off_policy_frac': 0.38051853646012235, 'mc_samples': 3, 'smc_type': 'kt_r', 'k': 0.5202529949683595, 'random_t': False, 'lambda_eff': 0.8900549405272193}. Best is trial 5 with value: -6.1720372635770815.
+Seed set to 1249
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+[I 2026-05-29 16:20:32,635] Trial 15 pruned. 
+Seed set to 1250
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:21:36,938] Trial 16 pruned. 
+Seed set to 1251
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  trial_0017: LCB=-6.299 [lr=4.7e-04 gd=off ns=25 mc=11 ofp=0.43 smc=kV_plus_ltr k=0.474 lam=0.66 rt=1] 1.2m
+[I 2026-05-29 16:22:47,505] Trial 17 finished with value: -6.298579276179024 and parameters: {'lr': 0.0004653401705605526, 'use_grad_decay': False, 'n_steps': 25, 'off_policy_frac': 0.4314272194565335, 'mc_samples': 11, 'smc_type': 'kV_plus_ltr', 'k': 0.47388286802216556, 'l': 0.001095311489061849, 'random_t': True, 'lambda_eff': 0.6635058835247571}. Best is trial 5 with value: -6.1720372635770815.
+Seed set to 1252
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  trial_0018: LCB=-6.262 [lr=2.0e-04 gd=off ns=39 mc=6 ofp=0.31 smc=k_Vnograd k=0.188 lam=0.32 rt=1] 1.2m
+[I 2026-05-29 16:23:58,404] Trial 18 finished with value: -6.262226907710747 and parameters: {'lr': 0.00020265372427867234, 'use_grad_decay': False, 'n_steps': 39, 'off_policy_frac': 0.307772404364192, 'mc_samples': 6, 'smc_type': 'k_Vnograd', 'k': 0.18774178436226732, 'random_t': True, 'lambda_eff': 0.315114972883831}. Best is trial 5 with value: -6.1720372635770815.
+Seed set to 1253
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  trial_0019: LCB=-6.096 [lr=1.6e-04 gd=off ns=17 mc=3 ofp=0.22 smc=kV_plus_ltr k=0.624 lam=0.62 rt=0] 1.2m
+[I 2026-05-29 16:25:07,645] Trial 19 finished with value: -6.0964131393157155 and parameters: {'lr': 0.00016303460055939716, 'use_grad_decay': False, 'n_steps': 17, 'off_policy_frac': 0.21579705778516367, 'mc_samples': 3, 'smc_type': 'kV_plus_ltr', 'k': 0.6239194543150096, 'l': 0.043103016522398806, 'random_t': False, 'lambda_eff': 0.6230393586836867}. Best is trial 19 with value: -6.0964131393157155.
+Seed set to 1254
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+[I 2026-05-29 16:25:27,842] Trial 20 pruned. 
+Seed set to 1255
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:25:50,510] Trial 21 pruned. 
+Seed set to 1256
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:25:57,461] Trial 22 pruned. 
+Seed set to 1257
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  trial_0023: LCB=-6.168 [lr=4.3e-04 gd=off ns=30 mc=6 ofp=0.37 smc=k_r k=0.030 lam=0.55 rt=1] 1.1m
+[I 2026-05-29 16:27:02,564] Trial 23 finished with value: -6.168137482334011 and parameters: {'lr': 0.0004334354370517114, 'use_grad_decay': False, 'n_steps': 30, 'off_policy_frac': 0.3728125320565935, 'mc_samples': 6, 'smc_type': 'k_r', 'k': 0.029777094030185424, 'random_t': True, 'lambda_eff': 0.5511197476696057}. Best is trial 19 with value: -6.0964131393157155.
+Seed set to 1258
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+[I 2026-05-29 16:27:22,370] Trial 24 pruned. 
+Seed set to 1259
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:27:42,429] Trial 25 pruned. 
+Seed set to 1260
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:28:03,167] Trial 26 pruned. 
+Seed set to 1261
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:28:23,674] Trial 27 pruned. 
+Seed set to 1262
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:29:22,583] Trial 28 pruned. 
+Seed set to 1263
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:30:21,226] Trial 29 pruned. 
+Seed set to 1264
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:30:29,388] Trial 30 pruned. 
+Seed set to 1265
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:31:47,712] Trial 31 pruned. 
+Seed set to 1266
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:32:11,163] Trial 32 pruned. 
+Seed set to 1267
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:32:34,375] Trial 33 pruned. 
+Seed set to 1268
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:32:42,551] Trial 34 pruned. 
+Seed set to 1269
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:32:50,959] Trial 35 pruned. 
+Seed set to 1270
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:34:02,978] Trial 36 pruned. 
+Seed set to 1271
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:34:29,466] Trial 37 pruned. 
+Seed set to 1272
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:34:56,326] Trial 38 pruned. 
+Seed set to 1273
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+[I 2026-05-29 16:35:22,844] Trial 39 pruned. 
+  top-3: t19=-6.10, t23=-6.17, t5=-6.17
+Seed set to 1000
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=5000` reached.
+Seed set to 1001
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+Seed set to 1002
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+Seed set to 1003
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+Seed set to 1004
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  confirm t19: LCB -6.182±0.050  best -5.719
+Seed set to 1000
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+Seed set to 1001
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+Seed set to 1002
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+Seed set to 1003
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+Seed set to 1004
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  confirm t23: LCB -6.257±0.039  best -5.831
+Seed set to 1000
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+Seed set to 1001
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+Seed set to 1002
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+Seed set to 1003
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+Seed set to 1004
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=5000` reached.
+  confirm t5: LCB -6.247±0.031  best -5.831
+  winner t19: LCB -6.182  [lr=1.6e-04 gd=off ns=17 mc=3 ofp=0.22 smc=kV_plus_ltr k=0.624 lam=0.62 rt=0]
+Seed set to 20240
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.602                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=30000` reached.
+  CONVERGED plateau=-6.142 conv@19999 final_lcb=-6.212 (6.0m)
+  saved /home/dlibland/dev/diffusion_rl/experiments/dim_scaling_bs4/results/single_seed_td_lambda_d32.json  (52.4 min total)

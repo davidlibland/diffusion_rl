@@ -6,6 +6,7 @@ from torch.utils.data import IterableDataset
 
 from diffusion_rl.algorithms.integration import integrate_sde
 from diffusion_rl.losses.log_quadratic_bregman import log_quadratic_bregman_divergence
+from typing import Callable
 
 
 class InterpolatingNumpyDataset(IterableDataset):
@@ -26,7 +27,7 @@ class InterpolatingNumpyDataset(IterableDataset):
 
     def __init__(
         self,
-        generating_function: callable[[int], np.ndarray],
+        generating_function: Callable[[int], np.ndarray],
         a: float = 1,
         batch_size: int = 1024,
     ):

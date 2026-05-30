@@ -26,6 +26,7 @@ dependencies = [
   "matplotlib",
   "lightning",
   "tensorboard",
+  "optuna",  # hyperparameter sweeps (notebooks/optuna_*.py)
   "einops",
   "scikit-learn",
   "litdata",
