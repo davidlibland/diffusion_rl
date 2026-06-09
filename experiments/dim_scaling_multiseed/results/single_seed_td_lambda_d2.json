@@ -1,0 +1,243 @@
+{
+ "method": "single_seed_td_lambda",
+ "dim": 2,
+ "hparams": {
+  "off_policy_frac": 0.19790665201371332,
+  "lr": 0.0001637192595584526,
+  "use_grad_decay": false,
+  "n_steps": 22,
+  "mc_samples": 4,
+  "k": 0.17446353312160354,
+  "lambda_eff": 0.32778811342967723,
+  "smc_type": "k_r",
+  "random_t": true
+ },
+ "steps": 15000,
+ "seeds": [
+  {
+   "seed": 0,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -1.0013536110358117,
+   "V00": -6.015073378744379
+  },
+  {
+   "seed": 1,
+   "plateau": -55.81483554840088,
+   "best": -44.796138763427734,
+   "final": -62.0341911315918,
+   "opt_reward": -1.1072791498693033,
+   "V00": -5.92131256899688,
+   "regret": -54.70755639853157,
+   "n_val": 30
+  },
+  {
+   "seed": 2,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -1.0807897580642871,
+   "V00": -6.101310034634703
+  },
+  {
+   "seed": 3,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -1.00207437891595,
+   "V00": -6.0124401310921325
+  },
+  {
+   "seed": 4,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -0.9983367921081112,
+   "V00": -5.95280510234227
+  },
+  {
+   "seed": 5,
+   "plateau": -152.18867790699005,
+   "best": -38.09092712402344,
+   "final": -96.30663299560547,
+   "opt_reward": -1.0149374176738204,
+   "V00": -6.081421672975797,
+   "regret": -151.17374048931623,
+   "n_val": 30
+  },
+  {
+   "seed": 6,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -0.9871317146096726,
+   "V00": -6.147713430571608
+  },
+  {
+   "seed": 7,
+   "plateau": -46986.62438964844,
+   "best": -1667.108154296875,
+   "final": -44580.125,
+   "opt_reward": -0.9938555804955168,
+   "V00": -5.987406468172417,
+   "regret": -46985.63053406794,
+   "n_val": 30
+  },
+  {
+   "seed": 8,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -1.0032186644602374,
+   "V00": -5.967206652105216
+  },
+  {
+   "seed": 9,
+   "plateau": -56.88509625196457,
+   "best": -41.67504119873047,
+   "final": -46.68372344970703,
+   "opt_reward": -1.0585199402008827,
+   "V00": -6.141103824029258,
+   "regret": -55.82657631176369,
+   "n_val": 30
+  },
+  {
+   "seed": 10,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -0.9863792629291472,
+   "V00": -6.1010757560344855
+  },
+  {
+   "seed": 11,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -1.0230635232898821,
+   "V00": -6.018722270559687
+  },
+  {
+   "seed": 12,
+   "plateau": -113.17522650957108,
+   "best": -59.65460968017578,
+   "final": -90.420166015625,
+   "opt_reward": -1.0480543615519784,
+   "V00": -6.194657692817071,
+   "regret": -112.1271721480191,
+   "n_val": 30
+  },
+  {
+   "seed": 13,
+   "plateau": -84.80004501342773,
+   "best": -56.617984771728516,
+   "final": -63.3121337890625,
+   "opt_reward": -1.0149532514705761,
+   "V00": -5.810303188511613,
+   "regret": -83.78509176195716,
+   "n_val": 30
+  },
+  {
+   "seed": 14,
+   "plateau": -182.64686465263367,
+   "best": -64.12763977050781,
+   "final": -177.68431091308594,
+   "opt_reward": -1.0371796953637076,
+   "V00": -5.972472930682379,
+   "regret": -181.60968495726996,
+   "n_val": 30
+  },
+  {
+   "seed": 15,
+   "plateau": -2535.759750366211,
+   "best": -509.16375732421875,
+   "final": -553.0558471679688,
+   "opt_reward": -1.0370268059795478,
+   "V00": -5.917291115051274,
+   "regret": -2534.7227235602313,
+   "n_val": 30
+  },
+  {
+   "seed": 16,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -0.9971744402793274,
+   "V00": -5.889703660538037
+  },
+  {
+   "seed": 17,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -0.9997565832324369,
+   "V00": -5.799420600850148
+  },
+  {
+   "seed": 18,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -1.0053884802865363,
+   "V00": -6.01315616977264
+  },
+  {
+   "seed": 19,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -0.9969950187774892,
+   "V00": -5.971719151261823
+  },
+  {
+   "seed": 20,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -0.9978572401518547,
+   "V00": -5.871449243628342
+  },
+  {
+   "seed": 21,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -1.005807175663685,
+   "V00": -6.016313323700075
+  },
+  {
+   "seed": 22,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -0.9939724470321217,
+   "V00": -6.138960163612962
+  },
+  {
+   "seed": 23,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -0.965972858926448,
+   "V00": -6.031470302864845
+  },
+  {
+   "seed": 24,
+   "plateau": -63.57473814487457,
+   "best": -33.980613708496094,
+   "final": -53.42173767089844,
+   "opt_reward": -1.014116848599216,
+   "V00": -5.914945914061663,
+   "regret": -62.56062129627536,
+   "n_val": 30
+  },
+  {
+   "seed": 25,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -0.9811195147731337,
+   "V00": -6.013003823832068
+  },
+  {
+   "seed": 26,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -1.0001406273020341,
+   "V00": -5.968217989746339
+  },
+  {
+   "seed": 27,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -0.996368873983759,
+   "V00": -6.001963251799108
+  },
+  {
+   "seed": 28,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -0.9857778181268043,
+   "V00": -5.956041075065497
+  },
+  {
+   "seed": 29,
+   "error": "RuntimeError: Loss is not finite",
+   "opt_reward": -0.9940935612659252,
+   "V00": -6.023492564950866
+  }
+ ],
+ "summary": {
+  "n": 9,
+  "regret_mean": -5580.238188999034,
+  "regret_median": -112.1271721480191,
+  "regret_std": 15547.942882951216,
+  "regret_sem": 5182.647627650405,
+  "plateau_mean": -5581.27440267139,
+  "opt_mean": -1.0109565132139735
+ }
+}

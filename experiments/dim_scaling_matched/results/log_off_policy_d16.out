@@ -1,0 +1,200 @@
+
+
+===== launch 09:59:26 =====
+=== off_policy_d16 [matched]  device=cuda  hidden=256  done=0/10 ===
+  hparams={'off_policy_frac': 0.0, 'lr': 0.0001126364544163283, 'use_grad_decay': False}
+Seed set to 0
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+You are using a CUDA device ('NVIDIA GeForce RTX 3090 Ti') that has Tensor Cores. To properly utilize them, you should set `torch.set_float32_matmul_precision('medium' | 'high')` which will trade-off precision for performance. For more details, read https://pytorch.org/docs/stable/generated/torch.set_float32_matmul_precision.html#torch.set_float32_matmul_precision
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.586                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/utilities/_pytree.py:21: `isinstance(treespec, LeafSpec)` is deprecated, use `isinstance(treespec, TreeSpec) and treespec.is_leaf()` instead.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'train_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+/home/dlibland/dev/diffusion_rl/.venv/lib/python3.12/site-packages/lightning/pytorch/trainer/connectors/data_connector.py:434: The 'val_dataloader' does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` to `num_workers=31` in the `DataLoader` to improve performance.
+`Trainer.fit` stopped: `max_steps=15000` reached.
+  seed  0: plateau=-6.997 regret=-2.018  (167s)
+Seed set to 1
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.586                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=15000` reached.
+  seed  1: plateau=-7.509 regret=-3.097  (204s)
+Seed set to 2
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.586                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=15000` reached.
+  seed  2: plateau=-7.459 regret=-1.348  (203s)
+Seed set to 3
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.586                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=15000` reached.
+  seed  3: plateau=-8.448 regret=-2.808  (204s)
+Seed set to 4
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.586                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=15000` reached.
+  seed  4: plateau=-8.661 regret=-2.647  (203s)
+Seed set to 5
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.586                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=15000` reached.
+  seed  5: plateau=-6.523 regret=-1.964  (204s)
+Seed set to 6
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.586                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=15000` reached.
+  seed  6: plateau=-8.246 regret=-2.756  (205s)
+Seed set to 7
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.586                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=15000` reached.
+  seed  7: plateau=-7.762 regret=-2.500  (204s)
+Seed set to 8
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.586                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=15000` reached.
+  seed  8: plateau=-6.116 regret=-1.832  (206s)
+Seed set to 9
+GPU available: True (cuda), used: True
+TPU available: False, using: 0 TPU cores
+💡 Tip: For seamless cloud logging and experiment tracking, try installing [litlogger](https://pypi.org/project/litlogger/) to enable LitLogger, which logs metrics and artifacts automatically to the Lightning Experiments platform.
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+┏━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━┓
+┃   ┃ Name         ┃ Type         ┃ Params ┃ Mode  ┃ FLOPs ┃
+┡━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━┩
+│ 0 │ value_module │ ValueNetwork │  2.9 M │ train │     0 │
+└───┴──────────────┴──────────────┴────────┴───────┴───────┘
+Trainable params: 2.9 M                                                         
+Non-trainable params: 0                                                         
+Total params: 2.9 M                                                             
+Total estimated model params size (MB): 11.586                                  
+Modules in train mode: 45                                                       
+Modules in eval mode: 0                                                         
+Total FLOPs: 0                                                                  
+`Trainer.fit` stopped: `max_steps=15000` reached.
+  seed  9: plateau=-7.996 regret=-2.043  (201s)
+DONE off_policy_d16: {'n': 10, 'regret_mean': -2.3012619955238787, 'regret_median': -2.2716491051381835, 'regret_std': 0.5420853230325025, 'regret_sem': 0.1714224306930842, 'plateau_mean': -7.5717131108045574, 'opt_mean': -5.270451115280679}

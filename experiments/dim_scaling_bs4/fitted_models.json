@@ -1,0 +1,449 @@
+{
+  "off_policy": {
+    "lr": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": -9.091345143177724,
+      "model": "const",
+      "slope": [
+        -8.284522290630719,
+        -0.38799977608181735
+      ],
+      "loo_const": 1.6105243839723369,
+      "loo_slope": 2.2423635042033605,
+      "noise": true
+    },
+    "use_grad_decay": {
+      "kind": "bool",
+      "p_true": 0.2,
+      "value": false
+    },
+    "grad_decay": {
+      "kind": "cont",
+      "n_points": 3,
+      "n_dims": 2,
+      "transform": "fwd",
+      "const": -10.076162836510642,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    }
+  },
+  "single_seed_mc": {
+    "lr": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": -8.652412742849695,
+      "model": "const",
+      "slope": [
+        -8.402681947124242,
+        -0.12009512685012175
+      ],
+      "loo_const": 1.1204108638932058,
+      "loo_slope": 1.0924599385840643,
+      "noise": true
+    },
+    "n_steps": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": 37.0,
+      "model": "const",
+      "slope": [
+        38.0,
+        -0.48089834696298783
+      ],
+      "loo_const": 239.51666666666668,
+      "loo_slope": 407.35,
+      "noise": true
+    },
+    "mc_samples": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": 0.6931471805599453,
+      "model": "const",
+      "slope": [
+        0.31617553813858573,
+        0.18128503969235435
+      ],
+      "loo_const": 2.196359744487854,
+      "loo_slope": 3.711704234066481,
+      "noise": true
+    },
+    "off_policy_frac": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": 0.47771659001306044,
+      "model": "const",
+      "slope": [
+        -0.6494901523245435,
+        0.5420718590756883
+      ],
+      "loo_const": 4.15225553962971,
+      "loo_slope": 6.4167482764207815,
+      "noise": true
+    },
+    "k": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": -3.235750564470589,
+      "model": "slope",
+      "slope": [
+        -1.9519267541732208,
+        -0.6173887481637288
+      ],
+      "loo_const": 7.313120753563397,
+      "loo_slope": 6.1881208840470405,
+      "noise": false
+    },
+    "smc_type": {
+      "kind": "cat",
+      "mode": "kt_r",
+      "votes": {
+        "k_Vema": 8,
+        "kt_r": 16,
+        "k_Vnograd": 6
+      }
+    },
+    "use_grad_decay": {
+      "kind": "bool",
+      "p_true": 0.13333333333333333,
+      "value": false
+    },
+    "random_t": {
+      "kind": "bool",
+      "p_true": 0.4,
+      "value": false
+    },
+    "grad_decay": {
+      "kind": "cont",
+      "n_points": 2,
+      "n_dims": 2,
+      "transform": "fwd",
+      "const": -10.272872116056757,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    },
+    "ema_decay": {
+      "kind": "cont",
+      "n_points": 4,
+      "n_dims": 2,
+      "transform": "fwd",
+      "const": -2.536246434730803,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    }
+  },
+  "single_seed_td_lambda": {
+    "lr": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": -8.71735742895931,
+      "model": "const",
+      "slope": [
+        -8.72760278629687,
+        0.004926975407677317
+      ],
+      "loo_const": 0.3659308558406096,
+      "loo_slope": 0.5098189560969312,
+      "noise": true
+    },
+    "n_steps": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": 21.5,
+      "model": "const",
+      "slope": [
+        22.0,
+        -0.24044917348149392
+      ],
+      "loo_const": 78.38333333333334,
+      "loo_slope": 163.03333333333333,
+      "noise": true
+    },
+    "mc_samples": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": 1.354025100551105,
+      "model": "const",
+      "slope": [
+        2.1779843170521875,
+        -0.3962406251802891
+      ],
+      "loo_const": 1.2011215827932196,
+      "loo_slope": 1.1419012511590185,
+      "noise": true
+    },
+    "off_policy_frac": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": 0.3699135357033674,
+      "model": "slope",
+      "slope": [
+        -0.8193676736373774,
+        0.5719233676461073
+      ],
+      "loo_const": 2.1814539858251436,
+      "loo_slope": 1.8569489260112704,
+      "noise": false
+    },
+    "k": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": -1.7460395384246854,
+      "model": "const",
+      "slope": [
+        -1.3421191257541925,
+        -0.19424465875784797
+      ],
+      "loo_const": 1.647687940266264,
+      "loo_slope": 4.473149222591758,
+      "noise": true
+    },
+    "lambda_eff": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": 0.20519595985879455,
+      "model": "slope",
+      "slope": [
+        -1.179907271263455,
+        0.6660938542197831
+      ],
+      "loo_const": 6.429540846438649,
+      "loo_slope": 4.8847733175632,
+      "noise": false
+    },
+    "smc_type": {
+      "kind": "cat",
+      "mode": "k_r",
+      "votes": {
+        "k_r": 10,
+        "kV_plus_ltr": 4,
+        "k_Vnograd": 9,
+        "kt_r": 5,
+        "k_Vema": 2
+      }
+    },
+    "use_grad_decay": {
+      "kind": "bool",
+      "p_true": 0.43333333333333335,
+      "value": false
+    },
+    "random_t": {
+      "kind": "bool",
+      "p_true": 0.8,
+      "value": true
+    },
+    "grad_decay": {
+      "kind": "cont",
+      "n_points": 7,
+      "n_dims": 3,
+      "transform": "fwd",
+      "const": -9.942919069447232,
+      "model": "const",
+      "slope": null,
+      "loo_const": 1.8251181908898817,
+      "loo_slope": 27.27722930064158,
+      "noise": true
+    },
+    "l": {
+      "kind": "cont",
+      "n_points": 2,
+      "n_dims": 2,
+      "transform": "fwd",
+      "const": -3.1441622954027793,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    },
+    "ema_decay": {
+      "kind": "cont",
+      "n_points": 1,
+      "n_dims": 1,
+      "transform": "fwd",
+      "const": -2.570805993239423,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    }
+  },
+  "ancestral_mc_td_lambda": {
+    "lr": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": -8.894332439471665,
+      "model": "const",
+      "slope": [
+        -8.791718834941111,
+        -0.049346712794656813
+      ],
+      "loo_const": 0.828254656831852,
+      "loo_slope": 1.1404633464552245,
+      "noise": true
+    },
+    "n_steps": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": 32.5,
+      "model": "const",
+      "slope": [
+        27.0,
+        2.6449409082964332
+      ],
+      "loo_const": 288.21666666666664,
+      "loo_slope": 702.3166666666667,
+      "noise": true
+    },
+    "mc_samples": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": 1.0986122886681098,
+      "model": "const",
+      "slope": [
+        0.5038202552311916,
+        0.2860345056665682
+      ],
+      "loo_const": 1.8650470595682487,
+      "loo_slope": 3.848550395316844,
+      "noise": true
+    },
+    "off_policy_frac": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": 0.7506029572205888,
+      "model": "const",
+      "slope": [
+        0.9303282055363826,
+        -0.08642957482257779
+      ],
+      "loo_const": 1.0078174905516164,
+      "loo_slope": 1.348665349496751,
+      "noise": true
+    },
+    "k": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": -4.090743001382277,
+      "model": "const",
+      "slope": [
+        -3.2268004678356363,
+        -0.4154685362535953
+      ],
+      "loo_const": 5.490299926405929,
+      "loo_slope": 13.64303453129554,
+      "noise": true
+    },
+    "lambda_eff": {
+      "kind": "cont",
+      "n_points": 15,
+      "n_dims": 4,
+      "transform": "fwd",
+      "const": 0.9142504987901032,
+      "model": "const",
+      "slope": [
+        2.427019943643737,
+        -0.7274883253662292
+      ],
+      "loo_const": 4.356620269131236,
+      "loo_slope": 9.051239165539606,
+      "noise": true
+    },
+    "smc_type": {
+      "kind": "cat",
+      "mode": "k_Vnograd",
+      "votes": {
+        "k_Vnograd": 8,
+        "kV_plus_ltr": 6,
+        "k_Vema": 7,
+        "kt_r": 6,
+        "k_r": 3
+      }
+    },
+    "use_grad_decay": {
+      "kind": "bool",
+      "p_true": 0.16666666666666666,
+      "value": false
+    },
+    "grad_decay": {
+      "kind": "cont",
+      "n_points": 2,
+      "n_dims": 1,
+      "transform": "fwd",
+      "const": -8.555036923633358,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    },
+    "l": {
+      "kind": "cont",
+      "n_points": 3,
+      "n_dims": 2,
+      "transform": "fwd",
+      "const": -1.939798535009638,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    },
+    "ema_decay": {
+      "kind": "cont",
+      "n_points": 3,
+      "n_dims": 3,
+      "transform": "fwd",
+      "const": -2.568472628950261,
+      "model": "const",
+      "slope": null,
+      "loo_const": 0.2695940728608404,
+      "loo_slope": 0.05745543293570784,
+      "noise": false
+    }
+  }
+}
