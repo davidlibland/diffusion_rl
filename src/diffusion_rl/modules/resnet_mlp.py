@@ -129,7 +129,14 @@ class ResNetMLP(nn.Module):
     def _init_weights(self) -> None:
         """Initialize input/output projection weights."""
         nn.init.xavier_uniform_(self.input_proj.weight)
-        nn.init.zeros_(self.input_proj.bias)
+        # input_proj.bias must NOT be zero: with a zero bias the pre-norm
+        # features at x=0 are exactly zero, and the LayerNorm (eps=1e-6)
+        # Jacobian ~1/sqrt(eps) per layer compounds to a ~3e7 input-gradient
+        # at the origin AT INIT (trained nets move the bias and are fine).
+        # Anything that differentiates the freshly-initialised network at
+        # x=0 -- e.g. gradient-guided sampling drifts seeded at the origin --
+        # gets catapulted.  A small non-zero bias removes the singularity.
+        nn.init.normal_(self.input_proj.bias, std=0.1)
         # Small initialization for output to help with initial training
         nn.init.xavier_uniform_(self.output_proj.weight, gain=0.1)
         nn.init.zeros_(self.output_proj.bias)

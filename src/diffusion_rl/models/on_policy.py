@@ -299,7 +299,14 @@ class OnPolicySMCDataset(IterableDataset):
                                 n_particles=self.mc_samples_per_step,
                                 branch=self.branch,
                                 f=self.drift,
-                                v_policy=self.value,
+                                # smc_value plays the role of the FROZEN policy
+                                # net (e.g. an EMA shadow) -- the regime the
+                                # residual control variate exists for.  Pass
+                                # smc_value=value to recover the old behaviour
+                                # (v_policy == v_target, zero residual, i.e.
+                                # equivalent to plain "fbrrt").  Must be
+                                # differentiable w.r.t. x.
+                                v_policy=self.smc_value,
                                 v_target=self.value,
                                 reward=self.reward,
                                 d=self.dim,
@@ -1590,6 +1597,21 @@ def _entropy_regression_weights(values: Tensor, entropy_lambda: float) -> Tensor
     return w / w.mean().clamp_min(1e-30)
 
 
+def _clip_control(u: Tensor, max_norm: float | None) -> Tensor:
+    """Per-particle norm-clip of the FBRRT sampling control u (last dim = d).
+
+    A guard against pathological value-network gradients (e.g. the LayerNorm
+    init singularity at x=0, or mid-training spikes) catapulting particles.
+    Inactive for healthy gradients (default threshold is generous).  Clipping
+    the SAMPLING control does not bias the targets because the backward pass
+    uses the actually-applied control in the Girsanov driver term.
+    """
+    if max_norm is None:
+        return u
+    norm = u.norm(dim=-1, keepdim=True)
+    return u * (max_norm / norm.clamp_min(max_norm)).clamp(max=1.0)
+
+
 def _resample_fbrrt(weights: Tensor, n: int, method: str = "systematic") -> Tensor:
     """Return n indices sampled proportional to weights."""
     if method == "multinomial":
@@ -1618,6 +1640,7 @@ def fbrrt_smc_grad_control(
     device: torch.device | None = None,
     dtype: torch.dtype = torch.float32,
     resample_method: str = "systematic",
+    drift_grad_clip: float | None = 100.0,
 ) -> FBRRTSamples:
     """
     FBRRT-SMC where control = grad_x v_theta is derived automatically.
@@ -1629,22 +1652,26 @@ def fbrrt_smc_grad_control(
     sampling-drift gradient (the survivors ARE the next parents, at the same
     points and time).  Only the t=0 seeds need a dedicated initial call.
 
-    The forward SDE uses an interpolated drift:
-        dX_t = (f + alpha * 2a * grad_x v_theta) dt + sqrt(2a) dW_t
+    The forward SDE uses an interpolated, norm-clipped drift:
+        dX_t = (f + 2a * u) dt + sqrt(2a) dW_t,
+        u    = clip(alpha * grad_x v_theta, drift_grad_clip)
 
     alpha=1 samples under the optimal (on-policy) drift; alpha=0 samples
-    under the base drift f.
+    under the base drift f.  The clip is a guard against pathological value
+    gradients (notably: a freshly-initialised ValueNetwork used to have a ~3e7
+    input-gradient at x=0 -- exactly where all particles start) and is
+    inactive for healthy gradients.
 
-    The Girsanov correction from K back to f^mu = f + 2a*grad_x v is:
-        D_t = (f^mu - K) / sqrt(2a) = (1 - alpha) * sqrt(2a) * grad_x v
+    The BSDE driver uses the ACTUALLY-APPLIED control u (Hawkins et al. 2020
+    Thm 3.2 allows an arbitrary sampling drift K; the Girsanov term must
+    reflect the drift that generated the data, so clipping stays exact):
 
-    giving BSDE driver:
-        -1/2 |Z|^2 + Z * D_t
-        = -a|grad_x v|^2 + (1-alpha)*2a|grad_x v|^2
-        = a(1 - 2*alpha) * |grad_x v|^2
+        driver_b = ( a*|g_b|^2 - 2a * u_parent . g_b ) * dt,
+        g_b = grad_x v_theta(child_b, t_{i+1})
 
-    Special cases:
-        alpha=1: driver = -a |grad_x v|^2 * dt          (on-policy, D_t=0)
+    which for an unclipped on-grid control (u = alpha*g) reduces to the
+    familiar  a*(1 - 2*alpha) * |grad_x v|^2 * dt:
+        alpha=1: driver = -a |grad_x v|^2 * dt          (on-policy)
         alpha=0: driver = +a |grad_x v|^2 * dt          (base drift)
         alpha=0.5: driver = 0
 
@@ -1721,7 +1748,10 @@ def fbrrt_smc_grad_control(
         with torch.no_grad():
             dW = torch.randn(M, B, d, device=device, dtype=dtype) * sqdt
             f_val = f(parent_x, t_i_tensor.expand((M, 1)))  # [M, d]
-            K = f_val + alpha * 2 * a * grad_parent  # [M, d]
+            # Applied control (norm-clipped); the SAME u feeds the Girsanov
+            # term of the backward driver, so the clip stays exact.
+            u = _clip_control(alpha * grad_parent, drift_grad_clip)  # [M, d]
+            K = f_val + 2 * a * u  # [M, d]
 
             children = (
                 parent_x.unsqueeze(1) + K.unsqueeze(1) * dt + sq2a * dW
@@ -1767,6 +1797,7 @@ def fbrrt_smc_grad_control(
             {
                 "t_i": t_i,
                 "parent_x": parent_x,  # [M, d]
+                "u": u,  # [M, d]  applied control (clipped)
                 "grad_ch_mb": grad_ch_mb,  # [M, B, d]  grad v at children, t_{i+1}
                 "v_ch_mb": v_ch_mb,  # [M, B]
                 "w_flat": w_new.reshape(M, B),  # [M, B]
@@ -1774,19 +1805,20 @@ def fbrrt_smc_grad_control(
         )
 
     # -- Backward pass --
-    # Sampling drift K = f + alpha*2a*grad_x_v(parent, t_i)
-    # Driver (per child, right-endpoint): a*(1 - 2*alpha) * |grad_x v(child)|^2 * dt
-    #
-    # The Girsanov dot-product in the driver nominally involves the APPLIED
-    # drift gradient (parent, t_i); using the child gradient there too keeps the
-    # target free of any t_i-side estimate and differs only at O(dt^2)/step in
-    # expectation (E[grad v(child) | parent] = grad v(parent) + O(dt)).
-    driver_coeff = a * (1.0 - 2.0 * alpha)
+    # Sampling drift K = f + 2a*u with u = clip(alpha*grad v(parent, t_i)).
+    # Driver (per child, right-endpoint), using the APPLIED control u so that
+    # the Girsanov compensation is exact for any u (incl. clipped):
+    #   driver_b = ( a*|g_b|^2 - 2a * u . g_b ) * dt,
+    #   g_b = grad v(child_b, t_{i+1}).
+    # For unclipped u = alpha*g this reduces to a*(1-2*alpha)*|g|^2*dt.  u is
+    # the drift that actually generated the data -- a known input, not a
+    # t_i-side ESTIMATE -- so the target still bootstraps from t_{i+1} only.
     all_x, all_t, all_v_hat, all_w = [], [], [], []
 
     for data in step_data:
         t_i = data["t_i"]
         parent_x = data["parent_x"]
+        u = data["u"]  # [M, d]
         grad_ch_mb = data["grad_ch_mb"]  # [M, B, d]
         v_ch_mb = data["v_ch_mb"]  # [M, B]
 
@@ -1798,7 +1830,9 @@ def fbrrt_smc_grad_control(
         # loss (all_w below / eq. 23), not on the target.  Both the value AND
         # the driver are child-evaluated, so the target uses v_theta only at
         # t_{i+1} (a pure backward bootstrap).
-        driver_b = driver_coeff * (grad_ch_mb**2).sum(dim=-1) * dt  # [M, B]
+        g_sq = (grad_ch_mb**2).sum(dim=-1)  # [M, B]
+        u_dot_g = (u.unsqueeze(1) * grad_ch_mb).sum(dim=-1)  # [M, B]
+        driver_b = (a * g_sq - 2.0 * a * u_dot_g) * dt  # [M, B]
         target = (v_ch_mb + driver_b).mean(dim=1)  # [M]
         ev_next = v_ch_mb.mean(dim=1)  # [M]  (for the regression weights)
 
@@ -1837,24 +1871,26 @@ def fbrrt_smc_grad_control_td_lambda(
     device: torch.device | None = None,
     dtype: torch.dtype = torch.float32,
     resample_method: str = "multinomial",
+    drift_grad_clip: float | None = 100.0,
 ) -> FBRRTSamples:
     """
     TD(lambda) version of fbrrt_smc_grad_control, with interpolated drift.
 
-    Forward SDE:
-        dX_t = (f + alpha * 2a * grad_x v_theta) dt + sqrt(2a) dW_t
+    Forward SDE (norm-clipped applied control, as in fbrrt_smc_grad_control):
+        dX_t = (f + 2a * u) dt + sqrt(2a) dW_t,
+        u    = clip(alpha * grad_x v_theta(parent), drift_grad_clip)
 
-    Girsanov correction back to f^mu = f + 2a*grad_x v:
-        D_t = (1 - alpha) * sqrt(2a) * grad_x v
+    BSDE driver per child, using the APPLIED control u (exact for any u):
+        delta_i = mean_b ( a*|g_b|^2 - 2a * u . g_b ) * dt,
+        g_b = grad_x v_theta(child_b, t_{i+1})
 
-    BSDE driver (combining -1/2|Z|^2 + Z*D_t):
-        delta_i = a*(1 - 2*alpha) * |grad_x v|^2 * dt
+    (reduces to a*(1-2*alpha)*|grad v|^2*dt for unclipped u = alpha*g).
 
     GAE recursion:
         G_N = r(X_1)
         G_i = delta_i + EV_{i+1} + lam * (G_{i+1} - EV_{i+1})
 
-    Special cases for alpha:
+    Special cases for alpha (unclipped):
         alpha=1:   delta = -a|grad_x v|^2 * dt      (on-policy, D_t=0)
         alpha=0:   delta = +a|grad_x v|^2 * dt      (base drift)
         alpha=0.5: delta = 0                         (no driver)
@@ -1906,7 +1942,9 @@ def fbrrt_smc_grad_control_td_lambda(
         with torch.no_grad():
             dW = torch.randn(M, B, d, device=device, dtype=dtype) * sqdt
             f_val = f(parent_x, t_i_tensor)
-            K = f_val + alpha * 2 * a * grad_parent  # interpolated drift
+            # Applied control (norm-clipped); same u feeds the driver below.
+            u = _clip_control(alpha * grad_parent, drift_grad_clip)  # [M, d]
+            K = f_val + 2 * a * u  # interpolated drift
 
             children = (
                 parent_x.unsqueeze(1) + K.unsqueeze(1) * dt + sq2a * dW
@@ -1945,6 +1983,7 @@ def fbrrt_smc_grad_control_td_lambda(
             {
                 "t_i": t_i,
                 "parent_x": parent_x,  # [M, d]
+                "u": u,  # [M, d]  applied control (clipped)
                 "grad_ch_mb": grad_ch_mb,  # [M, B, d] grad v at children, t_{i+1}
                 "v_ch_mb": v_ch_mb,  # [M, B]
                 "indices": indices,  # [M] -> [0, M*B): which child each survivor is
@@ -1956,9 +1995,10 @@ def fbrrt_smc_grad_control_td_lambda(
     # ------------------------------------------------------------------ #
     # At each step i we have:
     #   EV_{i+1}  = UNIFORM mean of v_theta over the parent's B children   [M]
-    #   delta_i   = mean over children of a*(1-2*alpha)*|grad_x v(child)|^2*dt
-    #               (right-endpoint BSDE driver, evaluated at t_{i+1}; the
-    #               target therefore uses v_theta only at t_{i+1})
+    #   delta_i   = mean_b ( a*|g_b|^2 - 2a * u . g_b ) * dt
+    #               (right-endpoint BSDE driver at t_{i+1}, with the APPLIED
+    #               control u -- exact for any u, incl. clipped; the target
+    #               therefore uses v_theta only at t_{i+1})
     #
     # Recursion (sweep from i=N-1 down to i=0):
     #   G_N = r(X_1)  (terminal: x is the final particle positions)
@@ -1992,7 +2032,6 @@ def fbrrt_smc_grad_control_td_lambda(
     # Terminal: reward at final particle positions
     t_terminal = torch.full((M,), 1.0, device=device, dtype=dtype)
     G = reward(x).detach()  # [M], on the final-step survivors
-    driver_coeff = a * (1.0 - 2.0 * alpha)
 
     all_x = []
     all_t = []
@@ -2002,6 +2041,7 @@ def fbrrt_smc_grad_control_td_lambda(
     for data in reversed(step_data):
         t_i = data["t_i"]
         parent_x = data["parent_x"]  # [M, d]
+        u = data["u"]  # [M, d]  applied control
         grad_ch_mb = data["grad_ch_mb"]  # [M, B, d]
         v_ch_mb = data["v_ch_mb"]  # [M, B]
         indices = data["indices"]  # [M] survivor -> child index
@@ -2018,9 +2058,11 @@ def fbrrt_smc_grad_control_td_lambda(
         counts.scatter_add_(0, origin, torch.ones_like(G))
         Gnext = torch.where(counts > 0, sums / counts.clamp_min(1.0), EV_next)  # [M]
 
-        # BSDE driver (right-endpoint, child-averaged):
-        #   delta_i = mean_b a*(1-2*alpha)*|grad_x v(child_b, t_{i+1})|^2 * dt
-        delta = (driver_coeff * (grad_ch_mb**2).sum(dim=-1) * dt).mean(dim=1)  # [M]
+        # BSDE driver (right-endpoint, child-averaged, applied control u):
+        #   delta_i = mean_b ( a*|g_b|^2 - 2a * u . g_b ) * dt
+        g_sq = (grad_ch_mb**2).sum(dim=-1)  # [M, B]
+        u_dot_g = (u.unsqueeze(1) * grad_ch_mb).sum(dim=-1)  # [M, B]
+        delta = ((a * g_sq - 2.0 * a * u_dot_g) * dt).mean(dim=1)  # [M]
 
         # GAE recursion (now ancestry-aligned):
         # G_i = delta_i + EV_{i+1} + lam * (Gnext_i - EV_{i+1})
@@ -2067,10 +2109,15 @@ def fbrrt_smc_grad_control_variate(
     device: torch.device | None = None,
     dtype: torch.dtype = torch.float32,
     resample_method: str = "systematic",
+    drift_grad_clip: float | None = 100.0,
 ) -> FBRRTSamples:
     """
     FBRRT-SMC with residual control variate Z estimator and separated
     policy / target value functions.
+
+    The sampling control is norm-clipped, u = clip(alpha * grad_x v_policy,
+    drift_grad_clip), and the driver uses this APPLIED u in its Girsanov term
+    (exact for any u; see fbrrt_smc_grad_control).
 
     Not part of Hawkins et al. (2020) -- that algorithm estimates Z analytically
     as ``sigma^T grad_x V`` (see ``fbrrt_smc_grad_control``).  This variant
@@ -2192,7 +2239,9 @@ def fbrrt_smc_grad_control_variate(
             dW = torch.randn(M, B, d, device=device, dtype=dtype) * sqdt  # [M, B, d]
 
             f_val = f(parent_x, t_i_tensor.unsqueeze(-1))  # [M, d]
-            K = f_val + alpha * 2 * a * grad_parent  # [M, d]
+            # Applied control (norm-clipped); same u feeds the driver below.
+            u = _clip_control(alpha * grad_parent, drift_grad_clip)  # [M, d]
+            K = f_val + 2 * a * u  # [M, d]
 
             # Children positions: [M, B, d] -> [M*B, d]
             children = (
@@ -2236,6 +2285,7 @@ def fbrrt_smc_grad_control_variate(
                 "t_i": t_i,
                 "t_next": t_next,
                 "parent_x": parent_x,  # [M, d]
+                "u": u,  # [M, d]  applied control (clipped)
                 "grad_ch_policy_mb": grad_ch_policy_mb,  # [M, B, d] at t_{i+1}
                 "v_ch_policy": v_ch_policy,  # [M, B]  stop-grad
                 "v_ch_target": v_ch_target,  # [M, B]  stop-grad
@@ -2283,6 +2333,7 @@ def fbrrt_smc_grad_control_variate(
     for data in step_data:
         t_i = data["t_i"]
         parent_x = data["parent_x"]  # [M, d]
+        u = data["u"]  # [M, d]  applied control
         grad_ch_policy_mb = data["grad_ch_policy_mb"]  # [M, B, d]
         v_ch_policy = data["v_ch_policy"]  # [M, B]
         v_ch_target = data["v_ch_target"]  # [M, B]
@@ -2310,11 +2361,14 @@ def fbrrt_smc_grad_control_variate(
         z_anchor = grad_ch_policy_mb.mean(dim=1)  # [M, d]
         z_rcv = z_anchor + z_correction  # [M, d]
 
-        # Driver using the RCV estimate of grad_x V (matches grad_control / _mc_Z):
-        #   a * (|z_rcv|^2 - 2*alpha * z_rcv . z_anchor) * dt
+        # Driver using the RCV estimate of grad_x V and the APPLIED control u
+        # (matches grad_control; exact for any u, incl. clipped):
+        #   a * (|z_rcv|^2 - 2 * u . z_rcv) * dt
+        # For unclipped u = alpha * grad v_policy this reduces to the earlier
+        # a*(|z|^2 - 2*alpha*z.anchor)*dt form.
         z_sq = (z_rcv**2).sum(dim=-1)  # [M]
-        z_dot = (z_rcv * z_anchor).sum(dim=-1)  # [M]
-        driver = a * (z_sq - 2.0 * alpha * z_dot) * dt  # [M]
+        u_dot_z = (u * z_rcv).sum(dim=-1)  # [M]
+        driver = a * (z_sq - 2.0 * u_dot_z) * dt  # [M]
 
         # Regression target: E_P[V_target(child)|parent] + driver.
         # UNIFORM mean over the parent's B children (eq. 22), NOT entropy-weighted.

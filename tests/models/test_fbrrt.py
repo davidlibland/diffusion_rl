@@ -217,6 +217,61 @@ def test_driver_gradient_taken_at_child_times():
 
 
 # ---------------------------------------------------------------------------
+# drift clip guard (pathological gradients at the origin)
+# ---------------------------------------------------------------------------
+def test_drift_clip_guards_pathological_origin_gradient():
+    """A huge value-gradient at the t=0 seeds must not catapult the particles.
+
+    Regression for the ValueNetwork init singularity: with a zero input-proj
+    bias, LayerNorm gave a ~3e7 input-gradient at exactly x=0 at init, and the
+    FBRRT drift teleported all particles to |x|~1e5 on the very first step
+    (this silently crippled every FBRRT run in the archived BS=4 study).  The
+    samplers now norm-clip the applied control, and the driver uses the
+    actually-applied control so the clip does not bias the targets.
+    """
+
+    def spiky_value(x, t):
+        # ~3e7 gradient AT the origin (where the t=0 seeds sit), saturating to
+        # a constant outside |x| ~ 1e-3 -- mimicking the LayerNorm singularity.
+        spike = 1e4 * torch.tanh(3e3 * x).sum(-1)
+        return value(x, t) + spike
+
+    torch.manual_seed(0)
+    s = fbrrt_smc_grad_control(
+        a=A, n_steps=10, n_particles=64, branch=4, f=base_drift,
+        v_theta=spiky_value, reward=reward, d=1, alpha=1.0,
+        entropy_lambda=float("inf"), device=DEVICE,
+    )
+    assert torch.isfinite(s.v_hat).all(), "targets not finite under spiky grad"
+    assert s.x.abs().max() < 100, (
+        f"particles catapulted to |x|={s.x.abs().max():.1f} despite drift clip"
+    )
+    # Unclipped (drift_grad_clip=None) the same config explodes -- the guard
+    # is load-bearing.
+    torch.manual_seed(0)
+    s_unclipped = fbrrt_smc_grad_control(
+        a=A, n_steps=10, n_particles=64, branch=4, f=base_drift,
+        v_theta=spiky_value, reward=reward, d=1, alpha=1.0,
+        entropy_lambda=float("inf"), device=DEVICE, drift_grad_clip=None,
+    )
+    assert s_unclipped.x.abs().max() > 1000
+
+
+def test_value_network_init_gradient_finite_at_origin():
+    """ValueNetwork's input-gradient at x=0 must be O(1) at init (the zero
+    input-proj bias + LayerNorm used to give ~3e7)."""
+    from diffusion_rl.modules.resnet_mlp import ValueNetwork
+
+    torch.manual_seed(0)
+    vm = ValueNetwork(2, bias=-5.0)
+    x = torch.zeros(4, 2, requires_grad=True)
+    g = torch.autograd.grad(vm(x, torch.zeros(4)).sum(), x)[0]
+    assert g.abs().max().item() < 100, (
+        f"init gradient at origin is {g.abs().max().item():.2e}"
+    )
+
+
+# ---------------------------------------------------------------------------
 # regression weights and dataset/training plumbing
 # ---------------------------------------------------------------------------
 def test_entropy_regression_weights_shape_and_normalisation():
