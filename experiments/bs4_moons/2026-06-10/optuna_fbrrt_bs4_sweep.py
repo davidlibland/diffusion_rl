@@ -42,9 +42,26 @@ loss_type ∈ {quad, mse}.
 Objective: detrended-SEM LCB over the last OPT_LCB_TAIL of OPT_N_VAL validation
 checkpoints -- identical to the archived study, so numbers are comparable.
 
+Parallel execution (this box: 32-core 9950X + RTX 3090 Ti; one BS=4 run uses
+~2 GB VRAM and ~1 core, so we run many at once)
+---------------------------------------------------------------------------
+The study lives in an optuna JournalStorage (multi-process safe).  Stages are
+orchestrated by run_parallel.sh:
+
+  stage 1  K sweep workers      OPT_EXIT_AFTER=sweep OPT_SAMPLER_SEED=42+i
+           (global budget enforced via MaxTrialsCallback; TPE constant_liar)
+  stage 2  K confirm workers    OPT_EXIT_AFTER=confirm OPT_WORKER_ID=i
+           OPT_N_WORKERS=K  (work split by flat (config, seed) index; a
+           (config, seed) run is SKIPPED if its metrics.csv is complete, so
+           the final pass just aggregates)
+  stage 3  final pass           converges the best confirmed config of EACH
+           method in parallel (subprocesses with OPT_CONV_TRIAL=<n>), then
+           aggregates, plots, and writes the results JSON.
+
 Smoke test:
-    OPT_N_TRIALS=2 OPT_MAX_STEPS=200 OPT_N_VAL=4 OPT_TOPK=1 OPT_N_SEEDS=2 \
-    OPT_CONV_STEPS=300 python experiments/bs4_moons/2026-06-10/optuna_fbrrt_bs4_sweep.py
+    OPT_N_TRIALS=2 OPT_MAX_STEPS=200 OPT_N_VAL=10 OPT_LCB_TAIL=5 OPT_TOPK=1 \
+    OPT_N_SEEDS=2 OPT_CONV_STEPS=300 \
+    python experiments/bs4_moons/2026-06-10/optuna_fbrrt_bs4_sweep.py
 """
 
 import gc
@@ -73,6 +90,9 @@ from lightning.pytorch.loggers import CSVLogger
 import optuna
 from optuna.samplers import TPESampler
 from optuna.pruners import HyperbandPruner
+from optuna.storages import JournalStorage
+from optuna.storages.journal import JournalFileBackend
+from optuna.study import MaxTrialsCallback
 from optuna.trial import TrialState
 
 from diffusion_rl.models.on_policy import OnPolicySMCDataset, OnPolicyValue
@@ -144,13 +164,14 @@ class OnPolicyValueLive(OnPolicyValue):
 
 
 # ── Constants ──────────────────────────────────────────────────────────────
-HERE = "experiments/bs4_moons/2026-06-10"
+HERE = os.path.dirname(os.path.abspath(__file__))
 ARCHIVE = "experiments/bs4_moons/2026-05-28"
-LOG_DIR = "lightning_logs/optuna_fbrrt2"
-CONFIRM_DIR = "lightning_logs/optuna_fbrrt2_confirm"
-CONV_LOG_DIR = "lightning_logs/optuna_fbrrt2_converge"
-CKPT_DIR = "checkpoints/optuna_fbrrt2_converge"
-STUDY_DB = f"sqlite:///{HERE}/optuna_fbrrt2.db"
+_TAG = os.environ.get("OPT_LOGTAG", "")  # suffix for smoke-test isolation
+LOG_DIR = f"lightning_logs/optuna_fbrrt2{_TAG}"
+CONFIRM_DIR = f"lightning_logs/optuna_fbrrt2{_TAG}_confirm"
+CONV_LOG_DIR = f"lightning_logs/optuna_fbrrt2{_TAG}_converge"
+CKPT_DIR = f"checkpoints/optuna_fbrrt2{_TAG}_converge"
+STUDY_JOURNAL = f"{HERE}/optuna_fbrrt2_journal.log"
 STUDY_NAME = "fbrrt_bs4_lcb_fixed_v1"
 
 METHODS = ["fbrrt", "fbrrt_td_lambda", "fbrrt_cv"]
@@ -166,6 +187,13 @@ TOPK = int(os.environ.get("OPT_TOPK", 3))
 N_SEEDS = int(os.environ.get("OPT_N_SEEDS", 5))
 CONV_STEPS = int(os.environ.get("OPT_CONV_STEPS", 50000))
 CONV_VAL_EVERY = int(os.environ.get("OPT_CONV_VAL_EVERY", 1000))
+
+# Parallel-execution knobs (see module docstring).
+EXIT_AFTER = os.environ.get("OPT_EXIT_AFTER", "")          # "", "sweep", "confirm"
+WORKER_ID = int(os.environ.get("OPT_WORKER_ID", 0))
+N_WORKERS = int(os.environ.get("OPT_N_WORKERS", 1))
+SAMPLER_SEED = int(os.environ.get("OPT_SAMPLER_SEED", 42))
+CONV_TRIAL = os.environ.get("OPT_CONV_TRIAL")              # converge-only mode
 
 all_rewards = reward_fn(torch.from_numpy(X).float())
 max_r = all_rewards.max()
@@ -339,14 +367,16 @@ def objective(trial):
 
 
 t_start = time.time()
-sampler = TPESampler(multivariate=True, group=True, seed=42)
+sampler = TPESampler(multivariate=True, group=True, seed=SAMPLER_SEED,
+                     constant_liar=True)  # constant_liar: parallel-safe TPE
 pruner = HyperbandPruner(min_resource=500, max_resource=MAX_STEPS,
                          reduction_factor=3)
+storage = JournalStorage(JournalFileBackend(STUDY_JOURNAL))
 study = optuna.create_study(
-    study_name=STUDY_NAME, storage=STUDY_DB, load_if_exists=True,
+    study_name=STUDY_NAME, storage=storage, load_if_exists=True,
     direction="maximize", sampler=sampler, pruner=pruner)
 n_done = len([t for t in study.trials if t.state.is_finished()])
-print(f"PHASE 1 — FBRRT (fixed) sweep  device={DEVICE}  "
+print(f"PHASE 1 — FBRRT (fixed) sweep  device={DEVICE}  worker={WORKER_ID}  "
       f"done={n_done} remaining={max(0, N_TRIALS-n_done)}", flush=True)
 
 
@@ -360,8 +390,19 @@ def _cb(study, trial):
           f"| best LCB={best:.3f}", flush=True)
 
 
-study.optimize(objective, n_trials=max(0, N_TRIALS - n_done),
-               callbacks=[_cb], gc_after_trial=True)
+if n_done < N_TRIALS:
+    # Global budget across all workers: MaxTrialsCallback counts finished
+    # trials in the shared storage and stops this worker when the budget is
+    # met (slight overshoot by in-flight trials is fine).
+    study.optimize(
+        objective, n_trials=None,
+        callbacks=[_cb, MaxTrialsCallback(
+            N_TRIALS, states=(TrialState.COMPLETE, TrialState.PRUNED))],
+        gc_after_trial=True)
+
+if EXIT_AFTER == "sweep":
+    print(f"[worker {WORKER_ID}] sweep stage done -- exiting.", flush=True)
+    raise SystemExit(0)
 
 comp = [t for t in study.trials
         if t.state == TrialState.COMPLETE and t.value is not None]
@@ -382,44 +423,75 @@ print(f"Selected for {N_SEEDS}-seed confirm:")
 for t in chosen:
     print(f"  trial {t.number:>3}  LCB={t.value:>8.3f}  [{fmt(trial_params(t))}]")
 print("=" * 80, flush=True)
-json.dump([{"trial": t.number, "lcb": t.value, "params": trial_params(t)}
-           for t in chosen],
-          open(f"{HERE}/optuna_fbrrt2_top.json", "w"), indent=2, default=str)
+if EXIT_AFTER != "confirm" and CONV_TRIAL is None:  # don't race on the json
+    json.dump([{"trial": t.number, "lcb": t.value, "params": trial_params(t)}
+               for t in chosen],
+              open(f"{HERE}/optuna_fbrrt2_top.json", "w"), indent=2, default=str)
 
 
 # ── Phase 2: confirm ───────────────────────────────────────────────────────
-print(f"\nPHASE 2 — confirm × {N_SEEDS} seeds × {MAX_STEPS} steps\n", flush=True)
+# Idempotent: a (config, seed) run whose metrics.csv is already complete is
+# only READ, never retrained -- so K parallel confirm workers (partitioned by
+# the flat run index) populate the CSVs, and the final pass just aggregates.
+print(f"\nPHASE 2 — confirm × {N_SEEDS} seeds × {MAX_STEPS} steps "
+      f"(worker {WORKER_ID}/{N_WORKERS})\n", flush=True)
+MIN_CURVE = max(5, int(N_VAL * 0.6))  # "complete" threshold for a CSV
+
+
+def _confirm_run(params, trial, s):
+    """Train one (config, seed) confirm run unless its CSV is complete."""
+    name = f"t{trial}_seed{s:02d}"
+    csv = f"{CONFIRM_DIR}/{name}/version_0/metrics.csv"
+    _, cv = read_curve(csv)
+    if len(cv) >= MIN_CURVE:
+        return csv, False  # already done
+    for vv in range(3):
+        pth = f"{CONFIRM_DIR}/{name}/version_{vv}"
+        if os.path.exists(pth):
+            shutil.rmtree(pth)
+    t0 = time.time()
+    try:
+        model, vm, ds, loader = build(params, 1000 + s)
+        logger = CSVLogger(CONFIRM_DIR, name=name, version=0)
+        tr = L.Trainer(
+            max_steps=MAX_STEPS, val_check_interval=max(1, MAX_STEPS // N_VAL),
+            logger=logger, enable_checkpointing=False,
+            enable_progress_bar=False)
+        tr.fit(model, loader, val_dataloaders=val_loader)
+        del model, vm, tr, loader, ds
+    except (RuntimeError, ValueError) as e:
+        print(f"  {name}: error {type(e).__name__}: {str(e)[:120]}",
+              flush=True)
+    gc.collect(); empty_cache()
+    print(f"  {name}: trained ({(time.time()-t0)/60:.1f} min)", flush=True)
+    return csv, True
+
+
+run_idx = 0
+for t in chosen:
+    params = trial_params(t)
+    for s in range(N_SEEDS):
+        if run_idx % N_WORKERS == WORKER_ID:
+            _confirm_run(params, t.number, s)
+        run_idx += 1
+
+if EXIT_AFTER == "confirm":
+    print(f"[worker {WORKER_ID}] confirm stage done -- exiting.", flush=True)
+    raise SystemExit(0)
+
+# Aggregate (CSVs now complete -- either from workers or the loop above).
 confirm = {}
 for t in chosen:
     params = trial_params(t); trial = t.number
     seed_lcbs, seed_bests = [], []
     for s in range(N_SEEDS):
-        name = f"t{trial}_seed{s:02d}"
-        csv = f"{CONFIRM_DIR}/{name}/version_0/metrics.csv"
-        for vv in range(3):
-            pth = f"{CONFIRM_DIR}/{name}/version_{vv}"
-            if os.path.exists(pth):
-                shutil.rmtree(pth)
-        t0 = time.time()
-        try:
-            model, vm, ds, loader = build(params, 1000 + s)
-            logger = CSVLogger(CONFIRM_DIR, name=name, version=0)
-            tr = L.Trainer(
-                max_steps=MAX_STEPS, val_check_interval=max(1, MAX_STEPS // N_VAL),
-                logger=logger, enable_checkpointing=False,
-                enable_progress_bar=False)
-            tr.fit(model, loader, val_dataloaders=val_loader)
-            del model, vm, tr, loader, ds
-        except (RuntimeError, ValueError) as e:
-            print(f"  {name}: error {type(e).__name__}: {str(e)[:120]}",
-                  flush=True)
-        gc.collect(); empty_cache()
+        csv = f"{CONFIRM_DIR}/t{trial}_seed{s:02d}/version_0/metrics.csv"
         st, cv = read_curve(csv)
         lcb = lcb_of(cv) if len(cv) else -100.0
         best = float(cv.max()) if len(cv) else -100.0
         seed_lcbs.append(lcb); seed_bests.append(best)
-        print(f"  {name}: LCB={lcb:.3f} best={best:.3f} "
-              f"({(time.time()-t0)/60:.1f} min)", flush=True)
+        print(f"  t{trial}_seed{s:02d}: LCB={lcb:.3f} best={best:.3f}",
+              flush=True)
     seed_lcbs = np.array(seed_lcbs); seed_bests = np.array(seed_bests)
     confirm[trial] = {
         "params": {k: (str(v) if v == float("inf") else v)
@@ -435,9 +507,10 @@ for t in chosen:
           f"{confirm[trial]['lcb_sd']:.3f}  best {seed_bests.mean():.3f} ± "
           f"{confirm[trial]['best_sd']:.3f}", flush=True)
 
-json.dump({k: {kk: vv for kk, vv in v.items() if kk != "_params_raw"}
-           for k, v in confirm.items()},
-          open(f"{HERE}/optuna_fbrrt2_confirm_results.json", "w"), indent=2)
+if CONV_TRIAL is None:  # converge workers don't race on the json
+    json.dump({k: {kk: vv for kk, vv in v.items() if kk != "_params_raw"}
+               for k, v in confirm.items()},
+              open(f"{HERE}/optuna_fbrrt2_confirm_results.json", "w"), indent=2)
 
 best_trial = max(confirm, key=lambda tr: confirm[tr]["lcb_mean"])
 best_conf = confirm[best_trial]
@@ -449,11 +522,7 @@ print(f"  {fmt(best_params)}")
 print("=" * 80, flush=True)
 
 
-# ── Phase 3: converge winner ───────────────────────────────────────────────
-print(f"\nPHASE 3 — converge winner ({CONV_STEPS} steps, serialized)\n",
-      flush=True)
-
-
+# ── Phase 3: converge best config of EACH method (parallel) ────────────────
 def detect_convergence(steps, curve, win=8):
     if len(curve) < win + 4:
         return None, float(curve[-1]) if len(curve) else float("nan")
@@ -468,43 +537,94 @@ def detect_convergence(steps, curve, win=8):
     return conv_step, plateau
 
 
-params = best_params
-tag = f"fbrrt2_t{best_trial}_{params['method']}_converge"
-print(f"=== {tag} ===\n  {fmt(params)}", flush=True)
-for vv in range(3):
-    pth = f"{CONV_LOG_DIR}/{tag}/version_{vv}"
-    if os.path.exists(pth):
-        shutil.rmtree(pth)
-ckdir = f"{CKPT_DIR}/{tag}"
-if os.path.exists(ckdir):
-    shutil.rmtree(ckdir)
-os.makedirs(ckdir, exist_ok=True)
-t0 = time.time()
-model, vm, ds, loader = build(params, 20240)
-logger = CSVLogger(CONV_LOG_DIR, name=tag, version=0)
-ckpt = ModelCheckpoint(dirpath=ckdir, save_last=True, save_top_k=1,
-                       monitor="val_reward_mean", mode="max", filename="best")
-tr = L.Trainer(
-    max_steps=CONV_STEPS, val_check_interval=CONV_VAL_EVERY,
-    callbacks=[ckpt], logger=logger, enable_checkpointing=True,
-    enable_progress_bar=False)
-tr.fit(model, loader, val_dataloaders=val_loader)
-torch.save({"state_dict": model.value_module.state_dict(),
+def converge_one(trial_no, params):
+    """Train one config to CONV_STEPS, serialize, write conv_t{n}.json."""
+    tag = f"fbrrt2_t{trial_no}_{params['method']}_converge"
+    print(f"=== {tag} ===\n  {fmt(params)}", flush=True)
+    for vv in range(3):
+        pth = f"{CONV_LOG_DIR}/{tag}/version_{vv}"
+        if os.path.exists(pth):
+            shutil.rmtree(pth)
+    ckdir = f"{CKPT_DIR}/{tag}"
+    if os.path.exists(ckdir):
+        shutil.rmtree(ckdir)
+    os.makedirs(ckdir, exist_ok=True)
+    t0 = time.time()
+    model, vm, ds, loader = build(params, 20240)
+    logger = CSVLogger(CONV_LOG_DIR, name=tag, version=0)
+    ckpt = ModelCheckpoint(dirpath=ckdir, save_last=True, save_top_k=1,
+                           monitor="val_reward_mean", mode="max",
+                           filename="best")
+    tr = L.Trainer(
+        max_steps=CONV_STEPS, val_check_interval=CONV_VAL_EVERY,
+        callbacks=[ckpt], logger=logger, enable_checkpointing=True,
+        enable_progress_bar=False)
+    tr.fit(model, loader, val_dataloaders=val_loader)
+    torch.save({"state_dict": model.value_module.state_dict(),
+                "params": {k: str(v) for k, v in params.items()},
+                "trial": trial_no, "max_steps": CONV_STEPS},
+               f"{ckdir}/value_module.pt")
+    st, cv = read_curve(f"{CONV_LOG_DIR}/{tag}/version_0/metrics.csv")
+    cstep, plateau = detect_convergence(st, cv)
+    flcb = lcb_of(cv)
+    print(f"  {tag}: elapsed {(time.time()-t0)/60:.1f} min | "
+          f"plateau≈{plateau:.3f} | converged@step={cstep} | "
+          f"final-LCB={flcb:.3f}", flush=True)
+    conv = {"tag": tag, "trial": trial_no, "method": params["method"],
             "params": {k: str(v) for k, v in params.items()},
-            "trial": best_trial, "max_steps": CONV_STEPS},
-           f"{ckdir}/value_module.pt")
-st, cv = read_curve(f"{CONV_LOG_DIR}/{tag}/version_0/metrics.csv")
-cstep, plateau = detect_convergence(st, cv)
-flcb = lcb_of(cv)
-print(f"  elapsed {(time.time()-t0)/60:.1f} min | plateau≈{plateau:.3f} "
-      f"| converged@step={cstep} | final-LCB={flcb:.3f}", flush=True)
-print(f"  ckpts: {ckdir}/{{best.ckpt,last.ckpt,value_module.pt}}", flush=True)
-conv = {"trial": best_trial, "method": params["method"],
-        "plateau_reward": plateau, "convergence_step": cstep,
-        "final_lcb": flcb, "ckpt_dir": ckdir,
-        "steps": st.tolist(), "val_reward": cv.tolist()}
-del model, vm, tr, loader, ds
-gc.collect(); empty_cache()
+            "plateau_reward": plateau, "convergence_step": cstep,
+            "final_lcb": flcb, "ckpt_dir": ckdir,
+            "steps": st.tolist(), "val_reward": cv.tolist()}
+    json.dump(conv, open(f"{HERE}/conv_t{trial_no}.json", "w"), indent=2)
+    del model, vm, tr, loader, ds
+    gc.collect(); empty_cache()
+    return conv
+
+
+if CONV_TRIAL is not None:
+    # Converge-only worker (spawned by the aggregator below).
+    n = int(CONV_TRIAL)
+    converge_one(n, confirm[n]["_params_raw"])
+    raise SystemExit(0)
+
+# Aggregator: best confirmed config per METHOD, converged in parallel.
+per_method = {}
+for tr_, v in confirm.items():
+    m = v["_params_raw"]["method"]
+    if v["lcb_mean"] > -50 and (
+            m not in per_method
+            or v["lcb_mean"] > confirm[per_method[m]]["lcb_mean"]):
+        per_method[m] = tr_
+to_converge = sorted(set(per_method.values()))
+print(f"\nPHASE 3 — converge best-per-method in parallel ({CONV_STEPS} steps): "
+      f"{[(m, f't{tr_}') for m, tr_ in per_method.items()]}\n", flush=True)
+
+import subprocess  # noqa: E402
+
+procs = []
+for n in to_converge:
+    pth = f"{HERE}/conv_t{n}.json"
+    if os.path.exists(pth):
+        os.remove(pth)
+    env = dict(os.environ, OPT_CONV_TRIAL=str(n))
+    procs.append((n, subprocess.Popen(
+        ["python", f"{HERE}/optuna_fbrrt_bs4_sweep.py"], env=env)))
+for n, pr in procs:
+    rc = pr.wait()
+    print(f"  converge t{n}: exit={rc}", flush=True)
+
+convs = {}
+for n in to_converge:
+    pth = f"{HERE}/conv_t{n}.json"
+    if os.path.exists(pth):
+        convs[n] = json.load(open(pth))
+if not convs:
+    raise RuntimeError("no convergence runs produced results")
+# Headline = converged run of the overall confirmed winner (fall back to the
+# best converged plateau if the winner's method lost per-method selection).
+conv = convs.get(best_trial) or max(convs.values(),
+                                    key=lambda c: c["plateau_reward"])
+tag = conv["tag"]
 
 
 # ── Comparison vs the archived BS=4 winners (2026-05-28, pre-fix code) ──────
@@ -543,8 +663,9 @@ for k, vv in prior.items():
               f"{str(vv['convergence_step']):>9} | {vv['final_lcb']:>9.3f}")
     except (KeyError, TypeError):
         pass
-print(f"{tag:>48} | {conv['plateau_reward']:>9.3f} | "
-      f"{str(conv['convergence_step']):>9} | {conv['final_lcb']:>9.3f}")
+for n, cc in sorted(convs.items()):
+    print(f"{cc['tag']:>48} | {cc['plateau_reward']:>9.3f} | "
+          f"{str(cc['convergence_step']):>9} | {cc['final_lcb']:>9.3f}")
 print("=" * 88, flush=True)
 
 
@@ -566,11 +687,15 @@ ax.set_ylabel("mean LCB"); ax.grid(True, alpha=0.3, axis="y")
 
 ax = axes[1]
 ax.set_title("Convergence vs archived BS=4 winners")
-stc = np.array(conv["steps"]); cvc = np.array(conv["val_reward"])
-ax.plot(stc, cvc, color="#16a085", alpha=0.30, lw=1.0)
-ax.plot(stc, pd.Series(cvc).rolling(8, min_periods=1).mean(), color="#16a085",
-        lw=2.0, label=f"FBRRT fixed (conv@{conv['convergence_step']}, "
-                      f"plateau={conv['plateau_reward']:.2f})")
+conv_palette = {"fbrrt": "#16a085", "fbrrt_td_lambda": "#e67e22",
+                "fbrrt_cv": "#8e44ad"}
+for n, cc in sorted(convs.items()):
+    col = conv_palette.get(cc["method"], "#16a085")
+    stc = np.array(cc["steps"]); cvc = np.array(cc["val_reward"])
+    ax.plot(stc, cvc, color=col, alpha=0.25, lw=0.8)
+    ax.plot(stc, pd.Series(cvc).rolling(8, min_periods=1).mean(), color=col,
+            lw=2.0, label=f"{cc['method']} t{n} fixed "
+                          f"(plateau={cc['plateau_reward']:.2f})")
 palette = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#8c564b", "#9467bd"]
 for (k, vv), col in zip(prior.items(), palette):
     try:
@@ -586,6 +711,7 @@ print(f"\nSaved: {HERE}/optuna_fbrrt2_bs4_sweep.png", flush=True)
 
 json.dump(
     {"methods": METHODS,
+     "n_trials": N_TRIALS,
      "chosen": [{"trial": t.number, "lcb": t.value,
                  "params": trial_params(t)} for t in chosen],
      "confirm": {k: {kk: vv for kk, vv in v.items() if kk != "_params_raw"}
@@ -593,10 +719,12 @@ json.dump(
      "winner": {"trial": best_trial,
                 **{kk: vv for kk, vv in best_conf.items()
                    if kk != "_params_raw"}},
-     "convergence": {k: v for k, v in conv.items()
-                     if k not in ("steps", "val_reward")},
-     "convergence_curve": {"steps": conv["steps"],
-                           "val_reward": conv["val_reward"]},
+     "convergence": {n: {k: v for k, v in cc.items()
+                         if k not in ("steps", "val_reward")}
+                     for n, cc in convs.items()},
+     "convergence_curves": {n: {"steps": cc["steps"],
+                                "val_reward": cc["val_reward"]}
+                            for n, cc in convs.items()},
      "prior_comparison": {k: v for k, v in prior.items()
                           if isinstance(v, dict) and "plateau_reward" in v}},
     open(f"{HERE}/optuna_fbrrt2_bs4_sweep_results.json", "w"), indent=2,
