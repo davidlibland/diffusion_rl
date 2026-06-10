@@ -45,18 +45,22 @@ checkpoints -- identical to the archived study, so numbers are comparable.
 Parallel execution (this box: 32-core 9950X + RTX 3090 Ti; one BS=4 run uses
 ~2 GB VRAM and ~1 core, so we run many at once)
 ---------------------------------------------------------------------------
-The study lives in an optuna JournalStorage (multi-process safe).  Stages are
-orchestrated by run_parallel.sh:
+Each FBRRT method gets its OWN optuna study (OPT_METHOD env; study name,
+output files, and lightning-log dirs are suffixed by the method) with its OWN
+full OPT_N_TRIALS budget, so TPE cannot starve a method that looks weak early
+-- no false negatives from under-exploration.  Studies live in a shared
+JournalStorage (multi-process safe).  run_parallel.sh orchestrates, with all
+methods running concurrently:
 
-  stage 1  K sweep workers      OPT_EXIT_AFTER=sweep OPT_SAMPLER_SEED=42+i
-           (global budget enforced via MaxTrialsCallback; TPE constant_liar)
-  stage 2  K confirm workers    OPT_EXIT_AFTER=confirm OPT_WORKER_ID=i
-           OPT_N_WORKERS=K  (work split by flat (config, seed) index; a
-           (config, seed) run is SKIPPED if its metrics.csv is complete, so
-           the final pass just aggregates)
-  stage 3  final pass           converges the best confirmed config of EACH
-           method in parallel (subprocesses with OPT_CONV_TRIAL=<n>), then
-           aggregates, plots, and writes the results JSON.
+  stage 1  KPM sweep workers per method   OPT_EXIT_AFTER=sweep
+           (per-study budget via MaxTrialsCallback; TPE constant_liar)
+  stage 2  KPM confirm workers per method OPT_EXIT_AFTER=confirm
+           OPT_WORKER_ID=i OPT_N_WORKERS=KPM  (work split by flat
+           (config, seed) index; a run is SKIPPED if its metrics.csv is
+           complete, so the final pass just aggregates)
+  stage 3  one final pass per method (parallel), each converging its
+           method's confirmed winner (via an OPT_CONV_TRIAL subprocess)
+           and writing per-method results JSON / plot.
 
 Smoke test:
     OPT_N_TRIALS=2 OPT_MAX_STEPS=200 OPT_N_VAL=10 OPT_LCB_TAIL=5 OPT_TOPK=1 \
@@ -166,15 +170,22 @@ class OnPolicyValueLive(OnPolicyValue):
 # ── Constants ──────────────────────────────────────────────────────────────
 HERE = os.path.dirname(os.path.abspath(__file__))
 ARCHIVE = "experiments/bs4_moons/2026-05-28"
-_TAG = os.environ.get("OPT_LOGTAG", "")  # suffix for smoke-test isolation
-LOG_DIR = f"lightning_logs/optuna_fbrrt2{_TAG}"
-CONFIRM_DIR = f"lightning_logs/optuna_fbrrt2{_TAG}_confirm"
-CONV_LOG_DIR = f"lightning_logs/optuna_fbrrt2{_TAG}_converge"
-CKPT_DIR = f"checkpoints/optuna_fbrrt2{_TAG}_converge"
-STUDY_JOURNAL = f"{HERE}/optuna_fbrrt2_journal.log"
-STUDY_NAME = "fbrrt_bs4_lcb_fixed_v1"
 
-METHODS = ["fbrrt", "fbrrt_td_lambda", "fbrrt_cv"]
+METHODS_ALL = ["fbrrt", "fbrrt_td_lambda", "fbrrt_cv"]
+# One study PER METHOD (OPT_METHOD), so TPE cannot starve a method that looks
+# weak early -- each method gets its own full trial budget (OPT_N_TRIALS).
+# Unset OPT_METHOD = combined study over all methods (smoke tests only).
+OPT_METHOD = os.environ.get("OPT_METHOD", "")
+METHODS = [OPT_METHOD] if OPT_METHOD else METHODS_ALL
+SUF = f"_{OPT_METHOD}" if OPT_METHOD else ""
+STUDY_NAME = f"fbrrt_bs4_lcb_fixed_v1{SUF}"
+
+_TAG = os.environ.get("OPT_LOGTAG", "")  # suffix for smoke-test isolation
+LOG_DIR = f"lightning_logs/optuna_fbrrt2{_TAG}{SUF}"
+CONFIRM_DIR = f"lightning_logs/optuna_fbrrt2{_TAG}{SUF}_confirm"
+CONV_LOG_DIR = f"lightning_logs/optuna_fbrrt2{_TAG}{SUF}_converge"
+CKPT_DIR = f"checkpoints/optuna_fbrrt2{_TAG}{SUF}_converge"
+STUDY_JOURNAL = f"{HERE}/optuna_fbrrt2_journal.log"
 
 BS = 4
 DS_BATCH = 64
@@ -426,7 +437,7 @@ print("=" * 80, flush=True)
 if EXIT_AFTER != "confirm" and CONV_TRIAL is None:  # don't race on the json
     json.dump([{"trial": t.number, "lcb": t.value, "params": trial_params(t)}
                for t in chosen],
-              open(f"{HERE}/optuna_fbrrt2_top.json", "w"), indent=2, default=str)
+              open(f"{HERE}/optuna_fbrrt2_top{SUF}.json", "w"), indent=2, default=str)
 
 
 # ── Phase 2: confirm ───────────────────────────────────────────────────────
@@ -510,7 +521,7 @@ for t in chosen:
 if CONV_TRIAL is None:  # converge workers don't race on the json
     json.dump({k: {kk: vv for kk, vv in v.items() if kk != "_params_raw"}
                for k, v in confirm.items()},
-              open(f"{HERE}/optuna_fbrrt2_confirm_results.json", "w"), indent=2)
+              open(f"{HERE}/optuna_fbrrt2_confirm_results{SUF}.json", "w"), indent=2)
 
 best_trial = max(confirm, key=lambda tr: confirm[tr]["lcb_mean"])
 best_conf = confirm[best_trial]
@@ -539,7 +550,7 @@ def detect_convergence(steps, curve, win=8):
 
 def converge_one(trial_no, params):
     """Train one config to CONV_STEPS, serialize, write conv_t{n}.json."""
-    tag = f"fbrrt2_t{trial_no}_{params['method']}_converge"
+    tag = f"fbrrt2{SUF}_t{trial_no}_{params['method']}_converge"
     print(f"=== {tag} ===\n  {fmt(params)}", flush=True)
     for vv in range(3):
         pth = f"{CONV_LOG_DIR}/{tag}/version_{vv}"
@@ -575,7 +586,7 @@ def converge_one(trial_no, params):
             "plateau_reward": plateau, "convergence_step": cstep,
             "final_lcb": flcb, "ckpt_dir": ckdir,
             "steps": st.tolist(), "val_reward": cv.tolist()}
-    json.dump(conv, open(f"{HERE}/conv_t{trial_no}.json", "w"), indent=2)
+    json.dump(conv, open(f"{HERE}/conv{SUF}_t{trial_no}.json", "w"), indent=2)
     del model, vm, tr, loader, ds
     gc.collect(); empty_cache()
     return conv
@@ -603,7 +614,7 @@ import subprocess  # noqa: E402
 
 procs = []
 for n in to_converge:
-    pth = f"{HERE}/conv_t{n}.json"
+    pth = f"{HERE}/conv{SUF}_t{n}.json"
     if os.path.exists(pth):
         os.remove(pth)
     env = dict(os.environ, OPT_CONV_TRIAL=str(n))
@@ -615,7 +626,7 @@ for n, pr in procs:
 
 convs = {}
 for n in to_converge:
-    pth = f"{HERE}/conv_t{n}.json"
+    pth = f"{HERE}/conv{SUF}_t{n}.json"
     if os.path.exists(pth):
         convs[n] = json.load(open(pth))
 if not convs:
@@ -706,7 +717,7 @@ for (k, vv), col in zip(prior.items(), palette):
 ax.set_xlabel("training step"); ax.set_ylabel("val reward (mean)")
 ax.grid(True, alpha=0.3); ax.legend(fontsize=8)
 plt.tight_layout()
-plt.savefig(f"{HERE}/optuna_fbrrt2_bs4_sweep.png", dpi=140, bbox_inches="tight")
+plt.savefig(f"{HERE}/optuna_fbrrt2_bs4_sweep{SUF}.png", dpi=140, bbox_inches="tight")
 print(f"\nSaved: {HERE}/optuna_fbrrt2_bs4_sweep.png", flush=True)
 
 json.dump(
@@ -727,7 +738,7 @@ json.dump(
                             for n, cc in convs.items()},
      "prior_comparison": {k: v for k, v in prior.items()
                           if isinstance(v, dict) and "plateau_reward" in v}},
-    open(f"{HERE}/optuna_fbrrt2_bs4_sweep_results.json", "w"), indent=2,
+    open(f"{HERE}/optuna_fbrrt2_bs4_sweep{SUF}_results.json", "w"), indent=2,
     default=str)
 print(f"Saved: {HERE}/optuna_fbrrt2_bs4_sweep_results.json")
 print(f"\nTotal elapsed: {(time.time()-t_start)/60:.1f} min\nDone.")
