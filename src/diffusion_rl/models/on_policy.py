@@ -6,7 +6,7 @@ import lightning as L
 import numpy as np
 import torch
 from einops import rearrange
-from torch import Tensor, nn, optim
+from torch import Tensor, optim
 from torch.utils.data import IterableDataset
 
 from diffusion_rl.algorithms.integration import integrate_sde
@@ -92,6 +92,7 @@ class OnPolicySMCDataset(IterableDataset):
         self._x = None
         self._t = None
         self._y = None
+        self._w = None
         self._loc = 0
         self.sampling_method = sampling_method
         self.lambda_eff = lambda_eff
@@ -164,8 +165,8 @@ class OnPolicySMCDataset(IterableDataset):
                 # torch.cuda both expose empty_cache(), but calling the wrong
                 # one (e.g. torch.mps.empty_cache() on a CUDA box) raises.
                 if self._x is not None:
-                    del self._x, self._t, self._y
-                    self._x = self._t = self._y = None
+                    del self._x, self._t, self._y, self._w
+                    self._x = self._t = self._y = self._w = None
                 if _first_on_policy and str(self.device) != "cpu":
                     import gc
 
@@ -175,6 +176,10 @@ class OnPolicySMCDataset(IterableDataset):
                     elif torch.backends.mps.is_available():
                         torch.mps.empty_cache()
                     _first_on_policy = False
+                # Per-sample regression weights.  Only the FBRRT methods produce
+                # them (local-entropy LSMC weights); for all other methods they
+                # stay None and the training loss falls back to an unweighted mean.
+                all_weights = None
                 if self.sampling_method == "one_step_bootstrap":
                     with torch.no_grad():
                         all_x, all_t, all_tgt = one_step_bootstrap(
@@ -331,6 +336,15 @@ class OnPolicySMCDataset(IterableDataset):
                     )
                     eps = torch.randn_like(x1)  # inherits device from x1
                     t_off = torch.rand(n_off, 1, device=self.device)
+                    # NOTE: x_off is sampled from the *driftless* Brownian bridge
+                    #   x_t = t*x1 + sqrt(2a t(1-t)) eps,  with target r(x1).
+                    # Regressing exp(V) onto exp(r(x1)) is consistent ONLY if this
+                    # matches the base process's law of (X_t | X_1=x1), i.e. ONLY
+                    # if the base drift is zero (pure Brownian motion).  With a
+                    # non-trivial base drift these anchors are off-distribution and
+                    # their targets are biased.  Use off_policy_frac>0 only when the
+                    # base process really is driftless BM (or supply a bridge that
+                    # matches the actual base diffusion).
                     x_off = (
                         t_off * x1 + torch.sqrt(2 * self.a * t_off * (1 - t_off)) * eps
                     )
@@ -339,6 +353,16 @@ class OnPolicySMCDataset(IterableDataset):
                     all_x[off_idx] = x_off
                     all_t[off_idx] = t_off.reshape((n_off,) + all_t.shape[1:])
                     all_tgt[off_idx] = y_off.reshape((n_off,) + all_tgt.shape[1:])
+                    # Off-policy anchors are ordinary (unweighted) regression
+                    # samples: give them unit weight.
+                    if all_weights is not None:
+                        all_weights[off_idx] = 1.0
+                # Default to uniform weights when the sampler did not supply any,
+                # so every (x, t, y) row carries a weight for the loss.
+                if all_weights is None:
+                    all_weights = torch.ones(
+                        n_total, device=all_x.device, dtype=all_x.dtype
+                    )
                 if self.shuffle:
                     perm = torch.randperm(n_total)
                 else:
@@ -346,13 +370,15 @@ class OnPolicySMCDataset(IterableDataset):
                 self._x = all_x[perm]
                 self._t = all_t[perm].unsqueeze(-1)
                 self._y = all_tgt[perm].unsqueeze(-1)
+                self._w = all_weights[perm].unsqueeze(-1)
                 self._loc = 0
 
             else:
                 x = self._x[self._loc]
                 y = self._y[self._loc]
                 t = self._t[self._loc]
-                yield y, x, t
+                w = self._w[self._loc]
+                yield y, x, t, w
                 self._loc += 1
 
 
@@ -426,15 +452,30 @@ class OnPolicyValue(L.LightningModule):
     def training_step(self, batch, batch_idx):
         # training_step defines the train loop.
         # it is independent of forward
-        y, x, t = batch
+        # The dataset yields (y, x, t, w); w is the local-entropy LSMC regression
+        # weight (uniform for non-FBRRT samplers).  Accept the legacy 3-tuple too.
+        if len(batch) == 4:
+            y, x, t, w = batch
+        else:
+            y, x, t = batch
+            w = None
         if self.hparams.grad_decay is not None:
             x = x.clone().detach().requires_grad_(True)
         pred_value = self.value_module(x, t.flatten()).flatten()[:, None]
         true_value = y.flatten()[:, None]
+
+        def _reduce(per_sample):
+            # Weighted mean (Hawkins et al. 2020, eq. 23); plain mean if w is None.
+            per_sample = per_sample.flatten()
+            if w is None:
+                return per_sample.mean()
+            wf = w.flatten().clamp_min(0.0)
+            return (wf * per_sample).sum() / wf.sum().clamp_min(1e-30)
+
         if self.loss_type == "mse":
-            loss = nn.functional.mse_loss(torch.exp(pred_value), torch.exp(true_value))
+            loss = _reduce((torch.exp(pred_value) - torch.exp(true_value)) ** 2)
         elif self.loss_type == "quad":
-            loss = log_quadratic_bregman_divergence(pred_value, true_value).mean()
+            loss = _reduce(log_quadratic_bregman_divergence(pred_value, true_value))
         self.log("train_loss", loss)
         if not torch.isfinite(loss).all():
             raise RuntimeError("Loss is not finite")
@@ -1086,6 +1127,14 @@ def single_seed_td_lambda(
     NOTE: mc_samples proposals are used internally at each step but only
     ONE seed particle is kept per batch element per step.
 
+    CAVEAT: the one-step term `log_tau(x_j,t_j) + log_mean_v[j]` is a
+    self-normalised ratio estimator that is consistent only when `tau` is a
+    martingale of the base diffusion (E_base[tau(X')|x] = tau(x)), i.e. as
+    `tau -> H`.  With `tau` an EMA approximation of H it carries an O(tau - H)
+    bias for `lambda < 1`.  The pure-MC limit (`single_seed_mc`, lambda_eff=1)
+    and the child-averaged `one_step_bootstrap` do NOT have this dependence; the
+    bias is the usual TD bootstrap bias and vanishes at convergence.
+
     Returns:
         all_x:   (batch_size * (n_steps + 1), dim)
                  seeds at t = 0, t_1, ..., t_{n_steps-1}, 1
@@ -1504,13 +1553,41 @@ class FBRRTSamples(NamedTuple):
     x       : [N, M, d]  particle positions at t_0, ..., t_{N-1}
     t       : [N]        time grid values (excludes t=1)
     v_hat   : [N, M]     one-step BSDE targets for v_theta
-    weights : [N, M]     normalised SMC weights (uniform after resample)
+    weights : [N, M]     local-entropy LSMC regression weights (mean 1), used to
+                         weight the least-squares fit -- NOT the bootstrap target.
+                         See `_entropy_regression_weights` and Hawkins et al.
+                         (2020, arXiv:2006.12444) Alg. 2 line 20 / eq. 23.
     """
 
     x: Tensor  # [N, M, d]
     t: Tensor  # [N]
     v_hat: Tensor  # [N, M]
     weights: Tensor  # [N, M]
+
+
+def _entropy_regression_weights(values: Tensor, entropy_lambda: float) -> Tensor:
+    """Local-entropy LSMC regression weights (Hawkins et al. 2020, eq. 21/23).
+
+    Returns per-particle weights theta_j proportional to exp(values_j /
+    entropy_lambda), normalised to unit mean so the overall loss scale is
+    preserved.  In the paper these weights multiply the backward least-squares
+    objective (concentrating value-function accuracy near high-value paths);
+    they MUST NOT be folded into the bootstrap target (the target's child
+    expectation is taken under the sampling measure P, eq. 22, i.e. unweighted).
+
+    ``entropy_lambda = inf`` -> uniform weights (the unweighted LSMC of eq. 22).
+
+    NB: the paper's heuristic rho (eq. 30) also adds the accumulated running
+    cost along the path; here we use only the child value, matching the
+    historical implementation.  This concentrates by instantaneous value rather
+    than path value -- a deliberate simplification, not a correctness bug.
+    """
+    if entropy_lambda == float("inf"):
+        return torch.ones_like(values)
+    z = values / entropy_lambda
+    z = z - z.max()
+    w = z.exp()
+    return w / w.mean().clamp_min(1e-30)
 
 
 def _resample_fbrrt(weights: Tensor, n: int, method: str = "systematic") -> Tensor:
@@ -1579,8 +1656,13 @@ def fbrrt_smc_grad_control(
     v_theta         Current value function  v_theta(x, t) -> [M].
     d               State-space dimension.
     x0              Initial state [d] or [M, d].  Defaults to zeros.
-    entropy_lambda  Temperature for local-entropy reweighting.
-                    inf -> uniform SMC weights.
+    entropy_lambda  Temperature for the local-entropy weighting (Hawkins et al.
+                    2020, eq. 21).  Used in TWO places: (i) the forward
+                    branch-resampling proposal (exp(v/entropy_lambda)) that
+                    concentrates particle coverage, and (ii) the returned
+                    `weights`, which weight the backward least-squares
+                    regression -- NOT the bootstrap target, which is always the
+                    unweighted child mean.  inf -> uniform (unweighted LSMC).
     device          Torch device.
     dtype           Torch dtype.
     resample_method "systematic" (default, lower variance) or "multinomial".
@@ -1662,23 +1744,27 @@ def fbrrt_smc_grad_control(
         parent_x = data["parent_x"]
         grad_x_v = data["grad_x_v"]  # [M, d]
         v_ch_mb = data["v_ch_mb"]  # [M, B]
-        w_flat = data["w_flat"]  # [M, B]
 
-        w_norm = w_flat / w_flat.sum(dim=1, keepdim=True)
-        ev_next = (w_norm * v_ch_mb).sum(dim=1)  # [M]
+        # One-step BSDE target (Hawkins et al. 2020, Alg. 2 line 14):
+        #   y_hat = E_P[V(child) | parent] + (l^mu + z^T D) dt.
+        # E_P[V(child)|parent] is a UNIFORM mean over the parent's B children
+        # (they are i.i.d. under the sampling drift K, eq. 22).  It must NOT be
+        # entropy-weighted: the local-entropy weights belong on the regression
+        # loss (all_w below / eq. 23), not on the target.
+        ev_next = v_ch_mb.mean(dim=1)  # [M]
 
         driver = driver_coeff * (grad_x_v**2).sum(dim=-1) * dt  # [M]
 
         all_x.append(parent_x)
         all_t.append(torch.full((M,), t_i, device=device, dtype=dtype))
         all_v_hat.append((ev_next + driver).detach())
-        all_w.append(torch.full((M,), 1.0 / M, device=device, dtype=dtype))
+        all_w.append(_entropy_regression_weights(ev_next, entropy_lambda))
 
     # add reward targets at t=1:
     all_x.append(x)
     all_t.append(torch.full((M,), 1, device=device, dtype=dtype))
     all_v_hat.append(reward(x))
-    all_w.append(torch.full((M,), 1.0 / M, device=device, dtype=dtype))
+    all_w.append(_entropy_regression_weights(reward(x), entropy_lambda))
 
     return FBRRTSamples(
         x=rearrange(all_x, "M B d -> (M B) d"),
@@ -1703,7 +1789,7 @@ def fbrrt_smc_grad_control_td_lambda(
     entropy_lambda: float = 1.0,
     device: torch.device | None = None,
     dtype: torch.dtype = torch.float32,
-    resample_method: str = "systematic",
+    resample_method: str = "multinomial",
 ) -> FBRRTSamples:
     """
     TD(lambda) version of fbrrt_smc_grad_control, with interpolated drift.
@@ -1796,7 +1882,7 @@ def fbrrt_smc_grad_control_td_lambda(
                 "parent_x": parent_x,  # [M, d]
                 "grad_x_v": grad_x_v,  # [M, d]
                 "v_ch_mb": v_ch_mb,  # [M, B]
-                "w_flat": w_new.reshape(M, B),  # [M, B]
+                "indices": indices,  # [M] -> [0, M*B): which child each survivor is
             }
         )
 
@@ -1804,20 +1890,41 @@ def fbrrt_smc_grad_control_td_lambda(
     # Backward pass: GAE-style lambda return                               #
     # ------------------------------------------------------------------ #
     # At each step i we have:
-    #   EV_{i+1}  = weighted mean of v_theta over B children   [M]
-    #   delta_i = a*(1 - 2*alpha) * |grad_x_v|^2 * dt [M]
+    #   EV_{i+1}  = UNIFORM mean of v_theta over the parent's B children   [M]
+    #   delta_i   = a*(1 - 2*alpha) * |grad_x_v|^2 * dt                     [M]
     #
     # Recursion (sweep from i=N-1 down to i=0):
     #   G_N = r(X_1)  (terminal: x is the final particle positions)
-    #   G_i = delta_i + EV_{i+1} + lam * (G_{i+1} - EV_{i+1})
+    #   G_i = delta_i + EV_{i+1} + lam * (Gnext_i - EV_{i+1})
     #
-    # Note: G_{i+1} on the RHS refers to the target at the *resampled*
-    # children, i.e. x_{i+1} = children[indices].  Since after resampling
-    # we have M particles, G_{i+1} is also [M], aligned with x_{i+1}.
+    # Ancestry alignment (fix for the resampling/GAE mismatch): the multi-step
+    # return G lives on the *resampled* survivors x_{i+1} = children[indices_i].
+    # Survivor m descends from parent indices_i[m] // B, so survivor m is NOT in
+    # general the successor of parent m.  We therefore aggregate G back to each
+    # parent by its true descendants (scatter-mean over origin = indices // B),
+    # giving Gnext_i[p] = mean of downstream returns over parent p's surviving
+    # children.  Parents with no surviving descendant fall back to the one-step
+    # value EV (so the lambda term vanishes).  This mirrors the ancestor-indexed
+    # aggregation used by the ancestral_* methods.
+    #
+    # Resampling MUST be multinomial here (hence the changed default above):
+    # systematic resampling returns a near-diagonal index map
+    # (indices[m] ~ m*B + shared_offset), so every parent's "surviving child" is
+    # the SAME branch -- the descendants are not i.i.d. and the multi-step
+    # return picks up a bias that GROWS with n_steps.  Multinomial resampling
+    # gives each parent an independent descendant and the estimator is unbiased
+    # across lambda (verified numerically at entropy_lambda=inf).
+    #
+    # NB: survivors are resampled proportional to exp(v/entropy_lambda), so for
+    # FINITE entropy_lambda the scatter-mean over survivors is a value-biased
+    # estimate of E_P[downstream | parent's children].  It is unbiased only as
+    # entropy_lambda -> inf (uniform resampling); for the multi-step return,
+    # prefer entropy_lambda=inf, or use ancestral_mc_td_lambda (log-space,
+    # ancestor-exact).
 
     # Terminal: reward at final particle positions
     t_terminal = torch.full((M,), 1.0, device=device, dtype=dtype)
-    G = reward(x).detach()  # [M]
+    G = reward(x).detach()  # [M], on the final-step survivors
     driver_coeff = a * (1.0 - 2.0 * alpha)
 
     all_x = []
@@ -1830,23 +1937,31 @@ def fbrrt_smc_grad_control_td_lambda(
         parent_x = data["parent_x"]  # [M, d]
         grad_x_v = data["grad_x_v"]  # [M, d]
         v_ch_mb = data["v_ch_mb"]  # [M, B]
-        w_flat = data["w_flat"]  # [M, B]
+        indices = data["indices"]  # [M] survivor -> child index
 
-        # Weighted mean of v_theta over B children: EV_{i+1}
-        w_norm = w_flat / w_flat.sum(dim=1, keepdim=True)  # [M, B]
-        EV_next = (w_norm * v_ch_mb).sum(dim=1)  # [M]
+        # One-step term: UNIFORM mean over the parent's own B children (eq. 22).
+        EV_next = v_ch_mb.mean(dim=1)  # [M]
+
+        # Aggregate the downstream return G (on this step's survivors) back to
+        # each parent by ancestry, so it pairs with the SAME parent as EV_next.
+        origin = (indices // B).long()  # [M] parent index of each survivor
+        sums = torch.zeros(M, device=device, dtype=dtype)
+        sums.scatter_add_(0, origin, G)
+        counts = torch.zeros(M, device=device, dtype=dtype)
+        counts.scatter_add_(0, origin, torch.ones_like(G))
+        Gnext = torch.where(counts > 0, sums / counts.clamp_min(1.0), EV_next)  # [M]
 
         # BSDE driver: delta_i = a*(1 - 2*alpha) * |grad_x_v|^2 * dt
         delta = driver_coeff * (grad_x_v**2).sum(dim=-1) * dt  # [M]
 
-        # GAE recursion:
-        # G_i = delta_i + EV_{i+1} + lam * (G_{i+1} - EV_{i+1})
-        G = delta + EV_next + lam * (G - EV_next)  # [M]
+        # GAE recursion (now ancestry-aligned):
+        # G_i = delta_i + EV_{i+1} + lam * (Gnext_i - EV_{i+1})
+        G = delta + EV_next + lam * (Gnext - EV_next)  # [M], on parent_x (t_i)
 
         all_x.append(parent_x)
         all_t.append(torch.full((M,), t_i, device=device, dtype=dtype))
         all_v_hat.append(G.detach())
-        all_w.append(torch.full((M,), 1.0 / M, device=device, dtype=dtype))
+        all_w.append(_entropy_regression_weights(EV_next, entropy_lambda))
 
     # Reverse to chronological order
     all_x.reverse()
@@ -1858,7 +1973,7 @@ def fbrrt_smc_grad_control_td_lambda(
     all_x.append(x)
     all_t.append(t_terminal)
     all_v_hat.append(reward(x).detach())
-    all_w.append(torch.full((M,), 1.0 / M, device=device, dtype=dtype))
+    all_w.append(_entropy_regression_weights(reward(x), entropy_lambda))
 
     return FBRRTSamples(
         x=rearrange(all_x, "M B d -> (M B) d"),
@@ -1888,6 +2003,27 @@ def fbrrt_smc_grad_control_variate(
     """
     FBRRT-SMC with residual control variate Z estimator and separated
     policy / target value functions.
+
+    Not part of Hawkins et al. (2020) -- that algorithm estimates Z analytically
+    as ``sigma^T grad_x V`` (see ``fbrrt_smc_grad_control``).  This variant
+    estimates ``grad_x V_target`` by anchoring on ``grad_x v_policy`` (autograd)
+    and adding a Malliavin/IBP residual correction for ``v_target - v_policy``.
+
+    .. note::
+
+        The deterministic driver/scaling bugs of an earlier version are fixed:
+        the driver now matches the analytic form
+        ``a*(|z|^2 - 2*alpha * z.grad v_policy)*dt`` and the residual
+        z-correction carries the required ``1/sqrt(2a)`` Malliavin factor, so the
+        targets are unbiased when ``v_target == v_policy`` and approximately so
+        while the two stay close.  A residual remains: the ``|z|^2`` term still
+        contains the VARIANCE of the (finite-branch) Malliavin estimate of the
+        residual gradient, which grows with ``|v_target - v_policy|`` and with
+        ``1/branch``.  It is the same family as the instability that makes
+        ``fbrrt_smc_grad_mc_Z`` diverge, but here it is anchored/variance-reduced
+        by the control variate and is small in the intended regime where
+        ``v_policy`` is a lagged/EMA copy of ``v_target``.  Use a large ``branch``
+        and keep ``v_policy`` close to ``v_target`` for low bias.
 
     Two value functions are accepted:
 
@@ -2028,20 +2164,26 @@ def fbrrt_smc_grad_control_variate(
     # ------------------------------------------------------------------
     # Backward pass  --  residual control variate for Z
     # ------------------------------------------------------------------
-    # Sampling drift:   K = f + alpha * 2a * grad_x v_policy
-    # On-policy drift:  f^mu = f + 2a * grad_x v_policy
-    # Girsanov:         D_t = (f^mu - K) / sqrt(2a)
-    #                       = (1 - alpha) * sqrt(2a) * grad_x v_policy
+    # We work with z := Z / sqrt(2a) = grad_x V (the un-scaled gradient).  The
+    # RCV estimates grad_x V_target by anchoring on grad_x v_policy and adding a
+    # Malliavin/integration-by-parts correction for the residual
+    #     eps_b = v_target(x_{i+1}^b) - v_policy(x_{i+1}^b):
     #
-    # Z_RCV = sqrt(2a) * [grad_x v_policy
-    #                     + (1/dt) * sum_b w_b * eps_b * dW_b]
+    #     z_rcv = grad_x v_policy + grad_x(eps),
+    #     grad_x(eps) ~= (1 / (sqrt(2a) * dt)) * sum_b w_b * eps_b * dW_b
     #
-    # where  eps_b = v_target(x_{i+1}^b) - v_policy(x_{i+1}^b)
+    # The 1/sqrt(2a) is REQUIRED: for X' = x + K dt + sqrt(2a) dW the IBP
+    # estimator of grad_x E[phi] is E[phi dW] / (sqrt(2a) dt), not E[phi dW]/dt.
+    # (Previously the sqrt(2a) was missing -- bias for v_target != v_policy.)
     #
-    # Driver  = -1/2 |Z|^2 dt + Z^T D_t dt
-    #         = a * [-|z_rcv|^2 + 2*(1-alpha)* z_rcv . grad_x_v_policy] * dt
+    # The BSDE driver (added to E_P[V_target(child)|parent]) is the same one used
+    # by fbrrt_smc_grad_control / _mc_Z, written with the RCV estimate of grad V:
     #
-    # (z_rcv is Z_RCV / sqrt(2a), i.e. the un-scaled version)
+    #     driver = a * (|z_rcv|^2 - 2*alpha * z_rcv . grad_x v_policy) * dt
+    #
+    # It reduces to a*(1 - 2*alpha)*|grad v|^2 dt when eps -> 0 (z_rcv ->
+    # grad v_policy).  (The earlier -|z|^2 + 2(1-alpha) z.grad form only matched
+    # at eps = 0 and was biased once the control variate was active.)
     # ------------------------------------------------------------------
 
     all_x, all_t, all_v_hat, all_w = [], [], [], []
@@ -2063,12 +2205,12 @@ def fbrrt_smc_grad_control_variate(
             # Shape [M, B].  Zero when v_target and v_policy share weights.
             eps = v_ch_target - v_ch_policy  # [M, B]
 
-            # Weighted residual correction to z:
-            #   (1/dt) * sum_b w_b * eps_b * dW_b
+            # Malliavin/IBP correction to z = grad_x V:
+            #   grad_x(eps) ~= (1 / (sqrt(2a) * dt)) * sum_b w_b * eps_b * dW_b
             # [M, B, 1] * [M, B, d] -> sum over B -> [M, d]
             z_correction = (w_norm.unsqueeze(-1) * eps.unsqueeze(-1) * dW).sum(
                 dim=1
-            ) / dt  # [M, d]
+            ) / (sq2a * dt)  # [M, d]
 
         # Full z_rcv = grad_x v_policy + residual correction  [M, d]
         # grad_x_v_policy is already detached (no graph); z_correction
@@ -2076,25 +2218,26 @@ def fbrrt_smc_grad_control_variate(
         # stop-gradient by construction.
         z_rcv = grad_x_v_policy + z_correction  # [M, d]
 
-        # Driver using Z_RCV
-        #   a * [-|z_rcv|^2 + 2*(1-alpha) * z_rcv . grad_x_v_policy] * dt
+        # Driver using the RCV estimate of grad_x V (matches grad_control / _mc_Z):
+        #   a * (|z_rcv|^2 - 2*alpha * z_rcv . grad_x_v_policy) * dt
         z_sq = (z_rcv**2).sum(dim=-1)  # [M]
         z_dot = (z_rcv * grad_x_v_policy).sum(dim=-1)  # [M]
-        driver = a * (-z_sq + 2.0 * (1.0 - alpha) * z_dot) * dt  # [M]
+        driver = a * (z_sq - 2.0 * alpha * z_dot) * dt  # [M]
 
-        # Regression target: E_{w}[V_target(X_{i+1})] + driver(Z_RCV)
-        ev_next = (w_norm * v_ch_target).sum(dim=1)  # [M]
+        # Regression target: E_P[V_target(child)|parent] + driver.
+        # UNIFORM mean over the parent's B children (eq. 22), NOT entropy-weighted.
+        ev_next = v_ch_target.mean(dim=1)  # [M]
 
         all_x.append(parent_x)
         all_t.append(torch.full((M,), t_i, device=device, dtype=dtype))
         all_v_hat.append((ev_next + driver).detach())
-        all_w.append(torch.full((M,), 1.0 / M, device=device, dtype=dtype))
+        all_w.append(_entropy_regression_weights(ev_next, entropy_lambda))
 
     # Terminal condition  (x is the resampled final population)
     all_x.append(x)
     all_t.append(torch.full((M,), 1.0, device=device, dtype=dtype))
     all_v_hat.append(reward(x).detach())
-    all_w.append(torch.full((M,), 1.0 / M, device=device, dtype=dtype))
+    all_w.append(_entropy_regression_weights(reward(x), entropy_lambda))
 
     return FBRRTSamples(
         x=rearrange(all_x, "N M d -> (N M) d"),
@@ -2121,9 +2264,25 @@ def fbrrt_smc_grad_mc_Z(
     dtype: torch.dtype = torch.float32,
     resample_method: str = "systematic",
 ) -> FBRRTSamples:
-    """
-    FBRRT-SMC with MC estiamte of Z and separated
-    policy / target value functions.
+    r"""
+    FBRRT-SMC with MC estimate of Z and separated policy / target value
+    functions.
+
+    .. warning::
+
+        NUMERICALLY UNSTABLE -- NOT RECOMMENDED.  This routine estimates the
+        BSDE Z process by a raw Monte-Carlo / Malliavin formula
+        ``Z = (1/dt) * mean_b[ Y_{i+1}^b * dW_b ]`` and then feeds ``Z**2`` into
+        the driver.  A finite-branch MC estimate of Z has variance ~ 1/(B*dt),
+        so ``(1/2)|Z|^2 * dt`` retains an O(1/B) per-step bias that ACCUMULATES
+        over steps and blows up as dt -> 0.  Empirically the targets diverge to
+        1e20+ / NaN once n_steps is moderately large (verified at n_steps>=10).
+        Unlike Hawkins et al. (2020), which estimates Z analytically as
+        ``sigma^T grad_x V`` (autograd), this MC-Z variant is a later
+        experiment that is not in the paper.  Prefer ``fbrrt_smc_grad_control``
+        (autograd Z) or ``fbrrt_smc_grad_control_variate`` (autograd anchor +
+        variance-reduced residual), which do not square a high-variance Z.
+        Left in place for reference / reproducibility only.
 
     Two value functions are accepted:
 
@@ -2138,7 +2297,7 @@ def fbrrt_smc_grad_mc_Z(
 
     where Y_{i+1}, B_{t_i,t_{i+1}} range over the children.
 
-    The control is 2a* alpha* \grad v_policy:
+    The control is 2a* alpha* grad v_policy:
 
     Forward SDE (sampling measure P):
         dX_t = (f + alpha * 2a * grad_x v_policy) dt + sqrt(2a) dW_t
