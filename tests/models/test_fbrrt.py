@@ -169,6 +169,54 @@ def test_cv_driver_robust_to_policy_target_mismatch():
 
 
 # ---------------------------------------------------------------------------
+# right-endpoint (child-time) driver evaluation
+# ---------------------------------------------------------------------------
+def test_driver_gradient_taken_at_child_times():
+    """The BSDE driver gradient must be autograd of v at the CHILDREN (t_{i+1}),
+    not at the parents (t_i).
+
+    Structural check: with n_steps=N, parents live at t in {0, 1/N, ..., 1-1/N}
+    and children at {1/N, ..., 1}.  Under the old (left-endpoint) scheme the
+    only gradient-enabled queries to v were at parent times -- never at t=1.
+    Under the right-endpoint scheme the last step's children at t=1.0 receive a
+    gradient-enabled call.  We spy on v's inputs and assert grad-enabled calls
+    cover ALL child times including t=1.0 (and that the t=0 query is the
+    drift-only parent call).
+    """
+    grad_ts = set()
+
+    def spying_value(x, t):
+        if torch.is_grad_enabled() and x.requires_grad:
+            grad_ts.add(round(float(t.reshape(-1)[0]), 6))
+        return value(x, t)
+
+    n_steps = 4
+    for fn, kwargs in [
+        (fbrrt_smc_grad_control, dict(v_theta=spying_value)),
+        (fbrrt_smc_grad_control_td_lambda,
+         dict(v_theta=spying_value, lambda_eff=0.5)),
+        (fbrrt_smc_grad_control_variate,
+         dict(v_policy=spying_value, v_target=value)),
+    ]:
+        grad_ts.clear()
+        torch.manual_seed(0)
+        fn(
+            a=A, n_steps=n_steps, n_particles=8, branch=4, f=base_drift,
+            reward=reward, d=1, alpha=1.0, entropy_lambda=float("inf"),
+            device=DEVICE, **kwargs,
+        )
+        child_times = {round(i / n_steps, 6) for i in range(1, n_steps + 1)}
+        missing = child_times - grad_ts
+        assert not missing, (
+            f"{fn.__name__}: no grad-enabled v call at child times {missing}; "
+            "the driver is not being evaluated at t_{i+1}"
+        )
+        # t=1.0 is the discriminator: the old parent-endpoint code never
+        # queried gradients there.
+        assert 1.0 in grad_ts, f"{fn.__name__}: no grad call at t=1.0"
+
+
+# ---------------------------------------------------------------------------
 # regression weights and dataset/training plumbing
 # ---------------------------------------------------------------------------
 def test_entropy_regression_weights_shape_and_normalisation():

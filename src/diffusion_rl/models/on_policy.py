@@ -1623,10 +1623,10 @@ def fbrrt_smc_grad_control(
     FBRRT-SMC where control = grad_x v_theta is derived automatically.
 
     This is the natural special case u*(x,t) = grad_x v_theta(x,t).
-    No separate `control` argument is required.  Both the sampling drift
-    K = f + alpha*2a * grad_x v_theta  and the BSDE driver correction
-     -sqrt(2a) * grad_x v_theta  are computed from a single autograd
-    call per parent node, reused across forward and backward passes.
+    No separate `control` argument is required.  Two autograd calls per step:
+    grad_x v_theta at the PARENTS (t_i) defines the sampling drift K, and
+    grad_x v_theta at the CHILDREN (t_{i+1}) defines the BSDE driver in the
+    regression target.
 
     The forward SDE uses an interpolated drift:
         dX_t = (f + alpha * 2a * grad_x v_theta) dt + sqrt(2a) dW_t
@@ -1646,6 +1646,19 @@ def fbrrt_smc_grad_control(
         alpha=1: driver = -a |grad_x v|^2 * dt          (on-policy, D_t=0)
         alpha=0: driver = +a |grad_x v|^2 * dt          (base drift)
         alpha=0.5: driver = 0
+
+    Time-discretization (right-endpoint / explicit BSDE scheme): the ds-integral
+    of the driver over [t_i, t_{i+1}] is evaluated at the children at t_{i+1}
+    (per child, then child-averaged), NOT at the parent at t_i.  Both endpoints
+    are O(dt^2)-per-step quadratures of the same integral, so this introduces no
+    new leading-order error; the right endpoint is the standard explicit
+    backward-Euler BSDE scheme (Bouchard-Touzi/Zhang) and matches Hawkins et al.
+    (2020) Alg. 2 line 11 (z evaluated at x_{i+1} with the already-fitted
+    alpha_{i+1}).  Crucially it makes the target for V(., t_i) depend on v_theta
+    ONLY through values/gradients at t_{i+1} -- the better-trained side of the
+    network (anchored by the exact t=1 reward targets) -- removing the
+    self-referential same-t gradient term, whose error enters the target as a
+    systematic -a*|grad v - grad V|^2*dt bias concentrated at small t.
     Parameters
     ----------
     a               Diffusion constant  (dX uses sqrt(2a) dW).
@@ -1688,7 +1701,9 @@ def fbrrt_smc_grad_control(
         t_i_tensor = torch.tensor(t_i).to(x)
         t_next_tensor = torch.tensor(t_next).to(x)
 
-        # -- grad_x v_theta at parents: used for both K and D --
+        # -- grad_x v_theta at parents: used ONLY for the sampling drift K --
+        # (the BSDE driver in the target uses the CHILD gradient below, so the
+        # target depends on v_theta only through values at t_{i+1})
         x_in = x.detach().requires_grad_(True)
         with torch.enable_grad():
             v_par = v_theta(x_in, t_i_tensor.expand(M))  # [M]
@@ -1708,9 +1723,27 @@ def fbrrt_smc_grad_control(
                 parent_x.unsqueeze(1) + K.unsqueeze(1) * dt + sq2a * dW
             ).reshape(M * B, d)
 
-            v_ch = v_theta(children, t_next_tensor.expand(M * B))  # [M*B]
-            v_ch_mb = v_ch.reshape(M, B)
+        # -- v_theta and grad_x v_theta at CHILDREN (t_{i+1}) --
+        # Right-endpoint (explicit) BSDE scheme: the driver is evaluated at the
+        # children, so the regression target for V(., t_i) is built ENTIRELY
+        # from v_theta at t_{i+1} -- the better-trained side of the network
+        # (anchored by the exact t=1 reward targets).  This matches Hawkins et
+        # al. (2020) Alg. 2 line 11, which evaluates z at x_{i+1} with the
+        # already-fitted alpha_{i+1}.  Quadrature of the ds-integral at either
+        # endpoint is O(dt^2)/step; see backward-pass comment.
+        ch_in = children.detach().requires_grad_(True)
+        with torch.enable_grad():
+            v_ch_g = v_theta(ch_in, t_next_tensor.expand(M * B))  # [M*B]
+            grad_ch = torch.autograd.grad(
+                v_ch_g.sum(),
+                ch_in,
+                create_graph=False,
+            )[0].detach()  # [M*B, d]
+        v_ch = v_ch_g.detach()
+        v_ch_mb = v_ch.reshape(M, B)
+        grad_ch_mb = grad_ch.reshape(M, B, d)
 
+        with torch.no_grad():
             log_w = (
                 torch.zeros(M * B, device=device, dtype=dtype)
                 if entropy_lambda == float("inf")
@@ -1726,38 +1759,44 @@ def fbrrt_smc_grad_control(
             {
                 "t_i": t_i,
                 "parent_x": parent_x,  # [M, d]
-                "grad_x_v": grad_x_v,  # [M, d]  = control at parent
+                "grad_ch_mb": grad_ch_mb,  # [M, B, d]  grad v at children, t_{i+1}
                 "v_ch_mb": v_ch_mb,  # [M, B]
                 "w_flat": w_new.reshape(M, B),  # [M, B]
             }
         )
 
     # -- Backward pass --
-    # Sampling drift K = f + alpha*2a*grad_x_v
-    # So D_t = (f^mu - K) / sqrt(2a) = (1 - alpha) * sqrt(2a) * grad_x v
-    # driver = a*(1 - 2*alpha) * |grad_x_v|^2 * dt
+    # Sampling drift K = f + alpha*2a*grad_x_v(parent, t_i)
+    # Driver (per child, right-endpoint): a*(1 - 2*alpha) * |grad_x v(child)|^2 * dt
+    #
+    # The Girsanov dot-product in the driver nominally involves the APPLIED
+    # drift gradient (parent, t_i); using the child gradient there too keeps the
+    # target free of any t_i-side estimate and differs only at O(dt^2)/step in
+    # expectation (E[grad v(child) | parent] = grad v(parent) + O(dt)).
     driver_coeff = a * (1.0 - 2.0 * alpha)
     all_x, all_t, all_v_hat, all_w = [], [], [], []
 
     for data in step_data:
         t_i = data["t_i"]
         parent_x = data["parent_x"]
-        grad_x_v = data["grad_x_v"]  # [M, d]
+        grad_ch_mb = data["grad_ch_mb"]  # [M, B, d]
         v_ch_mb = data["v_ch_mb"]  # [M, B]
 
         # One-step BSDE target (Hawkins et al. 2020, Alg. 2 line 14):
-        #   y_hat = E_P[V(child) | parent] + (l^mu + z^T D) dt.
-        # E_P[V(child)|parent] is a UNIFORM mean over the parent's B children
+        #   y_hat = E_P[ V(child) + driver(child) | parent ].
+        # The expectation is a UNIFORM mean over the parent's B children
         # (they are i.i.d. under the sampling drift K, eq. 22).  It must NOT be
         # entropy-weighted: the local-entropy weights belong on the regression
-        # loss (all_w below / eq. 23), not on the target.
-        ev_next = v_ch_mb.mean(dim=1)  # [M]
-
-        driver = driver_coeff * (grad_x_v**2).sum(dim=-1) * dt  # [M]
+        # loss (all_w below / eq. 23), not on the target.  Both the value AND
+        # the driver are child-evaluated, so the target uses v_theta only at
+        # t_{i+1} (a pure backward bootstrap).
+        driver_b = driver_coeff * (grad_ch_mb**2).sum(dim=-1) * dt  # [M, B]
+        target = (v_ch_mb + driver_b).mean(dim=1)  # [M]
+        ev_next = v_ch_mb.mean(dim=1)  # [M]  (for the regression weights)
 
         all_x.append(parent_x)
         all_t.append(torch.full((M,), t_i, device=device, dtype=dtype))
-        all_v_hat.append((ev_next + driver).detach())
+        all_v_hat.append(target.detach())
         all_w.append(_entropy_regression_weights(ev_next, entropy_lambda))
 
     # add reward targets at t=1:
@@ -1843,6 +1882,8 @@ def fbrrt_smc_grad_control_td_lambda(
             (M * B, 1)
         )
 
+        # grad at parents: used ONLY for the sampling drift K (the driver in
+        # the target uses the child gradient at t_{i+1} below)
         x_in = x.detach().requires_grad_(True)
         with torch.enable_grad():
             v_par = v_theta(x_in, t_i_tensor)
@@ -1862,9 +1903,21 @@ def fbrrt_smc_grad_control_td_lambda(
                 parent_x.unsqueeze(1) + K.unsqueeze(1) * dt + sq2a * dW
             ).reshape(M * B, d)
 
-            v_ch = v_theta(children, t_next_tensor)
-            v_ch_mb = v_ch.reshape(M, B)
+        # v and grad_x v at CHILDREN (t_{i+1}): right-endpoint BSDE driver,
+        # so targets depend on v_theta only at t_{i+1} (see grad_control).
+        ch_in = children.detach().requires_grad_(True)
+        with torch.enable_grad():
+            v_ch_g = v_theta(ch_in, t_next_tensor)
+            grad_ch = torch.autograd.grad(
+                v_ch_g.sum(),
+                ch_in,
+                create_graph=False,
+            )[0].detach()  # [M*B, d]
+        v_ch = v_ch_g.detach()
+        v_ch_mb = v_ch.reshape(M, B)
+        grad_ch_mb = grad_ch.reshape(M, B, d)
 
+        with torch.no_grad():
             log_w = (
                 torch.zeros(M * B, device=device, dtype=dtype)
                 if entropy_lambda == float("inf")
@@ -1880,7 +1933,7 @@ def fbrrt_smc_grad_control_td_lambda(
             {
                 "t_i": t_i,
                 "parent_x": parent_x,  # [M, d]
-                "grad_x_v": grad_x_v,  # [M, d]
+                "grad_ch_mb": grad_ch_mb,  # [M, B, d] grad v at children, t_{i+1}
                 "v_ch_mb": v_ch_mb,  # [M, B]
                 "indices": indices,  # [M] -> [0, M*B): which child each survivor is
             }
@@ -1891,7 +1944,9 @@ def fbrrt_smc_grad_control_td_lambda(
     # ------------------------------------------------------------------ #
     # At each step i we have:
     #   EV_{i+1}  = UNIFORM mean of v_theta over the parent's B children   [M]
-    #   delta_i   = a*(1 - 2*alpha) * |grad_x_v|^2 * dt                     [M]
+    #   delta_i   = mean over children of a*(1-2*alpha)*|grad_x v(child)|^2*dt
+    #               (right-endpoint BSDE driver, evaluated at t_{i+1}; the
+    #               target therefore uses v_theta only at t_{i+1})
     #
     # Recursion (sweep from i=N-1 down to i=0):
     #   G_N = r(X_1)  (terminal: x is the final particle positions)
@@ -1935,7 +1990,7 @@ def fbrrt_smc_grad_control_td_lambda(
     for data in reversed(step_data):
         t_i = data["t_i"]
         parent_x = data["parent_x"]  # [M, d]
-        grad_x_v = data["grad_x_v"]  # [M, d]
+        grad_ch_mb = data["grad_ch_mb"]  # [M, B, d]
         v_ch_mb = data["v_ch_mb"]  # [M, B]
         indices = data["indices"]  # [M] survivor -> child index
 
@@ -1951,8 +2006,9 @@ def fbrrt_smc_grad_control_td_lambda(
         counts.scatter_add_(0, origin, torch.ones_like(G))
         Gnext = torch.where(counts > 0, sums / counts.clamp_min(1.0), EV_next)  # [M]
 
-        # BSDE driver: delta_i = a*(1 - 2*alpha) * |grad_x_v|^2 * dt
-        delta = driver_coeff * (grad_x_v**2).sum(dim=-1) * dt  # [M]
+        # BSDE driver (right-endpoint, child-averaged):
+        #   delta_i = mean_b a*(1-2*alpha)*|grad_x v(child_b, t_{i+1})|^2 * dt
+        delta = (driver_coeff * (grad_ch_mb**2).sum(dim=-1) * dt).mean(dim=1)  # [M]
 
         # GAE recursion (now ancestry-aligned):
         # G_i = delta_i + EV_{i+1} + lam * (Gnext_i - EV_{i+1})
@@ -2040,7 +2096,8 @@ def fbrrt_smc_grad_control_variate(
 
     The Z estimator is the residual control variate
 
-        Z_RCV = sigma^T grad_x v_policy(x_i)          <- low-variance anchor
+        Z_RCV = sigma^T mean_b grad_x v_policy(x_{i+1}^b)   <- low-variance anchor
+                (child-mean at t_{i+1}; right-endpoint BSDE scheme)
               + (1/dt) * sum_b w_b * eps_b * dW_b      <- residual correction
 
     where eps_b = v_target(x_{i+1}^b) - v_policy(x_{i+1}^b) is the
@@ -2107,7 +2164,8 @@ def fbrrt_smc_grad_control_variate(
         t_i_tensor = torch.tensor(t_i, device=device, dtype=dtype).expand(M)
         t_next_tensor = torch.tensor(t_next, device=device, dtype=dtype).expand(M * B)
 
-        # grad_x v_policy at parents -- drives both K and D_t
+        # grad_x v_policy at parents -- used ONLY for the sampling drift K
+        # (the driver/anchor in the target uses the child gradient below)
         x_in = x.detach().requires_grad_(True)
         with torch.enable_grad():
             v_par_policy = v_policy(x_in, t_i_tensor)  # [M]
@@ -2127,12 +2185,23 @@ def fbrrt_smc_grad_control_variate(
                 parent_x.unsqueeze(1) + K.unsqueeze(1) * dt + sq2a * dW
             ).reshape(M * B, d)
 
-            # ----------------------------------------------------------
-            # Evaluate BOTH value functions at children (no grad needed)
-            # v_policy at children: used for residual eps = v_target - v_policy
-            # v_target at children: used for E[V_target(X_{i+1})] in target
-            # ----------------------------------------------------------
-            v_ch_policy = v_policy(children, t_next_tensor).reshape(M, B)  # [M, B]
+        # ----------------------------------------------------------
+        # Evaluate BOTH value functions at children (t_{i+1})
+        # v_policy at children: residual eps = v_target - v_policy, AND the
+        #   anchor gradient grad_x v_policy(child) for the RCV z (right-endpoint
+        #   BSDE scheme -- targets use estimates only at t_{i+1})
+        # v_target at children: used for E[V_target(X_{i+1})] in target
+        # ----------------------------------------------------------
+        ch_in = children.detach().requires_grad_(True)
+        with torch.enable_grad():
+            v_ch_policy_g = v_policy(ch_in, t_next_tensor)  # [M*B]
+            grad_ch_policy = torch.autograd.grad(
+                v_ch_policy_g.sum(), ch_in, create_graph=False
+            )[0].detach()  # [M*B, d]
+        v_ch_policy = v_ch_policy_g.detach().reshape(M, B)  # [M, B]
+        grad_ch_policy_mb = grad_ch_policy.reshape(M, B, d)
+
+        with torch.no_grad():
             v_ch_target = v_target(children, t_next_tensor).reshape(M, B)  # [M, B]
 
             # SMC weights from v_target (the network being trained)
@@ -2152,7 +2221,7 @@ def fbrrt_smc_grad_control_variate(
                 "t_i": t_i,
                 "t_next": t_next,
                 "parent_x": parent_x,  # [M, d]
-                "grad_x_v_policy": grad_x_v_policy,  # [M, d]
+                "grad_ch_policy_mb": grad_ch_policy_mb,  # [M, B, d] at t_{i+1}
                 "v_ch_policy": v_ch_policy,  # [M, B]  stop-grad
                 "v_ch_target": v_ch_target,  # [M, B]  stop-grad
                 "w_flat": w_new.reshape(M, B),
@@ -2169,8 +2238,16 @@ def fbrrt_smc_grad_control_variate(
     # Malliavin/integration-by-parts correction for the residual
     #     eps_b = v_target(x_{i+1}^b) - v_policy(x_{i+1}^b):
     #
-    #     z_rcv = grad_x v_policy + grad_x(eps),
+    #     z_rcv = mean_b grad_x v_policy(child_b, t_{i+1}) + grad_x(eps),
     #     grad_x(eps) ~= (1 / (sqrt(2a) * dt)) * sum_b w_b * eps_b * dW_b
+    #
+    # The anchor is the child-mean gradient at t_{i+1} (right-endpoint BSDE
+    # scheme): E[grad v(child) | parent] = grad v(parent) + O(dt), so this
+    # differs from the parent anchor only at O(dt^2)/step inside the
+    # dt-multiplied driver, while keeping the target free of any t_i-side
+    # estimate (the better-trained larger-t side of the network defines the
+    # target).  The eps-correction was already built purely from t_{i+1}
+    # values plus the step noise dW.
     #
     # The 1/sqrt(2a) is REQUIRED: for X' = x + K dt + sqrt(2a) dW the IBP
     # estimator of grad_x E[phi] is E[phi dW] / (sqrt(2a) dt), not E[phi dW]/dt.
@@ -2179,10 +2256,10 @@ def fbrrt_smc_grad_control_variate(
     # The BSDE driver (added to E_P[V_target(child)|parent]) is the same one used
     # by fbrrt_smc_grad_control / _mc_Z, written with the RCV estimate of grad V:
     #
-    #     driver = a * (|z_rcv|^2 - 2*alpha * z_rcv . grad_x v_policy) * dt
+    #     driver = a * (|z_rcv|^2 - 2*alpha * z_rcv . z_anchor) * dt
     #
     # It reduces to a*(1 - 2*alpha)*|grad v|^2 dt when eps -> 0 (z_rcv ->
-    # grad v_policy).  (The earlier -|z|^2 + 2(1-alpha) z.grad form only matched
+    # z_anchor).  (The earlier -|z|^2 + 2(1-alpha) z.grad form only matched
     # at eps = 0 and was biased once the control variate was active.)
     # ------------------------------------------------------------------
 
@@ -2191,7 +2268,7 @@ def fbrrt_smc_grad_control_variate(
     for data in step_data:
         t_i = data["t_i"]
         parent_x = data["parent_x"]  # [M, d]
-        grad_x_v_policy = data["grad_x_v_policy"]  # [M, d]
+        grad_ch_policy_mb = data["grad_ch_policy_mb"]  # [M, B, d]
         v_ch_policy = data["v_ch_policy"]  # [M, B]
         v_ch_target = data["v_ch_target"]  # [M, B]
         w_flat = data["w_flat"]  # [M, B]
@@ -2212,16 +2289,16 @@ def fbrrt_smc_grad_control_variate(
                 dim=1
             ) / (sq2a * dt)  # [M, d]
 
-        # Full z_rcv = grad_x v_policy + residual correction  [M, d]
-        # grad_x_v_policy is already detached (no graph); z_correction
-        # is also no_grad, so z_rcv carries no gradient -- targets are
+        # Child-mean anchor (t_{i+1}) + residual correction  [M, d].
+        # Both terms are detached, so z_rcv carries no gradient -- targets are
         # stop-gradient by construction.
-        z_rcv = grad_x_v_policy + z_correction  # [M, d]
+        z_anchor = grad_ch_policy_mb.mean(dim=1)  # [M, d]
+        z_rcv = z_anchor + z_correction  # [M, d]
 
         # Driver using the RCV estimate of grad_x V (matches grad_control / _mc_Z):
-        #   a * (|z_rcv|^2 - 2*alpha * z_rcv . grad_x_v_policy) * dt
+        #   a * (|z_rcv|^2 - 2*alpha * z_rcv . z_anchor) * dt
         z_sq = (z_rcv**2).sum(dim=-1)  # [M]
-        z_dot = (z_rcv * grad_x_v_policy).sum(dim=-1)  # [M]
+        z_dot = (z_rcv * z_anchor).sum(dim=-1)  # [M]
         driver = a * (z_sq - 2.0 * alpha * z_dot) * dt  # [M]
 
         # Regression target: E_P[V_target(child)|parent] + driver.
