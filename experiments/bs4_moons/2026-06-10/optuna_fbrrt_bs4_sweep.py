@@ -160,11 +160,37 @@ def gmm_sample(n):
     return means_np[k_] + sigmas_np[k_, np.newaxis] * np.random.randn(n, D)
 
 
+SKIP_NONFINITE = os.environ.get("OPT_SKIP_NONFINITE", "0") == "1"
+
+
 class OnPolicyValueLive(OnPolicyValue):
-    """Inference/drift use the LIVE network (no EMA in drift) — the BS=4 default."""
+    """Inference/drift use the LIVE network (no EMA in drift) — the BS=4 default.
+
+    With OPT_SKIP_NONFINITE=1 (used ONLY by the long convergence runs), a
+    non-finite training loss skips the batch instead of aborting the run: the
+    quad loss NaNs on a single extreme-negative target (exp(target)*target^2 =
+    0*inf), which over 50k steps a rare far-field particle will eventually
+    produce.  A cap of 200 consecutive skips still aborts truly-poisoned runs.
+    Sweep/confirm keep the hard failure so fragile configs are penalised.
+    """
 
     def drift(self, x, t, beta=1, use_ema=False):
         return super().drift(x, t, beta=beta, use_ema=use_ema)
+
+    def training_step(self, batch, batch_idx):
+        try:
+            loss = super().training_step(batch, batch_idx)
+        except RuntimeError as e:
+            if SKIP_NONFINITE and "not finite" in str(e):
+                self._nonfinite_count = getattr(self, "_nonfinite_count", 0) + 1
+                self._nonfinite_count_total = getattr(
+                    self, "_nonfinite_count_total", 0) + 1
+                if self._nonfinite_count > 200:
+                    raise
+                return None  # Lightning skips the optimizer step
+            raise
+        self._nonfinite_count = 0
+        return loss
 
 
 # ── Constants ──────────────────────────────────────────────────────────────
@@ -570,7 +596,14 @@ def converge_one(trial_no, params):
         max_steps=CONV_STEPS, val_check_interval=CONV_VAL_EVERY,
         callbacks=[ckpt], logger=logger, enable_checkpointing=True,
         enable_progress_bar=False)
-    tr.fit(model, loader, val_dataloaders=val_loader)
+    diverged_at = None
+    try:
+        tr.fit(model, loader, val_dataloaders=val_loader)
+    except (RuntimeError, ValueError) as e:
+        diverged_at = int(tr.global_step)
+        print(f"  {tag}: DIVERGED at step {diverged_at}: "
+              f"{type(e).__name__}: {str(e)[:100]} -- salvaging curve",
+              flush=True)
     torch.save({"state_dict": model.value_module.state_dict(),
                 "params": {k: str(v) for k, v in params.items()},
                 "trial": trial_no, "max_steps": CONV_STEPS},
@@ -585,6 +618,9 @@ def converge_one(trial_no, params):
             "params": {k: str(v) for k, v in params.items()},
             "plateau_reward": plateau, "convergence_step": cstep,
             "final_lcb": flcb, "ckpt_dir": ckdir,
+            "diverged_at": diverged_at,
+            "nonfinite_skips": int(getattr(model, "_nonfinite_count_total", 0)
+                                   or getattr(model, "_nonfinite_count", 0)),
             "steps": st.tolist(), "val_reward": cv.tolist()}
     json.dump(conv, open(f"{HERE}/conv{SUF}_t{trial_no}.json", "w"), indent=2)
     del model, vm, tr, loader, ds
@@ -617,7 +653,7 @@ for n in to_converge:
     pth = f"{HERE}/conv{SUF}_t{n}.json"
     if os.path.exists(pth):
         os.remove(pth)
-    env = dict(os.environ, OPT_CONV_TRIAL=str(n))
+    env = dict(os.environ, OPT_CONV_TRIAL=str(n), OPT_SKIP_NONFINITE="1")
     procs.append((n, subprocess.Popen(
         ["python", f"{HERE}/optuna_fbrrt_bs4_sweep.py"], env=env)))
 for n, pr in procs:

@@ -7,8 +7,9 @@ convergence; detrended-SEM LCB objective). Runs live in date-marked folders:
 | folder | what | code |
 |---|---|---|
 | [`2026-05-28/`](2026-05-28/) | Original full study (all 10 methods; summary in [`bs4_experiments_summary.md`](2026-05-28/bs4_experiments_summary.md)). Includes the 2026-05-29 `ancestral_mc_td_lambda` re-tune. **⚠️ The FBRRT results predate the FBRRT FBSDE fixes** (commits `57926d6`, `13ef36a`, `c6b70ee`: entropy weights moved off the target, ancestor-aligned TD(λ), corrected CV driver/Malliavin scaling, child-time driver gradients). The FBRRT rows there (`fbrrt_td_lambda` plateau −10.71, "weakest and slowest") reflect the **old, biased estimators** and should not be cited as the methods' performance. Non-FBRRT rows are unaffected. | pre-fix (≤ `3ec4f7b`) |
-| [`2026-06-10/`](2026-06-10/) | **FBRRT re-tune** under the fixed estimators, same task/objective/budgets, to test whether FBRRT can match the other on-policy methods and the off-policy baseline. | post-fix (`c6b70ee`+) |
+| [`2026-06-10/`](2026-06-10/) | **FBRRT re-tune** under the fixed estimators (one 80-trial study per method, 9-way parallel), same task/objective/budgets. See [`2026-06-10/REPORT.md`](2026-06-10/REPORT.md). **Outcome:** `fbrrt_cv` plateau **−6.42** (was −10.71 with old code) — beats off-policy (−9.69) and `single_seed_mc` (−6.78); the SMC-twist TD(λ) methods (−5.16/−5.67) still lead. | post-fix (`2fd7535`+) |
 
-Reference numbers from the archived study (plateau reward at 50k, BS=4):
+Plateau reward at 50k, BS=4, across both runs:
 `single_seed_td_lambda` **−5.16** · `ancestral_mc_td_lambda` (re-tuned) **−5.67**
-· `single_seed_mc` **−6.78** · off-policy **−9.69** · `fbrrt_td_lambda` (old code) **−10.71**.
+· **`fbrrt_cv` (fixed) −6.42** · `single_seed_mc` **−6.78** · `fbrrt` (fixed) **−6.90**
+· off-policy **−9.69** · `fbrrt_td_lambda` (old code) **−10.71**.

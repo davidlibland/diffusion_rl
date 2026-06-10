@@ -1,0 +1,53 @@
+[
+  {
+    "trial": 47,
+    "lcb": -12.626169153321289,
+    "params": {
+      "method": "fbrrt_td_lambda",
+      "n_steps": 47,
+      "mc_samples": 6,
+      "branch": 11,
+      "alpha": 0.08439145243472061,
+      "off_policy_frac": 0.46745336053252884,
+      "lr": 0.00010886680203417244,
+      "loss_type": "mse",
+      "use_grad_decay": false,
+      "entropy_lambda": 0.1675357759176587,
+      "lambda_eff": 0.9243440269566885
+    }
+  },
+  {
+    "trial": 21,
+    "lcb": -14.000786477193904,
+    "params": {
+      "method": "fbrrt_td_lambda",
+      "n_steps": 18,
+      "mc_samples": 18,
+      "branch": 14,
+      "alpha": 0.1714366283488614,
+      "off_policy_frac": 0.1619172911938739,
+      "lr": 0.0015858299217091471,
+      "loss_type": "mse",
+      "use_grad_decay": false,
+      "entropy_lambda": 0.759760176933624,
+      "lambda_eff": 0.5455672668566438
+    }
+  },
+  {
+    "trial": 1,
+    "lcb": -14.687963731863784,
+    "params": {
+      "method": "fbrrt_td_lambda",
+      "n_steps": 47,
+      "mc_samples": 4,
+      "branch": 9,
+      "alpha": 0.6359070234630348,
+      "off_policy_frac": 0.2841598068902967,
+      "lr": 0.002003358564312635,
+      "loss_type": "quad",
+      "use_grad_decay": false,
+      "entropy_lambda": Infinity,
+      "lambda_eff": 0.9689909052664663
+    }
+  }
+]
