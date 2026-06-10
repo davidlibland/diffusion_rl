@@ -1623,10 +1623,11 @@ def fbrrt_smc_grad_control(
     FBRRT-SMC where control = grad_x v_theta is derived automatically.
 
     This is the natural special case u*(x,t) = grad_x v_theta(x,t).
-    No separate `control` argument is required.  Two autograd calls per step:
-    grad_x v_theta at the PARENTS (t_i) defines the sampling drift K, and
-    grad_x v_theta at the CHILDREN (t_{i+1}) defines the BSDE driver in the
-    regression target.
+    No separate `control` argument is required.  ONE autograd call per step,
+    at the CHILDREN (t_{i+1}): it defines the BSDE driver in the regression
+    target, and -- gathered at the resampling survivors -- the next step's
+    sampling-drift gradient (the survivors ARE the next parents, at the same
+    points and time).  Only the t=0 seeds need a dedicated initial call.
 
     The forward SDE uses an interpolated drift:
         dX_t = (f + alpha * 2a * grad_x v_theta) dt + sqrt(2a) dW_t
@@ -1693,6 +1694,20 @@ def fbrrt_smc_grad_control(
 
     x = torch.zeros(M, d, device=device, dtype=dtype)
 
+    # grad_x v_theta at the current parents: used ONLY for the sampling drift K.
+    # A dedicated autograd call is needed just once, for the t=0 seeds (they are
+    # nobody's children); every later step reuses the previous step's CHILD
+    # gradients via the resampling gather below -- the survivors x_{i+1} =
+    # children[indices] were already differentiated at (x_{i+1}, t_{i+1}).
+    x_in = x.detach().requires_grad_(True)
+    with torch.enable_grad():
+        v0 = v_theta(x_in, torch.zeros((), device=device, dtype=dtype).expand(M))
+        grad_parent = torch.autograd.grad(
+            v0.sum(),
+            x_in,
+            create_graph=False,
+        )[0].detach()  # [M, d]
+
     step_data = []
 
     for i in range(N):
@@ -1701,36 +1716,26 @@ def fbrrt_smc_grad_control(
         t_i_tensor = torch.tensor(t_i).to(x)
         t_next_tensor = torch.tensor(t_next).to(x)
 
-        # -- grad_x v_theta at parents: used ONLY for the sampling drift K --
-        # (the BSDE driver in the target uses the CHILD gradient below, so the
-        # target depends on v_theta only through values at t_{i+1})
-        x_in = x.detach().requires_grad_(True)
-        with torch.enable_grad():
-            v_par = v_theta(x_in, t_i_tensor.expand(M))  # [M]
-            grad_x_v = torch.autograd.grad(
-                v_par.sum(),
-                x_in,
-                create_graph=False,
-            )[0].detach()  # [M, d]
-        parent_x = x_in.detach()
+        parent_x = x.detach()
 
         with torch.no_grad():
             dW = torch.randn(M, B, d, device=device, dtype=dtype) * sqdt
             f_val = f(parent_x, t_i_tensor.expand((M, 1)))  # [M, d]
-            K = f_val + alpha * 2 * a * grad_x_v  # [M, d]
+            K = f_val + alpha * 2 * a * grad_parent  # [M, d]
 
             children = (
                 parent_x.unsqueeze(1) + K.unsqueeze(1) * dt + sq2a * dW
             ).reshape(M * B, d)
 
         # -- v_theta and grad_x v_theta at CHILDREN (t_{i+1}) --
-        # Right-endpoint (explicit) BSDE scheme: the driver is evaluated at the
-        # children, so the regression target for V(., t_i) is built ENTIRELY
-        # from v_theta at t_{i+1} -- the better-trained side of the network
-        # (anchored by the exact t=1 reward targets).  This matches Hawkins et
-        # al. (2020) Alg. 2 line 11, which evaluates z at x_{i+1} with the
-        # already-fitted alpha_{i+1}.  Quadrature of the ds-integral at either
-        # endpoint is O(dt^2)/step; see backward-pass comment.
+        # The single autograd call per step.  It serves BOTH purposes:
+        #   (i)  the BSDE driver of this step's target (right-endpoint /
+        #        explicit scheme: the target for V(., t_i) is built ENTIRELY
+        #        from v_theta at t_{i+1}, the better-trained side of the
+        #        network, anchored by the exact t=1 reward targets; matches
+        #        Hawkins et al. (2020) Alg. 2 line 11, z at x_{i+1} with the
+        #        already-fitted alpha_{i+1});
+        #   (ii) the next step's drift gradient, gathered at the survivors.
         ch_in = children.detach().requires_grad_(True)
         with torch.enable_grad():
             v_ch_g = v_theta(ch_in, t_next_tensor.expand(M * B))  # [M*B]
@@ -1754,6 +1759,9 @@ def fbrrt_smc_grad_control(
 
             indices = _resample_fbrrt(w_new, M, method=resample_method)
             x = children[indices]
+            # Reuse: survivors' child gradients are the next step's parent
+            # (drift) gradients -- same points, same time, same network.
+            grad_parent = grad_ch[indices]
 
         step_data.append(
             {
@@ -1869,6 +1877,17 @@ def fbrrt_smc_grad_control_td_lambda(
 
     x = torch.zeros(M, d, device=device, dtype=dtype)
 
+    # Initial drift gradient for the t=0 seeds; later steps reuse the previous
+    # step's child gradients via the resampling gather (see grad_control).
+    x_in = x.detach().requires_grad_(True)
+    with torch.enable_grad():
+        v0 = v_theta(x_in, torch.zeros((M, 1), device=device, dtype=dtype))
+        grad_parent = torch.autograd.grad(
+            v0.sum(),
+            x_in,
+            create_graph=False,
+        )[0].detach()  # [M, d]
+
     step_data = []
 
     # ------------------------------------------------------------------ #
@@ -1882,29 +1901,21 @@ def fbrrt_smc_grad_control_td_lambda(
             (M * B, 1)
         )
 
-        # grad at parents: used ONLY for the sampling drift K (the driver in
-        # the target uses the child gradient at t_{i+1} below)
-        x_in = x.detach().requires_grad_(True)
-        with torch.enable_grad():
-            v_par = v_theta(x_in, t_i_tensor)
-            grad_x_v = torch.autograd.grad(
-                v_par.sum(),
-                x_in,
-                create_graph=False,
-            )[0].detach()
-        parent_x = x_in.detach()
+        parent_x = x.detach()
 
         with torch.no_grad():
             dW = torch.randn(M, B, d, device=device, dtype=dtype) * sqdt
             f_val = f(parent_x, t_i_tensor)
-            K = f_val + alpha * 2 * a * grad_x_v  # interpolated drift
+            K = f_val + alpha * 2 * a * grad_parent  # interpolated drift
 
             children = (
                 parent_x.unsqueeze(1) + K.unsqueeze(1) * dt + sq2a * dW
             ).reshape(M * B, d)
 
-        # v and grad_x v at CHILDREN (t_{i+1}): right-endpoint BSDE driver,
-        # so targets depend on v_theta only at t_{i+1} (see grad_control).
+        # v and grad_x v at CHILDREN (t_{i+1}): the single autograd per step.
+        # Right-endpoint BSDE driver (targets depend on v_theta only at
+        # t_{i+1}); the survivors' rows double as the next step's drift
+        # gradient (see grad_control).
         ch_in = children.detach().requires_grad_(True)
         with torch.enable_grad():
             v_ch_g = v_theta(ch_in, t_next_tensor)
@@ -1928,6 +1939,7 @@ def fbrrt_smc_grad_control_td_lambda(
 
             indices = _resample_fbrrt(w_new, M, method=resample_method)
             x = children[indices]
+            grad_parent = grad_ch[indices]  # next step's drift gradient
 
         step_data.append(
             {
@@ -2153,6 +2165,16 @@ def fbrrt_smc_grad_control_variate(
 
     x = torch.zeros(M, d, device=device, dtype=dtype)
 
+    # Initial drift gradient (v_policy) for the t=0 seeds; later steps reuse
+    # the previous step's child gradients via the resampling gather (see
+    # grad_control).
+    x_in = x.detach().requires_grad_(True)
+    with torch.enable_grad():
+        v0 = v_policy(x_in, torch.zeros((), device=device, dtype=dtype).expand(M))
+        grad_parent = torch.autograd.grad(
+            v0.sum(), x_in, create_graph=False
+        )[0].detach()  # [M, d]
+
     step_data: list[dict] = []
 
     # ------------------------------------------------------------------
@@ -2164,21 +2186,13 @@ def fbrrt_smc_grad_control_variate(
         t_i_tensor = torch.tensor(t_i, device=device, dtype=dtype).expand(M)
         t_next_tensor = torch.tensor(t_next, device=device, dtype=dtype).expand(M * B)
 
-        # grad_x v_policy at parents -- used ONLY for the sampling drift K
-        # (the driver/anchor in the target uses the child gradient below)
-        x_in = x.detach().requires_grad_(True)
-        with torch.enable_grad():
-            v_par_policy = v_policy(x_in, t_i_tensor)  # [M]
-            grad_x_v_policy = torch.autograd.grad(
-                v_par_policy.sum(), x_in, create_graph=False
-            )[0].detach()  # [M, d]
-        parent_x = x_in.detach()
+        parent_x = x.detach()
 
         with torch.no_grad():
             dW = torch.randn(M, B, d, device=device, dtype=dtype) * sqdt  # [M, B, d]
 
             f_val = f(parent_x, t_i_tensor.unsqueeze(-1))  # [M, d]
-            K = f_val + alpha * 2 * a * grad_x_v_policy  # [M, d]
+            K = f_val + alpha * 2 * a * grad_parent  # [M, d]
 
             # Children positions: [M, B, d] -> [M*B, d]
             children = (
@@ -2215,6 +2229,7 @@ def fbrrt_smc_grad_control_variate(
 
             indices = _resample_fbrrt(w_new, M, method=resample_method)
             x = children[indices]
+            grad_parent = grad_ch_policy[indices]  # next step's drift gradient
 
         step_data.append(
             {
