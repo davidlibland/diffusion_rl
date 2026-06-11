@@ -1962,7 +1962,8 @@ def fbrrt_smc_grad_control(
             log_w = (
                 torch.zeros(M * B, device=device, dtype=dtype)
                 if entropy_lambda == float("inf")
-                else v_ch / entropy_lambda
+                else torch.nan_to_num(v_ch / entropy_lambda,
+                                      nan=0.0, posinf=80.0, neginf=-80.0)
             )
             log_w = log_w - log_w.logsumexp(dim=0)
             w_new = log_w.exp()
@@ -2150,7 +2151,8 @@ def fbrrt_smc_grad_control_td_lambda(
             log_w = (
                 torch.zeros(M * B, device=device, dtype=dtype)
                 if entropy_lambda == float("inf")
-                else v_ch / entropy_lambda
+                else torch.nan_to_num(v_ch / entropy_lambda,
+                                      nan=0.0, posinf=80.0, neginf=-80.0)
             )
             log_w = log_w - log_w.logsumexp(dim=0)
             w_new = log_w.exp()
@@ -2451,7 +2453,8 @@ def fbrrt_smc_grad_control_variate(
             log_w = (
                 torch.zeros(M * B, device=device, dtype=dtype)
                 if entropy_lambda == float("inf")
-                else v_ch_target.reshape(M * B) / entropy_lambda
+                else torch.nan_to_num(v_ch_target.reshape(M * B) / entropy_lambda,
+                                      nan=0.0, posinf=80.0, neginf=-80.0)
             )
             log_w = log_w - log_w.logsumexp(dim=0)
             w_new = log_w.exp()  # [M*B]
@@ -2728,7 +2731,8 @@ def fbrrt_smc_grad_mc_Z(
             log_w = (
                 torch.zeros(M * B, device=device, dtype=dtype)
                 if entropy_lambda == float("inf")
-                else v_ch_policy.reshape(M * B) / entropy_lambda
+                else torch.nan_to_num(v_ch_policy.reshape(M * B) / entropy_lambda,
+                                      nan=0.0, posinf=80.0, neginf=-80.0)
             )
             log_w = log_w - log_w.logsumexp(dim=0)
             w_new = log_w.exp()  # [M*B]

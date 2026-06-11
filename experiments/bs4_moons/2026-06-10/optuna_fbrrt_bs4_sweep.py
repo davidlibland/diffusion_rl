@@ -203,7 +203,14 @@ METHODS_ALL = ["fbrrt", "fbrrt_td_lambda", "fbrrt_cv"]
 # Unset OPT_METHOD = combined study over all methods (smoke tests only).
 OPT_METHOD = os.environ.get("OPT_METHOD", "")
 METHODS = [OPT_METHOD] if OPT_METHOD else METHODS_ALL
-SUF = f"_{OPT_METHOD}" if OPT_METHOD else ""
+# OPT_FORCE_LOSS restricts the loss_type search space (e.g. "quad"): the v1
+# sweeps spent 40-63% of their budget on mse trials whose 5k-step LCBs look
+# good but degrade over long horizons (the fbrrt_td_lambda v1 winner was an
+# mse config that collapsed at 50k).  A forced-loss study gets its own name
+# and artifact suffix.
+FORCE_LOSS = os.environ.get("OPT_FORCE_LOSS", "")
+SUF = (f"_{OPT_METHOD}" if OPT_METHOD else "") + (
+    f"_{FORCE_LOSS}only" if FORCE_LOSS else "")
 STUDY_NAME = f"fbrrt_bs4_lcb_fixed_v1{SUF}"
 
 _TAG = os.environ.get("OPT_LOGTAG", "")  # suffix for smoke-test isolation
@@ -286,7 +293,8 @@ def sample_params(trial):
         "alpha": trial.suggest_float("alpha", 0.0, 1.5),
         "off_policy_frac": trial.suggest_float("off_policy_frac", 0.0, 0.5),
         "lr": trial.suggest_float("lr", 1e-4, 3e-3, log=True),
-        "loss_type": trial.suggest_categorical("loss_type", ["quad", "mse"]),
+        "loss_type": trial.suggest_categorical(
+            "loss_type", [FORCE_LOSS] if FORCE_LOSS else ["quad", "mse"]),
     }
     # entropy_lambda: inf = uniform resampling + unweighted regression;
     # finite values tilt the forward resampling AND weight the loss.
