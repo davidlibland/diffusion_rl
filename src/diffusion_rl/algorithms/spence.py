@@ -135,11 +135,16 @@ class Spence1mExp(torch.autograd.Function):
             / (1 + input_ / 2 + input_**2 / 6 + input_**3 / 24 + input_**4 / 120)
         )
 
-        # Rest of the values can use explicit formula:
+        # Rest of the values can use the explicit formula.  Use the identity
+        #   -x * e^x / expm1(x) = x / expm1(-x)
+        # which is finite for ALL floats: the naive left-hand side is inf/inf
+        # = NaN for x > ~88 (float32), where the right-hand side correctly
+        # tends to -x; for very negative x, expm1(-x) overflows to inf and
+        # the ratio correctly underflows to 0.
         mask_zero = input.abs() >= 0.001
         input_ = input[mask_zero]
         result[mask_zero] = (
-            -grad_output[mask_zero] * input_ * input_.exp() / torch.expm1(input_)
+            grad_output[mask_zero] * input_ / torch.expm1(-input_)
         )
 
         # Return gradients for all inputs (in this case, only one input)
