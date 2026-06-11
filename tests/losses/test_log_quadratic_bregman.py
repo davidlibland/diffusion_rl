@@ -146,3 +146,56 @@ def test_target_gradient_raises():
     loss = log_quadratic_bregman_divergence(p, q).sum()
     with pytest.raises(NotImplementedError):
         loss.backward()
+
+
+# ---------------------------------------------------------------------------
+# analytic verification of the backward formula
+# ---------------------------------------------------------------------------
+def test_backward_formula_symbolically():
+    """Verify dL/dp = p*(e^p - e^q)/(e^p - 1) from the closed form of the
+    divergence, using only the dilogarithm derivative Li2'(z) = -ln(1-z)/z.
+
+    Two independent symbolic routes:
+      (a) direct differentiation of L(p, q) = 1/2 e^q (p^2 - q^2)
+          + (e^q - 1)(S(p) - S(q)),   S(x) = Li2(1 - e^x);
+      (b) the Bregman structure: with the potential
+          F(x) = (1-x) Li2(1-x) - 1/2 x ln^2 x  (from the docstring),
+          F''(x) = -ln(x)/(x(1-x)) and the gradient of D_F linearised at
+          the prediction u = e^p is -F''(u)(e^q - u) du/dp.
+    sympy leaves polylog(1, 1-e^p) unevaluated; substitute the identity
+    polylog(1, z) = -log(1-z), i.e. polylog(1, 1-e^p) = -p.
+    """
+    sp = pytest.importorskip("sympy")
+
+    p, q = sp.symbols("p q", real=True)
+
+    def S(x):
+        return sp.polylog(2, 1 - sp.exp(x))
+
+    def fix(e):
+        return sp.simplify(e.subs(sp.polylog(1, 1 - sp.exp(p)), -p))
+
+    backward = p * (sp.exp(p) - sp.exp(q)) / (sp.exp(p) - 1)
+
+    # (a) direct differentiation of the closed-form loss
+    L = (sp.Rational(1, 2) * sp.exp(q) * (p**2 - q**2)
+         + (sp.exp(q) - 1) * (S(p) - S(q)))
+    assert fix(sp.diff(L, p) - backward) == 0
+
+    # Spence derivative identity used by Spence1mExp.backward
+    assert fix(sp.diff(S(p), p) - (-p * sp.exp(p) / (sp.exp(p) - 1))) == 0
+
+    # (b) Bregman-potential route
+    x = sp.symbols("x", positive=True)
+    F = (1 - x) * sp.polylog(2, 1 - x) - sp.Rational(1, 2) * x * sp.log(x) ** 2
+    grad_bregman = (-sp.diff(F, x, 2) * (sp.exp(q) - x) * x).subs(x, sp.exp(p))
+    assert sp.simplify(fix(grad_bregman) - backward) == 0
+
+    # removable singularity at p = 0 (the m0 branch)
+    assert sp.simplify(sp.limit(backward, p, 0) - (1 - sp.exp(q))) == 0
+
+    # branch forms used by the stable implementation are algebraically equal
+    neg_branch = p * ((sp.exp(p) - 1) - (sp.exp(q) - 1)) / (sp.exp(p) - 1)
+    pos_branch = p * (sp.exp(q - p) - 1) / (sp.exp(-p) - 1)
+    assert sp.simplify(neg_branch - backward) == 0
+    assert sp.simplify(pos_branch - backward) == 0

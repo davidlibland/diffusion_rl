@@ -21,8 +21,18 @@ def log_quadratic_bregman_grad(input: torch.Tensor, target: torch.Tensor):
 
         dL/dp = p * (e^p - e^q) / (e^p - 1)
 
-    (The Spence terms telescope:  dL/dp = e^q*p + expm1(q)*S'(p) with
-    S'(p) = -p*e^p/expm1(p) collapses to the expression above.)
+    Derivation (verified symbolically in tests/losses/): with
+    S(x) = Li_2(1 - e^x) and the dilogarithm derivative
+    Li_2'(z) = -ln(1-z)/z, the chain rule gives
+        S'(x) = Li_2'(1-e^x) * (-e^x) = -x*e^x/(e^x - 1),
+    so
+        dL/dp = e^q*p + expm1(q)*S'(p)
+              = p*[e^q*(e^p-1) - (e^q-1)*e^p]/(e^p - 1)
+              = p*(e^p - e^q)/(e^p - 1)        (cross terms cancel).
+    Equivalently, via the Bregman potential F of the docstring below
+    (F''(x) = -ln(x)/(x*(1-x))): the loss is D_F linearised at the
+    prediction u = e^p, whose gradient -F''(u)*(e^q - u)*du/dp collapses to
+    the same expression.
 
     Computed branch-wise so it is finite for ALL float inputs:
 
