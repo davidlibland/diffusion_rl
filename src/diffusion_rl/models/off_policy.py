@@ -5,6 +5,7 @@ from torch import nn, optim
 from torch.utils.data import IterableDataset
 
 from diffusion_rl.algorithms.integration import integrate_sde
+from diffusion_rl.losses.exp_mse import exp_mse
 from diffusion_rl.losses.log_quadratic_bregman import log_quadratic_bregman_divergence
 from typing import Callable
 
@@ -99,8 +100,12 @@ class OffPolicyValue(L.LightningModule):
             x = x.clone().detach().requires_grad_(True)
         pred_value = self.value_module(x, t.flatten()).flatten()[:, None]
         true_value = self.reward_function(x1).flatten()[:, None]
+        # Fail fast on a non-finite forward, before backward can poison the
+        # weights (see OnPolicyValue.training_step).
+        if not torch.isfinite(pred_value).all():
+            raise RuntimeError("Predictions are not finite")
         if self.loss_type == "mse":
-            loss = nn.functional.mse_loss(torch.exp(pred_value), torch.exp(true_value))
+            loss = exp_mse(pred_value, true_value).mean()
         elif self.loss_type == "quad":
             loss = log_quadratic_bregman_divergence(pred_value, true_value).mean()
         self.log("train_loss", loss)

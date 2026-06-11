@@ -51,7 +51,10 @@ def log_quadratic_bregman_grad(input: torch.Tensor, target: torch.Tensor):
     every subsequent loss is non-finite.
     """
     p, q = input, target
-    g = torch.empty_like(p)
+    # NaN-init: lanes not selected by any branch below (p = NaN) stay NaN and
+    # are zeroed by the final nan_to_num -- empty_like would leave
+    # uninitialised memory there (arbitrary finite garbage gradients).
+    g = torch.full_like(p, float("nan"))
 
     mn = p < 0
     mp = p > 0

@@ -10,6 +10,7 @@ from torch import Tensor, optim
 from torch.utils.data import IterableDataset
 
 from diffusion_rl.algorithms.integration import integrate_sde
+from diffusion_rl.losses.exp_mse import exp_mse
 from diffusion_rl.losses.log_quadratic_bregman import log_quadratic_bregman_divergence
 
 
@@ -52,6 +53,14 @@ class OnPolicySMCDataset(IterableDataset):
         a: the scale of the diffusive coefficient
         n_steps: The number of integration steps
         mc_samples_per_step: The number of samples drawn per step (for the SMC estimate)
+        smc_guidance_scale: if nonzero, the non-FBRRT SMC samplers draw their
+            proposals under the guided drift f + smc_guidance_scale * 2a * grad V
+            (V = smc_value, the stable twist estimate) instead of the base
+            drift f.  The samplers compensate exactly through the kernel-ratio
+            (discrete Girsanov) correction of the SMC weights, so the targets
+            remain unbiased for the base process; only their variance and the
+            regions visited change.  Ignored by the FBRRT methods, which have
+            their own drift modification (`fbrrt_alpha`).
     """
 
     def __init__(
@@ -71,6 +80,7 @@ class OnPolicySMCDataset(IterableDataset):
         branch=4,
         entropy_lambda=1.0,
         fbrrt_alpha=1.0,
+        smc_guidance_scale: float = 0.0,
         off_policy_frac: float = 0.0,
         generating_function: Callable[[int], "np.ndarray"] | None = None,
         random_t: bool = False,
@@ -99,6 +109,14 @@ class OnPolicySMCDataset(IterableDataset):
         self.branch = branch
         self.entropy_lambda = entropy_lambda
         self.fbrrt_alpha = fbrrt_alpha
+        self.smc_guidance_scale = smc_guidance_scale
+        # Guided-proposal control u(x,t) = scale * grad_x smc_value(x,t) for
+        # the non-FBRRT SMC samplers (None -> base drift, original behaviour).
+        self._guidance = (
+            grad_value_guidance(smc_value, smc_guidance_scale)
+            if smc_guidance_scale != 0.0
+            else None
+        )
 
         # Off-policy mixing: fraction of samples drawn from forward-noised
         # base distribution with reward targets (stabilizing anchor).
@@ -115,6 +133,14 @@ class OnPolicySMCDataset(IterableDataset):
         dr = self.drift(x_, t)
         assert dr.shape == (bs * mc, d)
         return rearrange(dr, "(bs mc) d -> bs mc d", bs=bs, mc=mc)
+
+    def guidance_fn(self, x, t):
+        """Guidance control on x extended by mc samples (mirrors drift_fn)."""
+        bs, mc, d = x.shape
+        x_ = rearrange(x, "bs mc d -> (bs mc) d")
+        u = self._guidance(x_, t)
+        assert u.shape == (bs * mc, d)
+        return rearrange(u, "(bs mc) d -> bs mc d", bs=bs, mc=mc)
 
     def smc_value_fn(self, x, t):
         """This just computes the value function on x extended by mc samples"""
@@ -193,6 +219,11 @@ class OnPolicySMCDataset(IterableDataset):
                             dim=self.dim,
                             n_steps=self.n_steps,
                             device=self.device,
+                            guidance=(
+                                self.guidance_fn
+                                if self._guidance is not None
+                                else None
+                            ),
                         )
                 elif self.sampling_method == "ancestral_td_lambda":
                     with torch.no_grad():
@@ -208,6 +239,7 @@ class OnPolicySMCDataset(IterableDataset):
                             dim=self.dim,
                             n_steps=self.n_steps,
                             device=self.device,
+                            guidance=self._guidance,
                         )
                 elif self.sampling_method == "single_seed_td_lambda":
                     with torch.no_grad():
@@ -225,6 +257,7 @@ class OnPolicySMCDataset(IterableDataset):
                             device=self.device,
                             random_t=self.random_t,
                             include_t_zero=self.include_t_zero,
+                            guidance=self._guidance,
                         )
                 elif self.sampling_method == "single_seed_mc":
                     with torch.no_grad():
@@ -241,6 +274,7 @@ class OnPolicySMCDataset(IterableDataset):
                             device=self.device,
                             random_t=self.random_t,
                             include_t_zero=self.include_t_zero,
+                            guidance=self._guidance,
                         )
                 elif self.sampling_method == "ancestral_mc_td_lambda":
                     with torch.no_grad():
@@ -256,6 +290,7 @@ class OnPolicySMCDataset(IterableDataset):
                             dim=self.dim,
                             n_steps=self.n_steps,
                             device=self.device,
+                            guidance=self._guidance,
                         )
                 elif self.sampling_method == "fbrrt":
                     with torch.no_grad():
@@ -470,6 +505,14 @@ class OnPolicyValue(L.LightningModule):
             x = x.clone().detach().requires_grad_(True)
         pred_value = self.value_module(x, t.flatten()).flatten()[:, None]
         true_value = y.flatten()[:, None]
+        # A non-finite PREDICTION means the network forward overflowed (or the
+        # weights are already poisoned).  The stabilised losses would report a
+        # finite (sanitised) value, but backpropagating through the non-finite
+        # forward graph still produces NaN weight-gradients -- so fail fast
+        # here, BEFORE backward, where guards (e.g. converge-phase batch
+        # skipping) can catch it.
+        if not torch.isfinite(pred_value).all():
+            raise RuntimeError("Predictions are not finite")
 
         def _reduce(per_sample):
             # Weighted mean (Hawkins et al. 2020, eq. 23); plain mean if w is None.
@@ -480,7 +523,7 @@ class OnPolicyValue(L.LightningModule):
             return (wf * per_sample).sum() / wf.sum().clamp_min(1e-30)
 
         if self.loss_type == "mse":
-            loss = _reduce((torch.exp(pred_value) - torch.exp(true_value)) ** 2)
+            loss = _reduce(exp_mse(pred_value, true_value))
         elif self.loss_type == "quad":
             loss = _reduce(log_quadratic_bregman_divergence(pred_value, true_value))
         self.log("train_loss", loss)
@@ -588,6 +631,7 @@ def one_step_bootstrap(
     n_steps,
     device,
     dtype=torch.float32,
+    guidance=None,  # optional u(x,t) on (B, N, dim): proposal drift f + 2a*u
 ):
     """
     One step bootstrap.
@@ -597,6 +641,11 @@ def one_step_bootstrap(
     across siblings sharing the same resampled parent (child-averaging).
 
     Includes both t=0 (all particles at origin) and t=1 (terminal, target=h).
+
+    If `guidance` is given, proposals are drawn under the drift f + 2a*u and
+    both the child-value estimates and the resampling weights are corrected by
+    the kernel ratio log_rho = log[p_base/p_guided] (see `_girsanov_log_rho`),
+    keeping the targets unbiased for the BASE-process value.
 
     Returns:
         xs:      (B*N*(n_steps+1), dim)  -- particles at t=0, dt, ..., 1
@@ -625,10 +674,18 @@ def one_step_bootstrap(
             t_vec = torch.full((BN, 1), t_curr, device=device, dtype=dtype)
             t_next_vec = torch.full((BN, 1), t_next_scalar, device=device, dtype=dtype)
 
-            # SDE step
+            # SDE step (guided drift f + 2a*u when guidance is given)
             dx = drift(x, t_vec) * dt
             db = sqrt(2 * a * dt) * torch.randn_like(x)
-            x_next = x + dx + db
+            if guidance is None:
+                log_rho = torch.zeros(
+                    x.shape[:-1] + (1,), dtype=x.dtype, device=x.device
+                )
+                x_next = x + dx + db
+            else:
+                u = guidance(x, t_vec)
+                log_rho = _girsanov_log_rho(u, db, a, dt).unsqueeze(-1)
+                x_next = x + dx + 2 * a * u * dt + db
 
             # Value of children (use h at terminal step)
             is_terminal = step_idx == n_steps - 1
@@ -636,6 +693,9 @@ def one_step_bootstrap(
                 v_next = h(x_next)
             else:
                 v_next = value(x_next, t_next_vec)
+            # Girsanov correction: under the guided proposal each child
+            # contributes rho * exp(v) to the parent's value estimate.
+            v_next = v_next + log_rho
 
             # Child-average: log_mean_exp of v_next over siblings sharing
             # the same parent (tracked by ix from previous resampling)
@@ -662,9 +722,10 @@ def one_step_bootstrap(
             all_ts.append(t_curr)
             all_tgts.append(target_scattered)
 
-            # Resample for next step
+            # Resample for next step.  Incremental weight rho * tau'/tau
+            # (the kernel-ratio correction of FK steering, eq. 6).
             v_smc_next = log_tau(x_next, t_next_vec)
-            rel_weights = torch.exp(v_smc_next - v_smc)
+            rel_weights = torch.exp(v_smc_next - v_smc + log_rho)
             ix = torch.multinomial(
                 rel_weights.squeeze(-1),
                 num_samples=mc_samples,
@@ -706,11 +767,69 @@ def _tvec(t_scalar, batch_size, mc_samples, dtype, device):
     )
 
 
-def _sde_step(x_flat, drift, a, t_scalar, dt, batch_size, mc_samples, dim, device):
+def _girsanov_log_rho(u, db, a, dt):
+    r"""Log Radon-Nikodym correction for a guided Euler-Maruyama step.
+
+    The guided proposal draws  x' = x + (f + 2a*u) dt + db,  db ~ N(0, 2a*dt*I),
+    while the SMC target chain transitions under the base kernel
+    x' = x + f dt + N(0, 2a*dt*I).  The incremental SMC weight must therefore be
+    multiplied by the kernel ratio (Singhal et al. 2025, arXiv:2501.06848, eq. 6)
+
+        rho = p_base(x'|x) / p_guided(x'|x),
+
+    which for these two Gaussians, expressed in the realised noise db, is
+
+        log rho = -u . db - a |u|^2 dt
+
+    (the discrete Girsanov exponent).  `u` and `db` share their trailing
+    dimension d; the dot products are taken over it, so the result drops the
+    last axis.
+    """
+    return -(u * db).sum(dim=-1) - a * (u * u).sum(dim=-1) * dt
+
+
+def grad_value_guidance(value_fn, scale):
+    r"""Build a guidance control u(x, t) = scale * grad_x value_fn(x, t).
+
+    Passing the result as `guidance` to an SMC sampler changes its forward SDE
+    from  dX = f dt + sqrt(2a) dW  to  dX = (f + 2a*u) dt + sqrt(2a) dW, i.e.
+    it adds `scale` times the optimal control 2a*grad V.  The samplers
+    compensate exactly via `_girsanov_log_rho`, so any (even imperfect)
+    value_fn leaves the targets unbiased and only affects variance.
+
+    Works inside torch.no_grad() blocks; value_fn need only be differentiable
+    w.r.t. x (frozen/EMA parameters are fine).
+    """
+
+    def guidance(x, t):
+        with torch.enable_grad():
+            x_in = x.detach().clone().requires_grad_(True)
+            v = value_fn(x_in, t)
+            (g,) = torch.autograd.grad(v.sum(), x_in)
+        return scale * g.detach()
+
+    return guidance
+
+
+def _sde_step(
+    x_flat, drift, a, t_scalar, dt, batch_size, mc_samples, dim, device, guidance=None
+):
+    """Euler-Maruyama step under drift f + 2a*u (u=0 if guidance is None).
+
+    Returns (x_next, log_rho) where log_rho is the per-particle Girsanov
+    correction log[p_base(x'|x) / p_guided(x'|x)] (zeros when unguided).
+    """
     t_vec = _tvec(t_scalar, batch_size, mc_samples, x_flat.dtype, device)
     dx = drift(x_flat, t_vec) * dt
     db = sqrt(2.0 * a * dt) * torch.randn_like(x_flat)
-    return x_flat + dx + db
+    if guidance is None:
+        log_rho = torch.zeros(
+            x_flat.shape[0], dtype=x_flat.dtype, device=x_flat.device
+        )
+        return x_flat + dx + db, log_rho
+    u = guidance(x_flat, t_vec)
+    log_rho = _girsanov_log_rho(u, db, a, dt)
+    return x_flat + dx + 2.0 * a * u * dt + db, log_rho
 
 
 def _log_mean_exp_by_ancestor(log_vals, ancestor_ix):
@@ -812,6 +931,7 @@ def ancestral_td_lambda(
     n_steps,
     device,
     dtype=torch.float32,
+    guidance=None,  # optional u(x,t): proposal drift becomes f + 2a*u
 ):
     """
     Ancestral TD(λ).
@@ -820,6 +940,13 @@ def ancestral_td_lambda(
     Each particle's value estimate v_i = log F(x*_i, t) is a valid log-target
     for its parent x_i (by the martingale property).  Resampling decides which
     particles to refine; log_mean_exp_by_ancestor averages sibling estimates.
+
+    If `guidance` is given, proposals are drawn under the modified drift
+    f + 2a*u (e.g. u = grad_x V from `grad_value_guidance`).  Both the
+    incremental SMC weights and the per-child value estimates are corrected by
+    the kernel ratio log_rho = log[p_base/p_guided] (see `_girsanov_log_rho`),
+    so the targets remain unbiased estimates of the BASE-process value: the
+    martingale identity becomes exp V(x_i) = E_guided[rho * exp V(x*_i)].
 
     λ per step = lambda_eff^(1/n_steps), so the terminal weight is lambda_eff
     regardless of n_steps.
@@ -844,8 +971,9 @@ def ancestral_td_lambda(
     ).reshape(batch_size, N, 1)
 
     step_xs = []  # (B, N, dim) particles before resampling
-    step_vs = []  # (B, N, 1)  log F at next-step proposals
+    step_vs = []  # (B, N, 1)  log F at next-step proposals (Girsanov-corrected)
     step_ixs = []  # (B, N, 1)  resample indices
+    step_log_rhos = []  # (B, N, 1) log kernel ratio of each slot's child
 
     # ------------------------------------------------------------------
     # Forward pass
@@ -855,21 +983,28 @@ def ancestral_td_lambda(
         t_next = t_curr + dt
 
         x_flat = _flat(x, batch_size, N, dim)
-        x_next_flat = _sde_step(
-            x_flat, drift, a, t_curr, dt, batch_size, N, dim, device
+        x_next_flat, log_rho_flat = _sde_step(
+            x_flat, drift, a, t_curr, dt, batch_size, N, dim, device, guidance
         )
         x_next = x_next_flat.reshape(batch_size, N, dim)
+        log_rho = log_rho_flat.reshape(batch_size, N, 1)
 
         t_next_vec = _tvec(t_next, batch_size, N, dtype, device)
 
-        # v_i = log F(x*_i, t_next) or log h(x*_i) at terminal
+        # v_i = log F(x*_i, t_next) or log h(x*_i) at terminal.
+        # Under a guided proposal the single-sample estimate of the parent's
+        # value is rho_i * exp(v_i), so fold log_rho into v up front; every
+        # downstream use of v (one-step target, duplicate-averaging, childless
+        # fallback) then stays unbiased w.r.t. the base process.
         if step_idx == n_steps - 1 and h is not None:
             v = h(x_next_flat).reshape(batch_size, N, 1)
         else:
             v = value(x_next_flat, t_next_vec).reshape(batch_size, N, 1)
+        v = v + log_rho
 
         log_tau_next = log_tau(x_next_flat, t_next_vec).reshape(batch_size, N, 1)
-        log_w = log_tau_next - log_tau_x
+        # Incremental weight rho_i * tau(x*_i) / tau(x_i)  (FK-steering eq. 6).
+        log_w = log_tau_next - log_tau_x + log_rho
 
         # Average v across duplicate particles created by previous resampling.
         # Duplicates share the same (x, t) but got independent SDE noise,
@@ -881,6 +1016,7 @@ def ancestral_td_lambda(
 
         step_xs.append(x.clone())
         step_vs.append(v)
+        step_log_rhos.append(log_rho)
 
         x, log_tau_x, ix = _resample(log_w, x_next, log_tau_next, batch_size, N, dim)
         step_ixs.append(ix)
@@ -899,11 +1035,16 @@ def ancestral_td_lambda(
         v_j = step_vs[j]  # (B, N, 1)
         ix_j = step_ixs[j]  # (B, N, 1)
 
-        # Aggregate future target to parent support via log-mean-exp
+        # Aggregate future target to parent support via log-mean-exp.
+        # m_j[i] estimates V(x*_i, t_{j+1}) at slot i's child; pulling it back
+        # to the parent through the guided kernel costs the child's log_rho
+        # (exp V(x_i) = E_guided[rho * exp V(x*_i)]).  v_j already carries its
+        # own log_rho from the forward pass, so the childless fallback is
+        # used as-is.
         m_j, counts = _log_mean_exp_by_ancestor(target, ix_j)  # (B, N, 1)
 
         # Fallback for childless particles: use v_j (pure one-step)
-        log_multi = torch.where(counts > 0, m_j, v_j)
+        log_multi = torch.where(counts > 0, m_j + step_log_rhos[j], v_j)
 
         # TD(λ): log((1-λ)*exp(v_j) + λ*exp(log_multi))
         target = _log_td_blend(v_j, log_multi, lam)
@@ -967,9 +1108,19 @@ def _single_seed_forward(
     device,
     dtype,
     random_t: bool = False,
+    guidance=None,  # optional u(x,t): proposal drift becomes f + 2a*u
 ):
     """
     Single-seed SMC forward pass shared by both single-seed algorithms.
+
+    If ``guidance`` is given, the N proposals at each step are drawn under the
+    modified drift f + 2a*u and the incremental weights pick up the kernel
+    ratio log_rho = log[p_base/p_guided] (``_girsanov_log_rho``).  This is the
+    ONLY correction the single-seed algorithms need: ``log_z_list`` is a
+    log-mean of the corrected weights (so it still estimates the BASE-process
+    Z ratio), and ``log_mean_v_list`` is a self-normalised ratio over indices
+    resampled with the corrected weights (rho cancels between numerator and
+    denominator), so both downstream estimators are unchanged.
 
     At each step k (k=0..n_steps-1) a batch of seeds x (B, dim) at time
     ``t_k`` is propagated to ``t_{k+1}``; ``mc_samples`` proposals are
@@ -1042,14 +1193,21 @@ def _single_seed_forward(
         t_curr_vec = _tvec(t_curr, batch_size, N, dtype, device)
         dx = drift(x_exp_flat, t_curr_vec) * dt
         db = sqrt(2.0 * a * dt) * torch.randn_like(x_exp_flat)
-        x_next_flat = x_exp_flat + dx + db  # (B*N, dim)
+        if guidance is None:
+            x_next_flat = x_exp_flat + dx + db  # (B*N, dim)
+            log_rho = torch.zeros(batch_size, N, 1, dtype=dtype, device=device)
+        else:
+            u = guidance(x_exp_flat, t_curr_vec)
+            x_next_flat = x_exp_flat + dx + 2.0 * a * u * dt + db
+            log_rho = _girsanov_log_rho(u, db, a, dt).reshape(batch_size, N, 1)
         x_next = x_next_flat.reshape(batch_size, N, dim)
 
         t_next_vec = _tvec(t_next, batch_size, N, dtype, device)
         log_tau_next = log_tau(x_next_flat, t_next_vec).reshape(batch_size, N, 1)
 
-        # Incremental weights: w_i = tau(x*_i, t_next) / tau(x_seed, t_curr)
-        log_w = log_tau_next - log_tau_x.unsqueeze(1)  # (B, N, 1)
+        # Incremental weights: w_i = rho_i * tau(x*_i, t_next) / tau(x_seed, t_curr)
+        # (rho_i = 1 when unguided; FK-steering kernel-ratio correction, eq. 6)
+        log_w = log_tau_next - log_tau_x.unsqueeze(1) + log_rho  # (B, N, 1)
         log_z_ratio = torch.logsumexp(log_w.squeeze(-1), dim=1) - log(N)  # (B,)
 
         # Value at proposals (h at terminal step if provided).
@@ -1114,6 +1272,7 @@ def single_seed_td_lambda(
     dtype=torch.float32,
     random_t: bool = False,
     include_t_zero: bool = True,
+    guidance=None,  # optional u(x,t): proposal drift becomes f + 2a*u
 ):
     """
     Single-Seed TD(λ).
@@ -1163,6 +1322,7 @@ def single_seed_td_lambda(
         device,
         dtype,
         random_t=random_t,
+        guidance=guidance,
     )
 
     T = n_steps
@@ -1231,6 +1391,7 @@ def single_seed_mc(
     dtype=torch.float32,
     random_t: bool = False,
     include_t_zero: bool = True,
+    guidance=None,  # optional u(x,t): proposal drift becomes f + 2a*u
 ):
     """
     Single-Seed Monte Carlo.
@@ -1267,6 +1428,7 @@ def single_seed_mc(
         device,
         dtype,
         random_t=random_t,
+        guidance=guidance,
     )
 
     T = n_steps
@@ -1334,6 +1496,7 @@ def ancestral_mc_td_lambda(
     n_steps,
     device,
     dtype=torch.float32,
+    guidance=None,  # optional u(x,t): proposal drift becomes f + 2a*u
 ):
     """
     Ancestral MC-TD(λ).
@@ -1341,6 +1504,13 @@ def ancestral_mc_td_lambda(
     Runs a standard SMC sweep (batch_size * mc_samples particles, resampled
     each step using τ-weights), then walks backward through the resampling
     tree to assign TD(λ) targets.
+
+    If `guidance` is given, proposals are drawn under the modified drift
+    f + 2a*u and the kernel ratio log_rho = log[p_base/p_guided]
+    (`_girsanov_log_rho`) is folded into BOTH the incremental weights
+    (w_c = rho_c * tau(c)/tau(x_i), which the multi-step recursion and the
+    resampling use) and the child-value estimates log_v (so the one-step term
+    O and the childless fallback stay unbiased for the BASE process).
 
     The TD(λ) blend is performed in linear space before logging:
         R_i = log( (1-λ)*exp(O_i) + λ*exp(M_i) )
@@ -1398,19 +1568,25 @@ def ancestral_mc_td_lambda(
         t_next = t_curr + dt
 
         x_flat = flat(x)
-        x_next_flat = _sde_step(
-            x_flat, drift, a, t_curr, dt, batch_size, N, dim, device
+        x_next_flat, log_rho_flat = _sde_step(
+            x_flat, drift, a, t_curr, dt, batch_size, N, dim, device, guidance
         )
         x_next = x_next_flat.reshape(batch_size, N, dim)
+        log_rho = log_rho_flat.reshape(batch_size, N, 1)
 
         log_tau_next = log_tau(x_next_flat, tvec(t_next)).reshape(batch_size, N, 1)
-        log_w = log_tau_next - log_tau_x
+        # Incremental weight rho * tau'/tau (kernel-ratio corrected).
+        log_w = log_tau_next - log_tau_x + log_rho
 
         is_terminal = step_idx == n_steps - 1
         if is_terminal and h is not None:
             log_v = h(x_next_flat).reshape(batch_size, N, 1)
         else:
             log_v = value(x_next_flat, tvec(t_next)).reshape(batch_size, N, 1)
+        # Girsanov correction: each child estimates its parent's value as
+        # rho * exp(v); folding log_rho in here keeps the one-step term O and
+        # the childless fallback in the backward pass unbiased.
+        log_v = log_v + log_rho
 
         # Average log_v across duplicate particles from previous resampling.
         # Same rationale as ancestral_td_lambda: duplicates share the same
@@ -1608,6 +1784,10 @@ def _clip_control(u: Tensor, max_norm: float | None) -> Tensor:
     """
     if max_norm is None:
         return u
+    # Sanitise BEFORE rescaling: an inf component gives norm=inf and
+    # factor=0, and inf*0 = NaN -- one NaN particle position then poisons
+    # the whole generation downstream.
+    u = torch.nan_to_num(u, nan=0.0, posinf=max_norm, neginf=-max_norm)
     norm = u.norm(dim=-1, keepdim=True)
     return u * (max_norm / norm.clamp_min(max_norm)).clamp(max=1.0)
 

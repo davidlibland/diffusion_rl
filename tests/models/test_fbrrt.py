@@ -350,3 +350,16 @@ def test_dataset_yields_weighted_tuples_and_training_step_runs():
     t = torch.rand(8, 1)
     loss3 = model.training_step((y, x, t), 0)
     assert torch.isfinite(loss3).all()
+
+
+def test_clip_control_sanitizes_nonfinite_components():
+    """inf gradient components must not become NaN positions (inf*0=NaN in
+    the rescale) -- one NaN particle poisons the whole generation."""
+    from diffusion_rl.models.on_policy import _clip_control
+
+    u = torch.tensor([[float("inf"), 1.0], [float("nan"), 2.0], [3.0, 4.0]])
+    out = _clip_control(u, 100.0)
+    assert torch.isfinite(out).all()
+    assert out.norm(dim=-1).max() <= 100.0 + 1e-4
+    # healthy rows pass through unchanged
+    assert torch.allclose(out[2], u[2])
