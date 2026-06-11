@@ -80,6 +80,8 @@ class OnPolicySMCDataset(IterableDataset):
         branch=4,
         entropy_lambda=1.0,
         fbrrt_alpha=1.0,
+        fbrrt_driver_grad_clip=None,
+        fbrrt_drift_grad_clip=100.0,
         smc_guidance_scale: float = 0.0,
         off_policy_frac: float = 0.0,
         generating_function: Callable[[int], "np.ndarray"] | None = None,
@@ -109,6 +111,8 @@ class OnPolicySMCDataset(IterableDataset):
         self.branch = branch
         self.entropy_lambda = entropy_lambda
         self.fbrrt_alpha = fbrrt_alpha
+        self.fbrrt_driver_grad_clip = fbrrt_driver_grad_clip
+        self.fbrrt_drift_grad_clip = fbrrt_drift_grad_clip
         self.smc_guidance_scale = smc_guidance_scale
         # Guided-proposal control u(x,t) = scale * grad_x smc_value(x,t) for
         # the non-FBRRT SMC samplers (None -> base drift, original behaviour).
@@ -305,6 +309,8 @@ class OnPolicySMCDataset(IterableDataset):
                             d=self.dim,
                             entropy_lambda=self.entropy_lambda,
                             alpha=self.fbrrt_alpha,
+                            driver_grad_clip=self.fbrrt_driver_grad_clip,
+                            drift_grad_clip=self.fbrrt_drift_grad_clip,
                             device=self.device,
                         )
                 elif self.sampling_method == "fbrrt_td_lambda":
@@ -322,6 +328,8 @@ class OnPolicySMCDataset(IterableDataset):
                                 lambda_eff=self.lambda_eff,
                                 entropy_lambda=self.entropy_lambda,
                                 alpha=self.fbrrt_alpha,
+                                driver_grad_clip=self.fbrrt_driver_grad_clip,
+                                drift_grad_clip=self.fbrrt_drift_grad_clip,
                                 device=self.device,
                             )
                         )
@@ -347,6 +355,8 @@ class OnPolicySMCDataset(IterableDataset):
                                 d=self.dim,
                                 entropy_lambda=self.entropy_lambda,
                                 alpha=self.fbrrt_alpha,
+                                driver_grad_clip=self.fbrrt_driver_grad_clip,
+                                drift_grad_clip=self.fbrrt_drift_grad_clip,
                                 device=self.device,
                             )
                         )
@@ -364,6 +374,8 @@ class OnPolicySMCDataset(IterableDataset):
                             d=self.dim,
                             entropy_lambda=self.entropy_lambda,
                             alpha=self.fbrrt_alpha,
+                            driver_grad_clip=self.fbrrt_driver_grad_clip,
+                            drift_grad_clip=self.fbrrt_drift_grad_clip,
                             device=self.device,
                         )
                 # Splice in off-policy samples by overwriting a random subset of indices
@@ -1821,6 +1833,7 @@ def fbrrt_smc_grad_control(
     dtype: torch.dtype = torch.float32,
     resample_method: str = "systematic",
     drift_grad_clip: float | None = 100.0,
+    driver_grad_clip: float | None = None,
 ) -> FBRRTSamples:
     """
     FBRRT-SMC where control = grad_x v_theta is derived automatically.
@@ -2011,8 +2024,13 @@ def fbrrt_smc_grad_control(
         # loss (all_w below / eq. 23), not on the target.  Both the value AND
         # the driver are child-evaluated, so the target uses v_theta only at
         # t_{i+1} (a pure backward bootstrap).
-        g_sq = (grad_ch_mb**2).sum(dim=-1)  # [M, B]
-        u_dot_g = (u.unsqueeze(1) * grad_ch_mb).sum(dim=-1)  # [M, B]
+        # Optional saturation of the driver gradients: |g|^2 is the QUADRATIC
+        # amplifier of value-gradient error into the targets; clipping bounds
+        # target excursions at the cost of bias when active (the drift clip,
+        # by contrast, is exactly compensated and bias-free).
+        g_drv = _clip_control(grad_ch_mb, driver_grad_clip)
+        g_sq = (g_drv**2).sum(dim=-1)  # [M, B]
+        u_dot_g = (u.unsqueeze(1) * g_drv).sum(dim=-1)  # [M, B]
         driver_b = (a * g_sq - 2.0 * a * u_dot_g) * dt  # [M, B]
         target = (v_ch_mb + driver_b).mean(dim=1)  # [M]
         ev_next = v_ch_mb.mean(dim=1)  # [M]  (for the regression weights)
@@ -2053,6 +2071,7 @@ def fbrrt_smc_grad_control_td_lambda(
     dtype: torch.dtype = torch.float32,
     resample_method: str = "multinomial",
     drift_grad_clip: float | None = 100.0,
+    driver_grad_clip: float | None = None,
 ) -> FBRRTSamples:
     """
     TD(lambda) version of fbrrt_smc_grad_control, with interpolated drift.
@@ -2242,8 +2261,9 @@ def fbrrt_smc_grad_control_td_lambda(
 
         # BSDE driver (right-endpoint, child-averaged, applied control u):
         #   delta_i = mean_b ( a*|g_b|^2 - 2a * u . g_b ) * dt
-        g_sq = (grad_ch_mb**2).sum(dim=-1)  # [M, B]
-        u_dot_g = (u.unsqueeze(1) * grad_ch_mb).sum(dim=-1)  # [M, B]
+        g_drv = _clip_control(grad_ch_mb, driver_grad_clip)  # see grad_control
+        g_sq = (g_drv**2).sum(dim=-1)  # [M, B]
+        u_dot_g = (u.unsqueeze(1) * g_drv).sum(dim=-1)  # [M, B]
         delta = ((a * g_sq - 2.0 * a * u_dot_g) * dt).mean(dim=1)  # [M]
 
         # GAE recursion (now ancestry-aligned):
@@ -2292,6 +2312,7 @@ def fbrrt_smc_grad_control_variate(
     dtype: torch.dtype = torch.float32,
     resample_method: str = "systematic",
     drift_grad_clip: float | None = 100.0,
+    driver_grad_clip: float | None = None,
 ) -> FBRRTSamples:
     """
     FBRRT-SMC with residual control variate Z estimator and separated
@@ -2541,7 +2562,8 @@ def fbrrt_smc_grad_control_variate(
         # Child-mean anchor (t_{i+1}) + residual correction  [M, d].
         # Both terms are detached, so z_rcv carries no gradient -- targets are
         # stop-gradient by construction.
-        z_anchor = grad_ch_policy_mb.mean(dim=1)  # [M, d]
+        z_anchor = _clip_control(grad_ch_policy_mb,
+                                 driver_grad_clip).mean(dim=1)  # [M, d]
         z_rcv = z_anchor + z_correction  # [M, d]
 
         # Driver using the RCV estimate of grad_x V and the APPLIED control u
@@ -2592,6 +2614,8 @@ def fbrrt_smc_grad_mc_Z(
     device: torch.device | None = None,
     dtype: torch.dtype = torch.float32,
     resample_method: str = "systematic",
+    drift_grad_clip: float | None = 100.0,  # accepted for API parity; unused
+    driver_grad_clip: float | None = None,  # accepted for API parity; unused
 ) -> FBRRTSamples:
     r"""
     FBRRT-SMC with MC estimate of Z and separated policy / target value
