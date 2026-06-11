@@ -465,6 +465,7 @@ class OnPolicyValue(L.LightningModule):
         reward_function=None,
         dim: int = 2,
         loss_type: str = "mse",
+        loss_shift: float = 0.0,
         grad_decay: float = None,
         analytical_value_fn=None,
         ema_decay=0.99,  # EMA decay for stable SMC target
@@ -534,10 +535,19 @@ class OnPolicyValue(L.LightningModule):
             wf = w.flatten().clamp_min(0.0)
             return (wf * per_sample).sum() / wf.sum().clamp_min(1e-30)
 
+        # loss_shift recenters the log-values before the exp-space losses:
+        # for problems with a large log-partition gap (-V(0,0) >> 1) the raw
+        # exp-space gradients carry a factor e^{V00} and fall below Adam's eps,
+        # stalling training.  Shifting by ~V00 (a constant; same minimizer
+        # p=q, a Bregman divergence in the tilted variables H/e^shift) returns
+        # the gradient scale to the well-conditioned O(e^{-few}) regime at any
+        # dimension/gap.
+        c0 = self.hparams.loss_shift
         if self.loss_type == "mse":
-            loss = _reduce(exp_mse(pred_value, true_value))
+            loss = _reduce(exp_mse(pred_value - c0, true_value - c0))
         elif self.loss_type == "quad":
-            loss = _reduce(log_quadratic_bregman_divergence(pred_value, true_value))
+            loss = _reduce(log_quadratic_bregman_divergence(
+                pred_value - c0, true_value - c0))
         self.log("train_loss", loss)
         if not torch.isfinite(loss).all():
             raise RuntimeError("Loss is not finite")

@@ -78,6 +78,7 @@ class OffPolicyValue(L.LightningModule):
         lr,
         dim: int = 2,
         loss_type: str = "mse",
+        loss_shift: float = 0.0,
         grad_decay: float = None,
         analytical_value_fn=None,
     ):
@@ -104,10 +105,12 @@ class OffPolicyValue(L.LightningModule):
         # weights (see OnPolicyValue.training_step).
         if not torch.isfinite(pred_value).all():
             raise RuntimeError("Predictions are not finite")
+        c0 = self.hparams.loss_shift  # see OnPolicyValue.training_step
         if self.loss_type == "mse":
-            loss = exp_mse(pred_value, true_value).mean()
+            loss = exp_mse(pred_value - c0, true_value - c0).mean()
         elif self.loss_type == "quad":
-            loss = log_quadratic_bregman_divergence(pred_value, true_value).mean()
+            loss = log_quadratic_bregman_divergence(
+                pred_value - c0, true_value - c0).mean()
         self.log("train_loss", loss)
         # Per-bin variance of (r(x1) - V_analytical(x,t)), measuring off-policy target noise
         if self.analytical_value_fn is not None:
