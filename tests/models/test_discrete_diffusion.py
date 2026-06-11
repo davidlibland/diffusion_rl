@@ -82,7 +82,7 @@ def test_training_step_returns_scalar(small_model, bs, seq_len):
     """training_step must return a scalar (0-d) tensor."""
     vocab_size = small_model.hparams.vocab_size
     batch = torch.randint(0, vocab_size, (bs, seq_len))
-    loss = small_model.training_step(batch)
+    loss = small_model.training_step(batch, 0)
     assert isinstance(loss, torch.Tensor)
     assert loss.ndim == 0, f"Expected scalar loss, got shape {loss.shape}"
 
@@ -92,7 +92,7 @@ def test_training_step_finite_loss(small_model, bs, seq_len):
     """training_step must produce a finite loss for valid inputs."""
     vocab_size = small_model.hparams.vocab_size
     batch = torch.randint(0, vocab_size, (bs, seq_len))
-    loss = small_model.training_step(batch)
+    loss = small_model.training_step(batch, 0)
     assert torch.isfinite(loss), f"Loss is not finite: {loss.item()}"
 
 

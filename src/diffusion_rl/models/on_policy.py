@@ -83,6 +83,7 @@ class OnPolicySMCDataset(IterableDataset):
         fbrrt_driver_grad_clip=None,
         fbrrt_drift_grad_clip=100.0,
         smc_guidance_scale: float = 0.0,
+        smc_guidance_value=None,
         off_policy_frac: float = 0.0,
         generating_function: Callable[[int], "np.ndarray"] | None = None,
         random_t: bool = False,
@@ -114,10 +115,14 @@ class OnPolicySMCDataset(IterableDataset):
         self.fbrrt_driver_grad_clip = fbrrt_driver_grad_clip
         self.fbrrt_drift_grad_clip = fbrrt_drift_grad_clip
         self.smc_guidance_scale = smc_guidance_scale
-        # Guided-proposal control u(x,t) = scale * grad_x smc_value(x,t) for
-        # the non-FBRRT SMC samplers (None -> base drift, original behaviour).
+        # Guided-proposal control u(x,t) = scale * grad_x V(x,t) for the
+        # non-FBRRT SMC samplers (None -> base drift, original behaviour).
+        # The gradient SOURCE defaults to smc_value but can be overridden via
+        # smc_guidance_value (e.g. an EMA shadow for FBRRT-style gradient
+        # stabilisation, independent of the resampling twist choice).
+        _gsrc = smc_guidance_value if smc_guidance_value is not None else smc_value
         self._guidance = (
-            grad_value_guidance(smc_value, smc_guidance_scale)
+            grad_value_guidance(_gsrc, smc_guidance_scale)
             if smc_guidance_scale != 0.0
             else None
         )
@@ -810,7 +815,7 @@ def _girsanov_log_rho(u, db, a, dt):
     return -(u * db).sum(dim=-1) - a * (u * u).sum(dim=-1) * dt
 
 
-def grad_value_guidance(value_fn, scale):
+def grad_value_guidance(value_fn, scale, max_norm: float | None = 100.0):
     r"""Build a guidance control u(x, t) = scale * grad_x value_fn(x, t).
 
     Passing the result as `guidance` to an SMC sampler changes its forward SDE
@@ -818,6 +823,13 @@ def grad_value_guidance(value_fn, scale):
     it adds `scale` times the optimal control 2a*grad V.  The samplers
     compensate exactly via `_girsanov_log_rho`, so any (even imperfect)
     value_fn leaves the targets unbiased and only affects variance.
+
+    The control is sanitised and norm-clipped (per particle, default 100)
+    before use: a non-finite or spiking network gradient would otherwise
+    catapult particles off-manifold (the FBRRT failure mode).  Because the
+    Girsanov correction is computed from the ACTUALLY-APPLIED u, the clip is
+    exactly compensated and introduces no bias -- it only bounds how far the
+    proposal can stray.
 
     Works inside torch.no_grad() blocks; value_fn need only be differentiable
     w.r.t. x (frozen/EMA parameters are fine).
@@ -828,7 +840,7 @@ def grad_value_guidance(value_fn, scale):
             x_in = x.detach().clone().requires_grad_(True)
             v = value_fn(x_in, t)
             (g,) = torch.autograd.grad(v.sum(), x_in)
-        return scale * g.detach()
+        return _clip_control(scale * g.detach(), max_norm)
 
     return guidance
 
