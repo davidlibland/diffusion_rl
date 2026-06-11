@@ -88,6 +88,8 @@ def _winner(fname, key, method):
 
 T58 = _winner("optuna_fbrrt2_confirm_results_fbrrt_quadonly.json", "58", "fbrrt")
 T14 = _winner("optuna_fbrrt2_confirm_results_fbrrt_cv.json", "14", "fbrrt_cv")
+T11 = _winner("optuna_fbrrt2_confirm_results_fbrrt_td_lambda_quadonly.json",
+              "11", "fbrrt_td_lambda")
 
 
 class HybridValue:
@@ -107,9 +109,17 @@ class HybridValue:
 
 
 ARMS = ["f58_base", "f58_ema99", "f58_ema999", "f58_hybrid",
-        "cv14_base", "cv14_ema99", "cv14_ema999"]
+        "cv14_base", "cv14_ema99", "cv14_ema999",
+        # td_lambda at the same 50k length: base control, full target network,
+        # and the decoupled hybrid (EMA gradients + LIVE bootstrap values).
+        # The decoupling is mathematically sound: the driver only needs SOME
+        # estimate of grad V_true (bias quadratic in that estimate's error,
+        # regardless of which net supplies it), the Girsanov term keeps using
+        # the actually-applied control, and the GAE telescoping is agnostic
+        # to which estimator produced each step's delta/EV.
+        "td11_base", "td11_ema999", "td11_hybrid"]
 SEEDS = [0, 1, 2]
-LOG_DIR = "lightning_logs/fbrrt_stab"
+LOG_DIR = os.environ.get("OPT_STAB_LOGDIR", "lightning_logs/fbrrt_stab")
 
 
 def make_run(arm, seed):
@@ -119,6 +129,10 @@ def make_run(arm, seed):
             params["ema_decay"] = 0.99
         elif arm in ("f58_ema999", "f58_hybrid"):
             params["ema_decay"] = 0.999
+    elif arm.startswith("td11"):
+        params = dict(T11)
+        if arm in ("td11_ema999", "td11_hybrid"):
+            params["ema_decay"] = 0.999
     else:
         params = dict(T14)
         if arm == "cv14_ema99":
@@ -126,9 +140,9 @@ def make_run(arm, seed):
         elif arm == "cv14_ema999":
             params["ema_decay"] = 0.999
     model, vm, ds, loader = build(params, 4000 + seed)
-    if arm in ("f58_ema99", "f58_ema999"):
+    if arm in ("f58_ema99", "f58_ema999", "td11_ema999"):
         ds.value = model.ema                       # full target network
-    elif arm == "f58_hybrid":
+    elif arm in ("f58_hybrid", "td11_hybrid"):
         ds.value = HybridValue(model.value_module, model.ema)
     # cv arms: build() already wires smc_value (= v_policy) to model.ema with
     # the requested decay; v_target stays the live net.
@@ -226,9 +240,10 @@ json.dump({"t58": {k: str(v) for k, v in T58.items()},
            "max_steps": MAX_STEPS, "seeds": SEEDS, "arms": rows},
           open(f"{HERE}/fbrrt_stabilization_results.json", "w"), indent=2)
 
-fig, axes = plt.subplots(1, 2, figsize=(15, 5.5))
+fig, axes = plt.subplots(1, 3, figsize=(21, 5.5))
 for ax, prefix, title in [(axes[0], "f58", "fbrrt t58"),
-                          (axes[1], "cv14", "fbrrt_cv t14")]:
+                          (axes[1], "cv14", "fbrrt_cv t14"),
+                          (axes[2], "td11", "fbrrt_td_lambda t11")]:
     for arm in [a for a in ARMS if a.startswith(prefix)]:
         for seed in SEEDS:
             st, cv = read_curve(f"{LOG_DIR}/{arm}_s{seed}/version_0/metrics.csv")
