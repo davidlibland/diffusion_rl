@@ -147,3 +147,105 @@ Differences from the archived FBRRT sweep, all deliberate:
 
 Reproduce: `KPM=3 OPT_N_TRIALS=80 bash experiments/bs4_moons/2026-06-10/run_parallel.sh`
 (stages are idempotent and resumable).
+
+---
+
+# Addendum (2026-06-11): loss stabilization, quad-only re-sweeps, and the gradient-channel studies
+
+The initial convergence runs above exposed a chain of numerical-stability
+issues whose diagnosis and fixes substantially change the FBRRT picture.
+Chronology and findings:
+
+## 1. Loss-level fixes
+
+- **Quad loss**: the naive autograd of the log-quadratic Bregman divergence is
+  NaN for predictions > ~88 nats (Spence backward inf/inf) — one prediction
+  spike silently poisoned all 2.9M weights through Adam (forensics: post-crash
+  `value_module.pt` 100% non-finite, zero non-finite losses ever logged).
+  Replaced with an exact closed-form gradient `p(e^p−e^q)/(e^p−1)` (verified
+  symbolically), finite for all floats; the loss VALUE is sanitised for
+  monitoring only.
+- **MSE loss**: `(e^p−e^q)²` overflows float32 for predictions > ~44 nats; the
+  v1 `fbrrt_td_lambda` winner (an mse config) skipped 18% of its convergence
+  batches.  Same value/gradient split applied (`losses/exp_mse.py`).
+- Non-finite predictions now fail fast before backward; FBRRT resampling
+  weights and the control clip are sanitised (NaN data / CUDA asserts).
+
+## 2. Quad-only re-sweeps (fresh 80-trial studies per method)
+
+Budget analysis showed 49%/63%/40% of the v1 fbrrt/td_lambda/cv sweeps went to
+mse configs, whose 5k-step LCBs look competitive but degrade over 50k —
+worst for td_lambda, where TPE concentrated ON mse and crowned a winner that
+collapsed at convergence.  Quad-only results: `fbrrt` t58 (plateau −6.75
+single-seed), `fbrrt_cv` t0 (−7.82, no divergence), `fbrrt_td_lambda` t6
+(−29.6: the variant, not the loss, is the problem).
+
+## 3. The 2×2 gradient/value probe
+
+Perturbing the *oracle* V on the GMM benchmark and measuring FBRRT target
+quality: **the value-gradient channel dominates by ~2 orders of magnitude per
+nat of error** (gradient error 50 with a near-perfect value: bias 26, var 833,
+particles 6× off-manifold; value error 50: bias 4, var 2.5; a pure value
+offset changes nothing but the offset).  Mechanism: ∇V enters the dynamics
+(distribution feedback) and the targets quadratically (the `|∇v|²` driver),
+while V enters linearly/allocatively.  Even "extreme value" damage is
+mediated by its incidental gradient.
+
+## 4. Gradient-stabilization studies (pinned winners, multi-seed)
+
+**td11 lever study** (12 arms × 3 seeds × 25k): only the EMA generation
+network eliminates divergence (ema999 and the kitchen-sink: 0/3 deaths);
+the `grad_decay` L2 penalty is load-bearing (ablation: 3/3 deaths) but
+stronger over-smooths; magnitude clips (drift/driver/optimizer) and α-warmup
+reduce but never eliminate deaths.
+
+**Strong-variant study** (10 arms × 3 seeds × **50k**,
+`fbrrt_stabilization_results.json`):
+
+| arm | plateau (3 seeds) | best | deaths |
+|---|---:|---:|---:|
+| f58_base (live net) | −25.2 ± 5.0 | −14.3 | 0 |
+| **f58_ema99 (target network)** | **−6.34 ± 0.56** | **−5.49** | **0** |
+| f58_ema999 | −9.33 ± 1.2 | −7.05 | 0 |
+| f58_hybrid (EMA grads + live values) | −14.5 ± 12.7 | −12.4 | 0 |
+| cv14_base (policy-EMA 0.932, tuned) | −5.58 ± 0.67 | −4.98 | 1/3 |
+| cv14_ema99 | −6.44 ± 1.4 | −5.70 | 0/3 |
+| cv14_ema999 | −5.60 ± 0.7 | −5.02 | 1/3 |
+| td11_base | −18.3 ± 11.0 | −11.4 | 3/3 |
+| td11_ema999 | −13.9 ± 5.1 | −8.76 | 0/3 |
+| td11_hybrid | −17.1 ± 8.3 | −16.3 | 1/3 |
+
+Key lessons:
+
+- **Single-seed convergence numbers are unreliable** (f58 live: −6.75 on the
+  lucky converge seed vs −25.2 ± 5.0 over 3 fresh seeds).  The multi-seed rows
+  above supersede the single-run table in the main report.
+- **The EMA target network is the decisive stabilizer** and transforms plain
+  `fbrrt`: −25 → **−6.34 ± 0.56 with zero deaths** — the first multi-seed-
+  robust FBRRT result, just behind the SMC-twist leaders (−5.16/−5.67).
+  Decay 0.99 beats 0.999 (target staleness, as predicted).
+- **Hybrid (EMA gradients + live bootstrap values) loses to the full EMA on
+  both variants tried.**  Although mathematically unbiased-at-convergence,
+  mid-training it pairs values and gradients from different functions
+  (per-step mismatch bias) and re-opens the fast value-feedback loop; the
+  full target network's (value, gradient) pair is self-consistent.
+- **`fbrrt_cv` inverts the decay direction**: its RCV residual scales with
+  `v_target − v_policy`, so a slower policy EMA *widens* the residual and
+  feeds the `|z_rcv|²` driver — TPE's tuned 0.932 was right; cv's occasional
+  late death (~1/3 of 50k runs) is not fixed by EMA speed and remains the
+  family's open stability issue (cv14_ema99 trades ~0.9 plateau for 0/3
+  deaths).
+- `fbrrt_td_lambda` is stable under ema999 (0/3 at both 25k and 50k) but
+  uncompetitive (~−14); the variant is deprioritised in favour of
+  `ancestral_mc_td_lambda` for multi-step.
+
+## Recommended configurations (multi-seed, 50k, BS=4)
+
+| config | plateau | deaths | note |
+|---|---:|---:|---|
+| `fbrrt` t58 + EMA(0.99) generation | **−6.34 ± 0.56** | 0/3 | robust recommendation |
+| `fbrrt_cv` t14 (tuned, policy-EMA 0.932) | −5.58 ± 0.67 | 1/3 | best plateau, accepts rare late death |
+| `fbrrt_cv` t14 + policy-EMA 0.99 | −6.44 ± 1.4 | 0/3 | the safe cv |
+
+Reference: `single_seed_td_lambda` −5.16, `ancestral_mc_td_lambda` −5.67,
+`single_seed_mc` −6.78, off-policy −9.69 (archived single-seed numbers).

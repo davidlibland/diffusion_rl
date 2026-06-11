@@ -1,0 +1,51 @@
+[
+  {
+    "trial": 47,
+    "lcb": -8.519397412801718,
+    "params": {
+      "method": "fbrrt",
+      "n_steps": 24,
+      "mc_samples": 24,
+      "branch": 7,
+      "alpha": 1.1587840420703743,
+      "off_policy_frac": 0.03682964689913055,
+      "lr": 0.00011037447426221649,
+      "loss_type": "quad",
+      "use_grad_decay": false,
+      "entropy_lambda": 0.9130974293857703
+    }
+  },
+  {
+    "trial": 73,
+    "lcb": -10.29317365518977,
+    "params": {
+      "method": "fbrrt",
+      "n_steps": 21,
+      "mc_samples": 4,
+      "branch": 3,
+      "alpha": 0.8269838359716429,
+      "off_policy_frac": 0.1355122629110841,
+      "lr": 0.00012061707314982768,
+      "loss_type": "quad",
+      "use_grad_decay": true,
+      "entropy_lambda": 0.10272791377986788,
+      "grad_decay": 0.0010397104765457166
+    }
+  },
+  {
+    "trial": 58,
+    "lcb": -10.548181001868137,
+    "params": {
+      "method": "fbrrt",
+      "n_steps": 22,
+      "mc_samples": 31,
+      "branch": 4,
+      "alpha": 0.7663466778016537,
+      "off_policy_frac": 0.04297608575001072,
+      "lr": 0.00016653122910849136,
+      "loss_type": "quad",
+      "use_grad_decay": false,
+      "entropy_lambda": Infinity
+    }
+  }
+]
