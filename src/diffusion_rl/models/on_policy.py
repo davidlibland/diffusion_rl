@@ -84,6 +84,7 @@ class OnPolicySMCDataset(IterableDataset):
         fbrrt_drift_grad_clip=100.0,
         smc_guidance_scale: float = 0.0,
         smc_guidance_value=None,
+        augment_fn=None,
         off_policy_frac: float = 0.0,
         generating_function: Callable[[int], "np.ndarray"] | None = None,
         random_t: bool = False,
@@ -114,6 +115,12 @@ class OnPolicySMCDataset(IterableDataset):
         self.fbrrt_alpha = fbrrt_alpha
         self.fbrrt_driver_grad_clip = fbrrt_driver_grad_clip
         self.fbrrt_drift_grad_clip = fbrrt_drift_grad_clip
+        # Optional post-generation augmentation hook: receives and returns
+        # (all_x, all_t, all_tgt, all_weights).  E.g. bridge-backward 'noising'
+        # expansion of trajectory targets (harmonic property of e^V:
+        # X_t | X_s=x ~ N((t/s)x, 2a t(s-t)/s I) exactly for this process,
+        # so a target at (x_s, s) is a valid H-sample at the noised point).
+        self.augment_fn = augment_fn
         self.smc_guidance_scale = smc_guidance_scale
         # Guided-proposal control u(x,t) = scale * grad_x V(x,t) for the
         # non-FBRRT SMC samplers (None -> base drift, original behaviour).
@@ -422,6 +429,10 @@ class OnPolicySMCDataset(IterableDataset):
                     all_weights = torch.ones(
                         n_total, device=all_x.device, dtype=all_x.dtype
                     )
+                if self.augment_fn is not None:
+                    all_x, all_t, all_tgt, all_weights = self.augment_fn(
+                        all_x, all_t, all_tgt, all_weights)
+                    n_total = all_x.shape[0]
                 if self.shuffle:
                     perm = torch.randperm(n_total)
                 else:
