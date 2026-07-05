@@ -1,0 +1,78 @@
+{
+  "method": "ancestral_mc_td_lambda",
+  "dim": 128,
+  "problem": {
+    "d": 128,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 6.000000000000011,
+    "reward_scale": 0.11115539416072549,
+    "E_base_r": -27.493367197104025,
+    "E_opt_r": -21.493367197104014,
+    "gap": 24.096710919750972,
+    "bias_val": -24.096710919750972,
+    "V00_analytical": -24.096710205078125
+  },
+  "n_trials": 40,
+  "chosen": [
+    {
+      "trial": 5,
+      "lcb": -26.105306801051842,
+      "params": {
+        "off_policy_frac": 0.012709563372047594,
+        "lr": 0.0006746437142284312,
+        "use_grad_decay": true,
+        "grad_decay": 0.0012329098365270509,
+        "n_steps": 31,
+        "mc_samples": 1,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.005595986878006083,
+        "l": 0.017027416886764398,
+        "use_guidance": true,
+        "guidance_scale": 0.06496488370260174,
+        "guidance_source": "ema",
+        "ema_decay": 0.9920400675819148,
+        "lambda_eff": 0.808120379564417
+      }
+    },
+    {
+      "trial": 18,
+      "lcb": -26.112192481992473,
+      "params": {
+        "off_policy_frac": 0.26497094226823936,
+        "lr": 0.0008382083493496835,
+        "use_grad_decay": false,
+        "n_steps": 58,
+        "mc_samples": 1,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.0021596519040245872,
+        "l": 0.046009690576614526,
+        "use_guidance": true,
+        "guidance_scale": 0.051021511139253274,
+        "guidance_source": "ema",
+        "ema_decay": 0.9445776725938985,
+        "lambda_eff": 0.5987469329113434
+      }
+    },
+    {
+      "trial": 14,
+      "lcb": -26.157476782731777,
+      "params": {
+        "off_policy_frac": 0.10213360983514148,
+        "lr": 0.0001480098833292642,
+        "use_grad_decay": false,
+        "n_steps": 47,
+        "mc_samples": 1,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.0010193020681400593,
+        "l": 0.0014385014647105452,
+        "use_guidance": true,
+        "guidance_scale": 0.05888923262196661,
+        "guidance_source": "ema",
+        "ema_decay": 0.9483280334385863,
+        "lambda_eff": 0.7467545117749311
+      }
+    }
+  ],
+  "elapsed_min": 53.09752137263616
+}

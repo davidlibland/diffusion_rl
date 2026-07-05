@@ -1,0 +1,77 @@
+{
+  "method": "single_seed_td_lambda",
+  "dim": 16,
+  "problem": {
+    "d": 16,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 6.000000000000002,
+    "reward_scale": 0.4269406318604083,
+    "E_base_r": -13.960202937140465,
+    "E_opt_r": -7.960202937140464,
+    "gap": 10.465172839756868,
+    "bias_val": -10.465172839756868,
+    "V00_analytical": -10.46517276763916
+  },
+  "n_trials": 40,
+  "chosen": [
+    {
+      "trial": 3,
+      "lcb": -12.18643073003723,
+      "params": {
+        "off_policy_frac": 0.13567451588694796,
+        "lr": 0.00013511829476450826,
+        "use_grad_decay": true,
+        "grad_decay": 0.0002001342062287998,
+        "n_steps": 29,
+        "mc_samples": 13,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.0016736010167825778,
+        "l": 0.9133995846860972,
+        "use_guidance": true,
+        "guidance_scale": 0.05094796489697569,
+        "guidance_source": "ema",
+        "ema_decay": 0.9721717096360577,
+        "random_t": true,
+        "lambda_eff": 0.3584657285442726
+      }
+    },
+    {
+      "trial": 35,
+      "lcb": -12.296706926348154,
+      "params": {
+        "off_policy_frac": 0.1852112752606425,
+        "lr": 0.00013163705706578557,
+        "use_grad_decay": true,
+        "grad_decay": 0.0004243928266704569,
+        "n_steps": 18,
+        "mc_samples": 8,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.009476186639914693,
+        "l": 0.25688774954865823,
+        "use_guidance": false,
+        "random_t": true,
+        "lambda_eff": 0.12528615795181816
+      }
+    },
+    {
+      "trial": 38,
+      "lcb": -12.40896326668684,
+      "params": {
+        "off_policy_frac": 0.28001133910857723,
+        "lr": 0.00015688966548279732,
+        "use_grad_decay": true,
+        "grad_decay": 0.0006564792237845696,
+        "n_steps": 18,
+        "mc_samples": 10,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.006458448283234389,
+        "l": 0.34207689013678694,
+        "use_guidance": false,
+        "random_t": true,
+        "lambda_eff": 0.009160796291586795
+      }
+    }
+  ],
+  "elapsed_min": 53.39203120072683
+}

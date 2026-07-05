@@ -1,0 +1,73 @@
+{
+  "method": "single_seed_mc",
+  "dim": 2,
+  "problem": {
+    "d": 2,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 5.999999999999999,
+    "reward_scale": 1.947491622736417,
+    "E_base_r": -6.993032937872257,
+    "E_opt_r": -0.9930329378722572,
+    "gap": 2.3532556649489527,
+    "bias_val": -2.3532556649489527,
+    "V00_analytical": -2.3532557487487793
+  },
+  "n_trials": 40,
+  "chosen": [
+    {
+      "trial": 14,
+      "lcb": -1.7465431777084401,
+      "params": {
+        "off_policy_frac": 0.09529699023619297,
+        "lr": 0.00012935274362268684,
+        "use_grad_decay": true,
+        "grad_decay": 1.5520807981494032e-05,
+        "n_steps": 10,
+        "mc_samples": 10,
+        "smc_type": "k_Vema",
+        "k": 0.10354286803229082,
+        "use_guidance": true,
+        "guidance_scale": 0.609122374524667,
+        "guidance_source": "ema",
+        "ema_decay": 0.962278657124589,
+        "random_t": false
+      }
+    },
+    {
+      "trial": 20,
+      "lcb": -1.8500993591951889,
+      "params": {
+        "off_policy_frac": 0.31895778145812276,
+        "lr": 0.0005273720362160239,
+        "use_grad_decay": true,
+        "grad_decay": 0.00010421655866336136,
+        "n_steps": 11,
+        "mc_samples": 24,
+        "smc_type": "k_Vema",
+        "k": 0.43522072431839265,
+        "use_guidance": false,
+        "ema_decay": 0.962395500974866,
+        "random_t": false
+      }
+    },
+    {
+      "trial": 18,
+      "lcb": -1.8537713817307937,
+      "params": {
+        "off_policy_frac": 0.04006615331194187,
+        "lr": 0.000391631122483119,
+        "use_grad_decay": true,
+        "grad_decay": 6.186831303546068e-05,
+        "n_steps": 11,
+        "mc_samples": 12,
+        "smc_type": "k_Vema",
+        "k": 0.4374923438638556,
+        "use_guidance": false,
+        "ema_decay": 0.9678836112431148,
+        "random_t": false
+      }
+    }
+  ],
+  "elapsed_min": 69.95088658332824
+}

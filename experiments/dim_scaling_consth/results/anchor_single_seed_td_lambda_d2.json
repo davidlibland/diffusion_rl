@@ -1,0 +1,71 @@
+{
+  "method": "single_seed_td_lambda",
+  "dim": 2,
+  "problem": {
+    "d": 2,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 5.999999999999999,
+    "reward_scale": 1.947491622736417,
+    "E_base_r": -6.993032937872257,
+    "E_opt_r": -0.9930329378722572,
+    "gap": 2.3532556649489527,
+    "bias_val": -2.3532556649489527,
+    "V00_analytical": -2.3532557487487793
+  },
+  "n_trials": 40,
+  "chosen": [
+    {
+      "trial": 32,
+      "lcb": -2.007686534489711,
+      "params": {
+        "off_policy_frac": 0.19425263319554487,
+        "lr": 0.0001678238346514796,
+        "use_grad_decay": true,
+        "grad_decay": 0.00041438793792952734,
+        "n_steps": 24,
+        "mc_samples": 11,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.00400767782238195,
+        "l": 0.004277924370618082,
+        "use_guidance": false,
+        "random_t": true,
+        "lambda_eff": 0.03406521295474016
+      }
+    },
+    {
+      "trial": 30,
+      "lcb": -2.108653535861432,
+      "params": {
+        "off_policy_frac": 0.23438050664821938,
+        "lr": 0.00010872134415758414,
+        "use_grad_decay": false,
+        "n_steps": 22,
+        "mc_samples": 15,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.001135402822100375,
+        "l": 0.005983258080167087,
+        "use_guidance": false,
+        "random_t": true,
+        "lambda_eff": 0.07764712276951946
+      }
+    },
+    {
+      "trial": 18,
+      "lcb": -2.1226412629398075,
+      "params": {
+        "off_policy_frac": 0.3643380631040274,
+        "lr": 0.00024889884595524797,
+        "use_grad_decay": false,
+        "n_steps": 16,
+        "mc_samples": 3,
+        "smc_type": "k_Vnograd",
+        "k": 0.0011192062412458857,
+        "use_guidance": false,
+        "random_t": true,
+        "lambda_eff": 0.17906367597198486
+      }
+    }
+  ],
+  "elapsed_min": 58.82001629273097
+}

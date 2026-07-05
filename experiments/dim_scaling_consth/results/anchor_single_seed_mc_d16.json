@@ -1,0 +1,78 @@
+{
+  "method": "single_seed_mc",
+  "dim": 16,
+  "problem": {
+    "d": 16,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 6.000000000000002,
+    "reward_scale": 0.4269406318604083,
+    "E_base_r": -13.960202937140465,
+    "E_opt_r": -7.960202937140464,
+    "gap": 10.465172839756868,
+    "bias_val": -10.465172839756868,
+    "V00_analytical": -10.46517276763916
+  },
+  "n_trials": 40,
+  "chosen": [
+    {
+      "trial": 2,
+      "lcb": -11.962526346026461,
+      "params": {
+        "off_policy_frac": 0.017194260557609198,
+        "lr": 0.00013940346079873228,
+        "use_grad_decay": true,
+        "grad_decay": 3.077180271250682e-05,
+        "n_steps": 35,
+        "mc_samples": 17,
+        "smc_type": "k_r",
+        "k": 0.0035856126103453977,
+        "use_guidance": true,
+        "guidance_scale": 1.2210230422455708,
+        "guidance_source": "ema",
+        "ema_decay": 0.9912655492672886,
+        "random_t": false
+      }
+    },
+    {
+      "trial": 13,
+      "lcb": -12.238877925808751,
+      "params": {
+        "off_policy_frac": 0.16691111068842837,
+        "lr": 0.00019615209192762662,
+        "use_grad_decay": true,
+        "grad_decay": 0.010917244413759264,
+        "n_steps": 34,
+        "mc_samples": 8,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.6042708053190768,
+        "l": 0.833548981151104,
+        "use_guidance": true,
+        "guidance_scale": 0.6404027103622633,
+        "guidance_source": "ema",
+        "ema_decay": 0.9006849844629411,
+        "random_t": true
+      }
+    },
+    {
+      "trial": 8,
+      "lcb": -12.606680714927466,
+      "params": {
+        "off_policy_frac": 0.11881877199619983,
+        "lr": 0.0005284222249942597,
+        "use_grad_decay": true,
+        "grad_decay": 0.00488137519160367,
+        "n_steps": 48,
+        "mc_samples": 9,
+        "smc_type": "k_Vema",
+        "k": 0.32055863990707495,
+        "use_guidance": true,
+        "guidance_scale": 0.057438069208744516,
+        "guidance_source": "live",
+        "ema_decay": 0.9016421950638578,
+        "random_t": true
+      }
+    }
+  ],
+  "elapsed_min": 48.38231884241104
+}

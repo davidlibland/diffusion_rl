@@ -1,0 +1,69 @@
+{
+  "method": "fbrrt_cv",
+  "dim": 16,
+  "problem": {
+    "d": 16,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 6.000000000000002,
+    "reward_scale": 0.4269406318604083,
+    "E_base_r": -13.960202937140465,
+    "E_opt_r": -7.960202937140464,
+    "gap": 10.465172839756868,
+    "bias_val": -10.465172839756868,
+    "V00_analytical": -10.46517276763916
+  },
+  "n_trials": 40,
+  "chosen": [
+    {
+      "trial": 17,
+      "lcb": -12.789871023846532,
+      "params": {
+        "off_policy_frac": 0.4022717543025376,
+        "lr": 0.00047810405080618145,
+        "use_grad_decay": false,
+        "n_steps": 59,
+        "mc_samples": 24,
+        "branch": 3,
+        "alpha": 0.225236611687761,
+        "ent_inf": false,
+        "entropy_lambda": 0.8108996084024794,
+        "ema_decay": 0.9412028371155904
+      }
+    },
+    {
+      "trial": 11,
+      "lcb": -13.274730709762865,
+      "params": {
+        "off_policy_frac": 0.41844783273527253,
+        "lr": 0.0015216394373837926,
+        "use_grad_decay": false,
+        "n_steps": 56,
+        "mc_samples": 21,
+        "branch": 2,
+        "alpha": 0.2624496457825432,
+        "ent_inf": false,
+        "entropy_lambda": 0.3919147923942857,
+        "ema_decay": 0.9048843350417902
+      }
+    },
+    {
+      "trial": 3,
+      "lcb": -13.336149730028485,
+      "params": {
+        "off_policy_frac": 0.017194260557609198,
+        "lr": 0.00013940346079873228,
+        "use_grad_decay": true,
+        "grad_decay": 3.077180271250682e-05,
+        "n_steps": 35,
+        "mc_samples": 17,
+        "branch": 3,
+        "alpha": 0.993783426530973,
+        "ent_inf": false,
+        "entropy_lambda": 0.6199983918423044,
+        "ema_decay": 0.9183005910970272
+      }
+    }
+  ],
+  "elapsed_min": 41.13604445060094
+}

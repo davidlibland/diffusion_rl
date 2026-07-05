@@ -1,0 +1,49 @@
+{
+  "method": "off_policy",
+  "dim": 2,
+  "problem": {
+    "d": 2,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 5.999999999999999,
+    "reward_scale": 1.947491622736417,
+    "E_base_r": -6.993032937872257,
+    "E_opt_r": -0.9930329378722572,
+    "gap": 2.3532556649489527,
+    "bias_val": -2.3532556649489527,
+    "V00_analytical": -2.3532557487487793
+  },
+  "n_trials": 40,
+  "chosen": [
+    {
+      "trial": 20,
+      "lcb": -2.3628894542465377,
+      "params": {
+        "off_policy_frac": 0.0,
+        "lr": 0.00010221352445634651,
+        "use_grad_decay": false
+      }
+    },
+    {
+      "trial": 4,
+      "lcb": -2.5385703175679044,
+      "params": {
+        "off_policy_frac": 0.0,
+        "lr": 0.0002814509271606064,
+        "use_grad_decay": true,
+        "grad_decay": 0.0001461896279370495
+      }
+    },
+    {
+      "trial": 1,
+      "lcb": -2.666927799420214,
+      "params": {
+        "off_policy_frac": 0.0,
+        "lr": 0.0001700037298921101,
+        "use_grad_decay": true,
+        "grad_decay": 0.029154431891537533
+      }
+    }
+  ],
+  "elapsed_min": 48.444748504956564
+}

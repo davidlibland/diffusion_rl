@@ -1,0 +1,50 @@
+{
+  "method": "off_policy",
+  "dim": 128,
+  "problem": {
+    "d": 128,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 6.000000000000011,
+    "reward_scale": 0.11115539416072549,
+    "E_base_r": -27.493367197104025,
+    "E_opt_r": -21.493367197104014,
+    "gap": 24.096710919750972,
+    "bias_val": -24.096710919750972,
+    "V00_analytical": -24.096710205078125
+  },
+  "n_trials": 40,
+  "chosen": [
+    {
+      "trial": 18,
+      "lcb": -25.956818267244117,
+      "params": {
+        "off_policy_frac": 0.0,
+        "lr": 0.002948079927262126,
+        "use_grad_decay": true,
+        "grad_decay": 8.03025854038968e-05
+      }
+    },
+    {
+      "trial": 37,
+      "lcb": -25.999339108088236,
+      "params": {
+        "off_policy_frac": 0.0,
+        "lr": 0.0029922044549236205,
+        "use_grad_decay": true,
+        "grad_decay": 0.00017297908639596574
+      }
+    },
+    {
+      "trial": 14,
+      "lcb": -26.154443843419376,
+      "params": {
+        "off_policy_frac": 0.0,
+        "lr": 0.0022596160335859477,
+        "use_grad_decay": true,
+        "grad_decay": 0.0005636454862750901
+      }
+    }
+  ],
+  "elapsed_min": 48.801154458522795
+}

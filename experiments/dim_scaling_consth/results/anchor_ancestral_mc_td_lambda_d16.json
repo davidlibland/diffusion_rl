@@ -1,0 +1,72 @@
+{
+  "method": "ancestral_mc_td_lambda",
+  "dim": 16,
+  "problem": {
+    "d": 16,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 6.000000000000002,
+    "reward_scale": 0.4269406318604083,
+    "E_base_r": -13.960202937140465,
+    "E_opt_r": -7.960202937140464,
+    "gap": 10.465172839756868,
+    "bias_val": -10.465172839756868,
+    "V00_analytical": -10.46517276763916
+  },
+  "n_trials": 40,
+  "chosen": [
+    {
+      "trial": 25,
+      "lcb": -12.454912806810734,
+      "params": {
+        "off_policy_frac": 0.10155962887415583,
+        "lr": 0.00010820063671983995,
+        "use_grad_decay": true,
+        "grad_decay": 0.0016116031340261943,
+        "n_steps": 13,
+        "mc_samples": 1,
+        "smc_type": "k_Vema",
+        "k": 0.0630834726916422,
+        "use_guidance": false,
+        "ema_decay": 0.9537662109247196,
+        "lambda_eff": 0.2722976211319085
+      }
+    },
+    {
+      "trial": 22,
+      "lcb": -12.474761173121792,
+      "params": {
+        "off_policy_frac": 0.11903547738827498,
+        "lr": 0.0008111674115151643,
+        "use_grad_decay": true,
+        "grad_decay": 0.0036159926987376165,
+        "n_steps": 19,
+        "mc_samples": 1,
+        "smc_type": "k_r",
+        "k": 0.0011393267259188116,
+        "use_guidance": true,
+        "guidance_scale": 0.05049745788918198,
+        "guidance_source": "live",
+        "lambda_eff": 0.44704558986055587
+      }
+    },
+    {
+      "trial": 0,
+      "lcb": -12.539909838825213,
+      "params": {
+        "off_policy_frac": 0.07799726016810132,
+        "lr": 0.0003574712922600243,
+        "use_grad_decay": true,
+        "grad_decay": 0.0024810409748678114,
+        "n_steps": 17,
+        "mc_samples": 1,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.31428808908401085,
+        "l": 0.004335281794951566,
+        "use_guidance": false,
+        "lambda_eff": 0.3042422429595377
+      }
+    }
+  ],
+  "elapsed_min": 55.91929782231649
+}

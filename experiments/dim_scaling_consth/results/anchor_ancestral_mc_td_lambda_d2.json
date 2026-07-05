@@ -1,0 +1,75 @@
+{
+  "method": "ancestral_mc_td_lambda",
+  "dim": 2,
+  "problem": {
+    "d": 2,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 5.999999999999999,
+    "reward_scale": 1.947491622736417,
+    "E_base_r": -6.993032937872257,
+    "E_opt_r": -0.9930329378722572,
+    "gap": 2.3532556649489527,
+    "bias_val": -2.3532556649489527,
+    "V00_analytical": -2.3532557487487793
+  },
+  "n_trials": 40,
+  "chosen": [
+    {
+      "trial": 15,
+      "lcb": -2.0255466019374726,
+      "params": {
+        "off_policy_frac": 0.4049001286159608,
+        "lr": 0.00022739979219748362,
+        "use_grad_decay": true,
+        "grad_decay": 0.0006796877824749819,
+        "n_steps": 22,
+        "mc_samples": 1,
+        "smc_type": "kt_r",
+        "k": 0.003126983557772205,
+        "use_guidance": true,
+        "guidance_scale": 0.14524445697348454,
+        "guidance_source": "live",
+        "lambda_eff": 0.6908910153145771
+      }
+    },
+    {
+      "trial": 29,
+      "lcb": -2.123239423861912,
+      "params": {
+        "off_policy_frac": 0.3550500607662358,
+        "lr": 0.00023645087276967842,
+        "use_grad_decay": false,
+        "n_steps": 23,
+        "mc_samples": 1,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.0033151358996444213,
+        "l": 0.8466580174007715,
+        "use_guidance": true,
+        "guidance_scale": 0.2500944410562545,
+        "guidance_source": "live",
+        "lambda_eff": 0.5671242559690541
+      }
+    },
+    {
+      "trial": 17,
+      "lcb": -2.3024652317768517,
+      "params": {
+        "off_policy_frac": 0.24579941615544426,
+        "lr": 0.00036502837747740143,
+        "use_grad_decay": true,
+        "grad_decay": 1.2102280020340923e-05,
+        "n_steps": 26,
+        "mc_samples": 1,
+        "smc_type": "k_Vema",
+        "k": 0.031078990599668278,
+        "use_guidance": true,
+        "guidance_scale": 0.3416828699354035,
+        "guidance_source": "live",
+        "ema_decay": 0.9455386346785773,
+        "lambda_eff": 0.748479361867973
+      }
+    }
+  ],
+  "elapsed_min": 61.57360893090566
+}
