@@ -36,6 +36,12 @@ Arms (ssmc, d=512, paired seeds, 15k steps):
                   The mechanism at full strength: corridor sources carry the
                   most informative v-hat, expansion + unweighting spreads
                   them over the base manifold at smaller t.
+  expand_ns60   : expansion + n_steps=60.  Results round 1: expand +3.0 and
+                  ns60 +3.2 over the ssmc control are same-size gains from
+                  independent mechanisms (data density at small t vs
+                  integrator bias at the terminals); each alone ties
+                  off-policy.  This arm stacks them -- the direct test of
+                  whether on-policy can BEAT off-policy at d=512.
 
 Controls (existing): grid ssmc d512 25.9%, probe2 oracle_twist 16.3%,
 grid off_policy d512 30.7% (seeds 0-9 means).
@@ -117,11 +123,13 @@ def run_seed_arm(method, dim, s, arm, hidden):
     params = hparams_for_dim(method, dim)
     if arm == "blend":
         params["off_policy_frac"] = 0.5
+    elif arm == "expand_ns60":
+        params["n_steps"] = 60
 
     model, vm, ds, loader = sw.build(method, params, prob, dim, hidden, s)
     if arm in ("blend", "expand_oracle"):
         ds.smc_value = prob["anal_fn"]                     # tau = V*
-    if arm in ("expand", "expand_oracle"):
+    if arm in ("expand", "expand_oracle", "expand_ns60"):
         ds.augment_fn = make_expand_fn(ds.a, unweight=(arm == "expand_oracle"))
 
     vc = rc.ValCollector()
@@ -158,7 +166,7 @@ def main():
     ap.add_argument("--method", required=True)
     ap.add_argument("--dim", type=int, required=True)
     ap.add_argument("--arm", required=True,
-                    choices=["blend", "expand", "expand_oracle"])
+                    choices=["blend", "expand", "expand_oracle", "expand_ns60"])
     args = ap.parse_args()
     method, dim, arm = args.method, args.dim, args.arm
     os.makedirs(RESULTS, exist_ok=True)
