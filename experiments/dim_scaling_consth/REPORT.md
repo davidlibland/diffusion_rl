@@ -15,7 +15,9 @@ better. Probe 3 confirmed it from both sides: corridor data does not help even
 when coverage is guaranteed (blend), while **backward-noising expansion** of
 on-policy value estimates — a pure coverage densifier — lifts ssmc to a
 statistical tie with off-policy, matching the integrator fix via an independent
-mechanism.
+mechanism. Stacking the two (`expand_ns60`) puts ssmc at 32.8% vs off-policy's
+30.7% — the first on-policy configuration above off-policy at d=512 (+2.2±1.6
+paired, not yet significant at n=10).
 
 All code in this directory; results in `results/`; probe launch logs in `logs/`.
 
@@ -151,6 +153,7 @@ off-policy splice, before shuffling. Verified: rows double, expanded t′ in
 
 | arm | mean | vs grid ssmc (25.9) | vs off_policy (30.7) | vs oracle_twist (16.3) |
 |---|---|---|---|---|
+| **expand_ns60** | **32.8±2.0** | **+7.0±2.5** (p=.019) | **+2.2±1.6** (p=.21) | — |
 | **expand** | **28.9±2.4** | **+3.0±1.6** (p=.087) | −1.8±1.2 (p=.18) | +12.5±2.4 (p=.001) |
 | blend | 22.2±1.9 | −3.7±1.9 (p=.086) | −8.5±1.4 (p<.001) | +5.9±1.8 (p=.010) |
 | expand_oracle | 21.9±2.7 | −3.9±1.1 (p=.007) | −8.7±1.4 (p<.001) | +5.6±2.6 (p=.060) |
@@ -174,9 +177,14 @@ Readings:
   no-concentration control). The e^{−v̂} self-normalized unweighting pays a
   large ESS cost at 512 dimensions (a handful of corridor sources dominate
   after reweighting), so the recovered coverage is low-diversity.
-- **Follow-up arm (running): `expand_ns60`** stacks the two same-size,
-  mechanism-independent gains (expansion + n_steps=60) — the direct test of
-  whether on-policy can *beat* off-policy at d=512.
+- **The two fixes stack.** `expand_ns60` (expansion + n_steps=60) gains
+  +7.0±2.5 over the ssmc control — close to the sum of the individual gains
+  (+3.0 and +3.2), confirming independent mechanisms — and is the **first
+  on-policy configuration to land above off-policy at d=512**: +2.2±1.6
+  paired, 6/10 seed wins. Not significant at n=10 (p=0.21); extending to
+  all 30 grid seeds would settle whether it genuinely beats off-policy or
+  only ties it. Also ~30% faster per seed than the un-augmented law config
+  (8.0 vs 11.3 min).
 
 ## 7. Caveats / follow-ups
 
