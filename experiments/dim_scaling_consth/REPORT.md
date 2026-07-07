@@ -186,6 +186,34 @@ Readings:
   only ties it. Also ~30% faster per seed than the un-augmented law config
   (8.0 vs 11.3 min).
 
+### Staleness controls (`*_sub` arms)
+
+Both winning changes multiply rows per trajectory, so the dataset
+regenerates up to ~6× less often (expand_ns60: every ~1,920 gradient steps
+vs ~304 for the control) — slow-moving data could itself have been the win
+(implicit target-network smoothing) rather than the claimed mechanisms.
+Each `*_sub` arm subsamples the epoch uniformly back to the control's 1,216
+rows AFTER generation/expansion, exactly restoring the control's
+regeneration cadence:
+
+| arm | mean | vs grid ssmc | vs off_policy | vs its full arm |
+|---|---|---|---|---|
+| **expand_ns60_sub** | **34.7±3.5** | **+8.9±1.4** (p<.001, 10/10) | **+4.1±2.1** (p=.089, 7/10) | +1.9±2.6 (p=.48) |
+| expand_sub | 28.7±1.6 | +2.8±2.3 | −2.0±1.2 | −0.2±1.5 (p=.91) |
+| ns60_sub | 27.9±1.9 | +2.0±1.5 | −2.8±1.0 | −1.2±1.4 (p=.39) |
+
+**Staleness explains none of the gains.** Every `*_sub` arm matches its
+full-epoch counterpart within noise; the stacked arm actually *improves*
+with fresh data (34.7 vs 32.8, 10/10 paired wins over the control, +4.1
+over off-policy at p=.089). Mechanism attributions confirmed:
+`ns60_sub` keeps the integrator gain while discarding 2/3 of the rows (the
+fix lives in the *sampling*, not the row count), and `expand_sub` shows
+expanded off-path rows are worth at least as much as the on-path rows they
+replace (it's *where* the data sits, not how much of it there is). Note the
+`*_sub` arms consume the same 60k training rows as everything else while
+*discarding* most of what they generate — freshness matched, generation
+budget strictly wasted — and still win.
+
 ## 7. Caveats / follow-ups
 
 - **fbrrt_cv high-d collapse is unaudited.** Negative frac_closed at d ≥ 128
