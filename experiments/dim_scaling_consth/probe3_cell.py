@@ -43,6 +43,25 @@ Arms (ssmc, d=512, paired seeds, 15k steps):
                   off-policy.  This arm stacks them -- the direct test of
                   whether on-policy can BEAT off-policy at d=512.
 
+Staleness controls (*_sub arms).  Both winning changes multiply rows per
+trajectory, so epochs last longer (expand_ns60: regen every ~1920 gradient
+steps vs ~304 for the law control) and training data is up to ~6x STALER.
+Slow data could itself stabilize (an implicit target-network effect),
+confounding the claimed mechanisms.  Each *_sub arm subsamples the epoch
+uniformly back to SUB_ROWS = 64*19 rows AFTER generation/expansion, exactly
+restoring the control's regeneration cadence and rows-per-trajectory budget:
+
+  ns60_sub        : n_steps=60, subsampled 3840 -> 1216 (~19 rows/traj).
+                    If the ns60 gain is really integrator bias in the
+                    SAMPLING, it survives; if it was row count / staleness,
+                    it dies.
+  expand_sub      : expansion, subsampled 2432 -> 1216: expanded off-path
+                    rows REPLACE on-path rows at equal count (tests density
+                    vs location of the added data).
+  expand_ns60_sub : both changes, subsampled 7680 -> 1216.  The headline
+                    control: does the stacked win survive at matched data
+                    freshness?
+
 Controls (existing): grid ssmc d512 25.9%, probe2 oracle_twist 16.3%,
 grid off_policy d512 30.7% (seeds 0-9 means).
 
@@ -75,6 +94,8 @@ N_SEEDS = int(os.environ.get("DSC_PROBE_SEEDS", 10))
 
 T_MIN = 0.05        # don't expand below this t (kernel variance -> 0 anyway)
 W_MAX = 100.0       # cap on any single unweighted row after normalization
+SUB_ROWS = 64 * 19  # law-control epoch size (DS_BATCH * n_steps): *_sub arms
+                    # subsample back to this so regen cadence matches control
 
 
 def make_expand_fn(a, unweight, t_min=T_MIN, k=1):
@@ -115,6 +136,22 @@ def make_expand_fn(a, unweight, t_min=T_MIN, k=1):
     return expand
 
 
+def with_subsample(fn, n_rows):
+    """Wrap an augment_fn (or None) with uniform row subsampling to n_rows,
+    restoring the law control's epoch size / regeneration cadence."""
+    def inner(all_x, all_t, all_tgt, all_w):
+        if fn is not None:
+            all_x, all_t, all_tgt, all_w = fn(all_x, all_t, all_tgt, all_w)
+        n = all_x.shape[0]
+        if n > n_rows:
+            idx = torch.randperm(n, device=all_x.device)[:n_rows]
+            all_x, all_t, all_tgt, all_w = (all_x[idx], all_t[idx],
+                                            all_tgt[idx], all_w[idx])
+        return all_x, all_t, all_tgt, all_w
+
+    return inner
+
+
 def run_seed_arm(method, dim, s, arm, hidden):
     prob = make_problem(dim, seed=s)
     _, e_opt, _ = optimal_terminal_and_reward(
@@ -123,14 +160,17 @@ def run_seed_arm(method, dim, s, arm, hidden):
     params = hparams_for_dim(method, dim)
     if arm == "blend":
         params["off_policy_frac"] = 0.5
-    elif arm == "expand_ns60":
+    elif arm in ("expand_ns60", "ns60_sub", "expand_ns60_sub"):
         params["n_steps"] = 60
 
     model, vm, ds, loader = sw.build(method, params, prob, dim, hidden, s)
     if arm in ("blend", "expand_oracle"):
         ds.smc_value = prob["anal_fn"]                     # tau = V*
-    if arm in ("expand", "expand_oracle", "expand_ns60"):
+    if arm in ("expand", "expand_oracle", "expand_ns60",
+               "expand_sub", "expand_ns60_sub"):
         ds.augment_fn = make_expand_fn(ds.a, unweight=(arm == "expand_oracle"))
+    if arm.endswith("_sub"):
+        ds.augment_fn = with_subsample(ds.augment_fn, SUB_ROWS)
 
     vc = rc.ValCollector()
     tr = L.Trainer(max_steps=rc.STEPS, val_check_interval=rc.VAL_EVERY,
@@ -166,7 +206,8 @@ def main():
     ap.add_argument("--method", required=True)
     ap.add_argument("--dim", type=int, required=True)
     ap.add_argument("--arm", required=True,
-                    choices=["blend", "expand", "expand_oracle", "expand_ns60"])
+                    choices=["blend", "expand", "expand_oracle", "expand_ns60",
+                             "ns60_sub", "expand_sub", "expand_ns60_sub"])
     args = ap.parse_args()
     method, dim, arm = args.method, args.dim, args.arm
     os.makedirs(RESULTS, exist_ok=True)
