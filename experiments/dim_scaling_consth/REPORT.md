@@ -214,6 +214,37 @@ replace (it's *where* the data sits, not how much of it there is). Note the
 *discarding* most of what they generate — freshness matched, generation
 budget strictly wasted — and still win.
 
+### Does the recipe generalize beyond ssmc?
+
+`expand_ns60` (+ `_sub` freshness control) applied to the other on-policy
+methods at d=512, paired seeds 0–9 (off-policy control 30.7; `_sub`
+subsamples to each method's own law cadence, DS_BATCH × its law n_steps):
+
+| method | arm | mean | vs own control | vs off_policy |
+|---|---|---|---|---|
+| ssmc-td | expand_ns60 | **32.1±2.0** | **+6.5±2.0** (p=.011) | +1.5±1.3 (p=.30, 7/10) |
+| ssmc-td | expand_ns60_sub | 27.4±1.9 | +1.8±1.3 (p=.19) | −3.3±0.9 (p=.007) |
+| amctl | expand_ns60 | 27.8±2.5 | **+8.0±1.6** (p=.001, 10/10) | −2.9±1.2 |
+| amctl | expand_ns60_sub | 28.5±1.8 | **+8.6±1.3** (p<.001, 10/10) | −2.2±1.4 |
+| fbrrt | expand_ns60 | 13.6±3.8 | +3.1±6.2 (p=.63) | −17.1±3.5 |
+
+- **The recipe generalizes to both SMC-TD methods.** ssmc-td gains +6.5
+  (ns60 alone had done nothing in probe 2 — the expansion unlocks the
+  stack) and joins ssmc above off-policy on point estimate. amctl gains
+  +8.0–8.6 with 10/10 seed wins in both variants — its largest single
+  improvement in the study — though from a lower base, leaving it just
+  below off-policy.
+- **A mechanistic split in the staleness controls.** ssmc (pure MC targets)
+  and amctl keep their full gain under `_sub`; ssmc-td — the one method
+  whose targets *bootstrap* through TD(λ) — loses most of its gain when the
+  data cadence is restored (+6.5 → +1.8). Bootstrapped targets appear to
+  genuinely benefit from the slower-moving dataset (an implicit
+  target-network effect), on top of the placement effect; MC-target methods
+  don't need it.
+- **fbrrt does not benefit reliably** (+3.1±6.2, huge variance) — its high-d
+  deficit is not recipe-shaped, consistent with it having its own failure
+  mode.
+
 ## 7. Caveats / follow-ups
 
 - **fbrrt_cv high-d collapse is unaudited.** Negative frac_closed at d ≥ 128

@@ -1,0 +1,118 @@
+{
+ "method": "fbrrt",
+ "dim": 512,
+ "arm": "expand_ns60",
+ "steps": 15000,
+ "seeds": [
+  {
+   "seed": 0,
+   "plateau": -39.213533878326416,
+   "best": -39.153578758239746,
+   "opt_reward": -34.24020076621236,
+   "E_base": -40.240200766212446,
+   "regret": -4.973333112114055,
+   "frac_closed": 0.17111114798100502,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 1,
+   "plateau": -56.74082434177399,
+   "best": -56.0614980061849,
+   "opt_reward": -50.46361750373732,
+   "E_base": -56.46361750373729,
+   "regret": -6.277206838036669,
+   "frac_closed": -0.04620113967278291,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 2,
+   "plateau": -29.56503203511238,
+   "best": -29.209441423416138,
+   "opt_reward": -24.716488436214362,
+   "E_base": -30.71648843621433,
+   "regret": -4.848543598898019,
+   "frac_closed": 0.19190940018365824,
+   "nonfinite_skips": 0,
+   "error": "RuntimeError: Predictions are not finite"
+  },
+  {
+   "seed": 3,
+   "plateau": -36.125627756118774,
+   "best": -35.48152160644531,
+   "opt_reward": -30.936856569728864,
+   "E_base": -36.93685656972882,
+   "regret": -5.188771186389911,
+   "frac_closed": 0.13520480226834053,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 4,
+   "plateau": -49.681754767894745,
+   "best": -49.55895185470581,
+   "opt_reward": -45.08924801040395,
+   "E_base": -51.08924801040389,
+   "regret": -4.592506757490796,
+   "frac_closed": 0.2345822070848579,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 5,
+   "plateau": -37.48568785190582,
+   "best": -37.33445978164673,
+   "opt_reward": -33.40077405950669,
+   "E_base": -39.40077405950668,
+   "regret": -4.084913792399135,
+   "frac_closed": 0.31918103460014297,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 6,
+   "plateau": -38.030313372612,
+   "best": -37.50666046142578,
+   "opt_reward": -32.142553237037845,
+   "E_base": -38.14255323703773,
+   "regret": -5.887760135574155,
+   "frac_closed": 0.018706644070955274,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 7,
+   "plateau": -40.87086260318756,
+   "best": -40.43591833114624,
+   "opt_reward": -35.94636823220851,
+   "E_base": -41.946368232208464,
+   "regret": -4.924494370979048,
+   "frac_closed": 0.17925093817015045,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 8,
+   "plateau": -53.63225722312927,
+   "best": -53.358510971069336,
+   "opt_reward": -48.74934252270786,
+   "E_base": -54.74934252270798,
+   "regret": -4.882914700421409,
+   "frac_closed": 0.1861808832631174,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 9,
+   "plateau": -42.73633599281311,
+   "best": -42.2950439453125,
+   "opt_reward": -36.552018094834274,
+   "E_base": -42.55201809483426,
+   "regret": -6.184317897978836,
+   "frac_closed": -0.03071964966314174,
+   "nonfinite_skips": 0,
+   "error": null
+  }
+ ]
+}
