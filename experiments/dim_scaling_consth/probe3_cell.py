@@ -94,8 +94,8 @@ N_SEEDS = int(os.environ.get("DSC_PROBE_SEEDS", 10))
 
 T_MIN = 0.05        # don't expand below this t (kernel variance -> 0 anyway)
 W_MAX = 100.0       # cap on any single unweighted row after normalization
-SUB_ROWS = 64 * 19  # law-control epoch size (DS_BATCH * n_steps): *_sub arms
-                    # subsample back to this so regen cadence matches control
+# *_sub arms subsample each epoch back to the METHOD'S law-control size
+# (DS_BATCH * law n_steps) so regen cadence matches that method's control.
 
 
 def make_expand_fn(a, unweight, t_min=T_MIN, k=1):
@@ -158,6 +158,7 @@ def run_seed_arm(method, dim, s, arm, hidden):
         prob["means"], prob["sigma2"], prob["weights"], prob["c"],
         prob["reward_scale"], dim)
     params = hparams_for_dim(method, dim)
+    law_ns = int(params.get("n_steps", 19))
     if arm == "blend":
         params["off_policy_frac"] = 0.5
     elif arm in ("expand_ns60", "ns60_sub", "expand_ns60_sub"):
@@ -170,7 +171,7 @@ def run_seed_arm(method, dim, s, arm, hidden):
                "expand_sub", "expand_ns60_sub"):
         ds.augment_fn = make_expand_fn(ds.a, unweight=(arm == "expand_oracle"))
     if arm.endswith("_sub"):
-        ds.augment_fn = with_subsample(ds.augment_fn, SUB_ROWS)
+        ds.augment_fn = with_subsample(ds.augment_fn, sw.DS_BATCH * law_ns)
 
     vc = rc.ValCollector()
     tr = L.Trainer(max_steps=rc.STEPS, val_check_interval=rc.VAL_EVERY,
