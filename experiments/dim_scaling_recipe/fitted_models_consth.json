@@ -1,0 +1,772 @@
+{
+  "off_policy": {
+    "lr": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -7.157747071063479,
+      "model": "slope",
+      "slope": [
+        -9.145690895135264,
+        0.7169991741385515
+      ],
+      "loo_const": 4.152855043599667,
+      "loo_slope": 0.5124423634657617,
+      "noise": false
+    },
+    "use_grad_decay": {
+      "kind": "bool",
+      "p_true": 0.7222222222222222,
+      "value": true
+    },
+    "grad_decay": {
+      "kind": "cont",
+      "n_points": 7,
+      "n_dims": 3,
+      "const": -8.662339858658616,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    }
+  },
+  "single_seed_mc": {
+    "lr": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -7.776141766346684,
+      "model": "const",
+      "slope": [
+        -8.606724487212604,
+        0.29956939311033154
+      ],
+      "loo_const": 1.5883992373192082,
+      "loo_slope": 2.611865120460532,
+      "noise": true
+    },
+    "n_steps": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 19.0,
+      "model": "const",
+      "slope": [
+        13.0,
+        2.1640425613334453
+      ],
+      "loo_const": 381.25,
+      "loo_slope": 1365.2499999999998,
+      "noise": true
+    },
+    "mc_samples": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 2.2499048351651325,
+      "model": "const",
+      "slope": [
+        3.78496156382783,
+        -0.5536546824812272
+      ],
+      "loo_const": 2.520315927397018,
+      "loo_slope": 2.8595080876975043,
+      "noise": true
+    },
+    "off_policy_frac": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -0.6909479898459452,
+      "model": "const",
+      "slope": [
+        -1.6978910176632045,
+        0.3631779281724194
+      ],
+      "loo_const": 4.946193674132584,
+      "loo_slope": 14.982645520326823,
+      "noise": true
+    },
+    "k": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -1.6298201016767346,
+      "model": "const",
+      "slope": [
+        -2.055119745985788,
+        0.15339442193412786
+      ],
+      "loo_const": 3.2869955322874094,
+      "loo_slope": 10.614692029632097,
+      "noise": true
+    },
+    "guidance_scale": {
+      "kind": "cont",
+      "n_points": 5,
+      "n_dims": 3,
+      "const": -0.4957360880684011,
+      "model": "const",
+      "slope": [
+        0.57932613530996,
+        -0.3877467345787562
+      ],
+      "loo_const": 1.579273698438205,
+      "loo_slope": 2.959001020354006,
+      "noise": true
+    },
+    "smc_type": {
+      "kind": "cat",
+      "mode": "k_Vema",
+      "votes": {
+        "k_Vema": 7,
+        "k_r": 6,
+        "kV_plus_ltr": 5
+      }
+    },
+    "guidance_source": {
+      "kind": "cat",
+      "mode": "ema",
+      "votes": {
+        "ema": 11,
+        "live": 1
+      }
+    },
+    "use_grad_decay": {
+      "kind": "bool",
+      "p_true": 1.0,
+      "value": true
+    },
+    "use_guidance": {
+      "kind": "bool",
+      "p_true": 0.6666666666666666,
+      "value": true
+    },
+    "random_t": {
+      "kind": "bool",
+      "p_true": 0.3333333333333333,
+      "value": false
+    },
+    "grad_decay": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -8.826622506489697,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    },
+    "l": {
+      "kind": "cont",
+      "n_points": 3,
+      "n_dims": 2,
+      "const": -1.8625595030221243,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    },
+    "ema_decay": {
+      "kind": "cont",
+      "n_points": 7,
+      "n_dims": 3,
+      "const": -3.2775292206997126,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    }
+  },
+  "single_seed_td_lambda": {
+    "lr": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -8.69259573199506,
+      "model": "const",
+      "slope": [
+        -8.982412424017724,
+        0.10452927608698528
+      ],
+      "loo_const": 0.15607989721523818,
+      "loo_slope": 0.3682242672222015,
+      "noise": true
+    },
+    "n_steps": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 19.0,
+      "model": "const",
+      "slope": [
+        22.333333333333332,
+        -1.2022458674074696
+      ],
+      "loo_const": 41.69444444444444,
+      "loo_slope": 94.21527777777776,
+      "noise": true
+    },
+    "mc_samples": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 2.1910133173369406,
+      "model": "const",
+      "slope": [
+        3.029158196566773,
+        -0.3022968652028396
+      ],
+      "loo_const": 1.7150581650040437,
+      "loo_slope": 3.831318132620243,
+      "noise": true
+    },
+    "off_policy_frac": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -0.4535996174197451,
+      "model": "const",
+      "slope": [
+        -0.35119311159719907,
+        -0.03693533952623847
+      ],
+      "loo_const": 0.3268674924448396,
+      "loo_slope": 0.6237614431088612,
+      "noise": true
+    },
+    "k": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -5.280954747971311,
+      "model": "const",
+      "slope": [
+        -8.091778214978557,
+        1.0137902691664191
+      ],
+      "loo_const": 8.737161590915628,
+      "loo_slope": 8.391882269354644,
+      "noise": true
+    },
+    "guidance_scale": {
+      "kind": "cont",
+      "n_points": 1,
+      "n_dims": 1,
+      "const": -2.9769504632519626,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    },
+    "lambda_eff": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -1.107590576758978,
+      "model": "slope",
+      "slope": [
+        -2.875818928549374,
+        0.6377535685718175
+      ],
+      "loo_const": 3.704998215573139,
+      "loo_slope": 1.1725520721956253,
+      "noise": false
+    },
+    "smc_type": {
+      "kind": "cat",
+      "mode": "kV_plus_ltr",
+      "votes": {
+        "kV_plus_ltr": 12,
+        "k_Vnograd": 1,
+        "k_Vema": 3,
+        "kt_r": 2
+      }
+    },
+    "guidance_source": {
+      "kind": "cat",
+      "mode": "ema",
+      "votes": {
+        "ema": 3
+      }
+    },
+    "use_grad_decay": {
+      "kind": "bool",
+      "p_true": 0.8333333333333334,
+      "value": true
+    },
+    "use_guidance": {
+      "kind": "bool",
+      "p_true": 0.16666666666666666,
+      "value": false
+    },
+    "random_t": {
+      "kind": "bool",
+      "p_true": 0.6666666666666666,
+      "value": true
+    },
+    "grad_decay": {
+      "kind": "cont",
+      "n_points": 7,
+      "n_dims": 3,
+      "const": -7.764851053651794,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    },
+    "l": {
+      "kind": "cont",
+      "n_points": 6,
+      "n_dims": 3,
+      "const": -3.2389530458048905,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    },
+    "ema_decay": {
+      "kind": "cont",
+      "n_points": 2,
+      "n_dims": 2,
+      "const": -3.0614168491558607,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    }
+  },
+  "ancestral_mc_td_lambda": {
+    "lr": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -8.143112799083944,
+      "model": "const",
+      "slope": [
+        -8.842075639435041,
+        0.25209755588504823
+      ],
+      "loo_const": 1.0080019456789544,
+      "loo_slope": 1.12642519822418,
+      "noise": true
+    },
+    "n_steps": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 22.5,
+      "model": "const",
+      "slope": [
+        12.5,
+        3.6067376022224087
+      ],
+      "loo_const": 273.05555555555554,
+      "loo_slope": 884.0555555555555,
+      "noise": true
+    },
+    "mc_samples": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 0.0,
+      "model": "const",
+      "slope": [
+        0.0,
+        0.0
+      ],
+      "loo_const": 0.0,
+      "loo_slope": 0.0,
+      "noise": true
+    },
+    "off_policy_frac": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -1.1632846762933797,
+      "model": "const",
+      "slope": [
+        1.8537581380760109,
+        -1.0881681766101003
+      ],
+      "loo_const": 4.3599970411084294,
+      "loo_slope": 4.0572337606575966,
+      "noise": true
+    },
+    "k": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -5.709256660816749,
+      "model": "const",
+      "slope": [
+        -5.462508816050582,
+        -0.0889954729985469
+      ],
+      "loo_const": 3.1546411415590225,
+      "loo_slope": 14.72887450873092,
+      "noise": true
+    },
+    "guidance_scale": {
+      "kind": "cont",
+      "n_points": 7,
+      "n_dims": 3,
+      "const": -2.7339084058037115,
+      "model": "const",
+      "slope": [
+        -1.9358541925491086,
+        -0.2878372139557397
+      ],
+      "loo_const": 1.1862325816917563,
+      "loo_slope": 2.679791961577521,
+      "noise": true
+    },
+    "lambda_eff": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 0.40024670797606104,
+      "model": "const",
+      "slope": [
+        0.16869720860864393,
+        0.08351382861442372
+      ],
+      "loo_const": 1.3457510283227825,
+      "loo_slope": 6.854438068282317,
+      "noise": true
+    },
+    "smc_type": {
+      "kind": "cat",
+      "mode": "kV_plus_ltr",
+      "votes": {
+        "kt_r": 3,
+        "kV_plus_ltr": 9,
+        "k_Vema": 4,
+        "k_r": 2
+      }
+    },
+    "guidance_source": {
+      "kind": "cat",
+      "mode": "live",
+      "votes": {
+        "live": 8,
+        "ema": 6
+      }
+    },
+    "use_grad_decay": {
+      "kind": "bool",
+      "p_true": 0.7222222222222222,
+      "value": true
+    },
+    "use_guidance": {
+      "kind": "bool",
+      "p_true": 0.7777777777777778,
+      "value": true
+    },
+    "grad_decay": {
+      "kind": "cont",
+      "n_points": 6,
+      "n_dims": 3,
+      "const": -6.698378182755911,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    },
+    "l": {
+      "kind": "cont",
+      "n_points": 5,
+      "n_dims": 3,
+      "const": -4.072930475978646,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    },
+    "ema_decay": {
+      "kind": "cont",
+      "n_points": 5,
+      "n_dims": 3,
+      "const": -3.07404438294588,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    }
+  },
+  "fbrrt": {
+    "lr": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -8.275550119765093,
+      "model": "const",
+      "slope": [
+        -9.294371087281835,
+        0.3674619893475249
+      ],
+      "loo_const": 2.04614053399913,
+      "loo_slope": 6.805662439488748,
+      "noise": true
+    },
+    "n_steps": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 30.0,
+      "model": "const",
+      "slope": [
+        15.000000000000002,
+        5.410106403333613
+      ],
+      "loo_const": 906.0833333333334,
+      "loo_slope": 2774.7916666666665,
+      "noise": true
+    },
+    "mc_samples": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 1.6094379124341003,
+      "model": "const",
+      "slope": [
+        1.6094379124341003,
+        0.0
+      ],
+      "loo_const": 3.4502102516516846,
+      "loo_slope": 12.698102540050009,
+      "noise": true
+    },
+    "branch": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 2.4849066497880004,
+      "model": "const",
+      "slope": [
+        2.714581137580028,
+        -0.08283756113906778
+      ],
+      "loo_const": 0.24721539372576296,
+      "loo_slope": 0.6702093452366835,
+      "noise": true
+    },
+    "alpha": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 0.49408628955691725,
+      "model": "const",
+      "slope": [
+        0.2146180445323168,
+        0.1007968627957332
+      ],
+      "loo_const": 0.3062392778272552,
+      "loo_slope": 0.9433407831033315,
+      "noise": true
+    },
+    "off_policy_frac": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -1.0918465939967725,
+      "model": "const",
+      "slope": [
+        -3.8416364991317185,
+        0.9917770649061799
+      ],
+      "loo_const": 14.84790926374099,
+      "loo_slope": 78.6041741106725,
+      "noise": true
+    },
+    "entropy_lambda": {
+      "kind": "cont",
+      "n_points": 3,
+      "n_dims": 2,
+      "const": 0.19604094848254933,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    },
+    "ema_decay": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -4.1447147282279415,
+      "model": "const",
+      "slope": [
+        -3.7623849087450756,
+        -0.13789633363797582
+      ],
+      "loo_const": 2.755488329130891,
+      "loo_slope": 12.940989484061753,
+      "noise": true
+    },
+    "use_grad_decay": {
+      "kind": "bool",
+      "p_true": 0.7222222222222222,
+      "value": true
+    },
+    "ent_inf": {
+      "kind": "bool",
+      "p_true": 0.6111111111111112,
+      "value": true
+    },
+    "grad_decay": {
+      "kind": "cont",
+      "n_points": 6,
+      "n_dims": 3,
+      "const": -6.28104131243243,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    }
+  },
+  "fbrrt_cv": {
+    "lr": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -8.235467256513115,
+      "model": "const",
+      "slope": [
+        -8.139108620249699,
+        -0.0347540316710131
+      ],
+      "loo_const": 0.576902367270041,
+      "loo_slope": 2.282358776485884,
+      "noise": true
+    },
+    "n_steps": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 31.0,
+      "model": "const",
+      "slope": [
+        17.0,
+        5.0494326431113725
+      ],
+      "loo_const": 666.4166666666666,
+      "loo_slope": 3109.666666666667,
+      "noise": true
+    },
+    "mc_samples": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 1.9944920232821373,
+      "model": "const",
+      "slope": [
+        0.7999857104634338,
+        0.43082708345352605
+      ],
+      "loo_const": 2.7641513321816906,
+      "loo_slope": 13.818882795027939,
+      "noise": true
+    },
+    "branch": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 1.0986122886681098,
+      "model": "const",
+      "slope": [
+        2.0228085294147036,
+        -0.33333333333333337
+      ],
+      "loo_const": 1.2476226815114155,
+      "loo_slope": 1.7611737263722798,
+      "noise": true
+    },
+    "alpha": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": 0.7671204985933702,
+      "model": "const",
+      "slope": [
+        0.3827646476036109,
+        0.13862707003989577
+      ],
+      "loo_const": 0.3101213918174171,
+      "loo_slope": 1.0656572304623404,
+      "noise": true
+    },
+    "off_policy_frac": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -2.1253252399954445,
+      "model": "const",
+      "slope": [
+        -2.743412601030089,
+        0.22292789265020693
+      ],
+      "loo_const": 8.113056861805507,
+      "loo_slope": 41.808471363455524,
+      "noise": true
+    },
+    "entropy_lambda": {
+      "kind": "cont",
+      "n_points": 4,
+      "n_dims": 2,
+      "const": -0.47803839474909854,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    },
+    "ema_decay": {
+      "kind": "cont",
+      "n_points": 9,
+      "n_dims": 3,
+      "const": -2.83366167550678,
+      "model": "const",
+      "slope": [
+        -3.769396168060509,
+        0.33749487799900396
+      ],
+      "loo_const": 1.1016414607565972,
+      "loo_slope": 2.053501054682432,
+      "noise": true
+    },
+    "use_grad_decay": {
+      "kind": "bool",
+      "p_true": 0.7222222222222222,
+      "value": true
+    },
+    "ent_inf": {
+      "kind": "bool",
+      "p_true": 0.6111111111111112,
+      "value": true
+    },
+    "grad_decay": {
+      "kind": "cont",
+      "n_points": 7,
+      "n_dims": 3,
+      "const": -8.19291624675074,
+      "model": "const",
+      "noise": true,
+      "slope": null,
+      "loo_const": null,
+      "loo_slope": null
+    }
+  }
+}

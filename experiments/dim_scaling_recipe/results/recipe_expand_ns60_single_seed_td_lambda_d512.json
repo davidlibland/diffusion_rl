@@ -1,0 +1,119 @@
+{
+ "method": "single_seed_td_lambda",
+ "dim": 512,
+ "arm": "expand_ns60",
+ "steps": 15000,
+ "seeds": [
+  {
+   "seed": 0,
+   "plateau": -38.25135338306427,
+   "best": -38.124091148376465,
+   "opt_reward": -34.24020076621236,
+   "E_base": -40.240200766212446,
+   "regret": -4.011152616851909,
+   "frac_closed": 0.33147456385802937,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 1,
+   "plateau": -54.78037989139557,
+   "best": -54.61700248718262,
+   "opt_reward": -50.46361750373732,
+   "E_base": -56.46361750373729,
+   "regret": -4.316762387658251,
+   "frac_closed": 0.28053960205695344,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 2,
+   "plateau": -28.757154405117035,
+   "best": -28.584477424621582,
+   "opt_reward": -24.716488436214362,
+   "E_base": -30.71648843621433,
+   "regret": -4.0406659689026725,
+   "frac_closed": 0.32655567184954926,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 3,
+   "plateau": -35.36875665187836,
+   "best": -35.16858530044556,
+   "opt_reward": -30.936856569728864,
+   "E_base": -36.93685656972882,
+   "regret": -4.431900082149493,
+   "frac_closed": 0.2613499863084101,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 4,
+   "plateau": -48.96848803758621,
+   "best": -48.88584661483765,
+   "opt_reward": -45.08924801040395,
+   "E_base": -51.08924801040389,
+   "regret": -3.879240027182263,
+   "frac_closed": 0.3534599954696134,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 5,
+   "plateau": -37.07148164510727,
+   "best": -36.91548776626587,
+   "opt_reward": -33.40077405950669,
+   "E_base": -39.40077405950668,
+   "regret": -3.6707075856005815,
+   "frac_closed": 0.3882154023999019,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 6,
+   "plateau": -35.79512494802475,
+   "best": -35.622883319854736,
+   "opt_reward": -32.142553237037845,
+   "E_base": -38.14255323703773,
+   "regret": -3.652571710986905,
+   "frac_closed": 0.39123804816883023,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 7,
+   "plateau": -39.931640565395355,
+   "best": -39.57040309906006,
+   "opt_reward": -35.94636823220851,
+   "E_base": -41.946368232208464,
+   "regret": -3.985272333186842,
+   "frac_closed": 0.3357879444688514,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 8,
+   "plateau": -52.60036909580231,
+   "best": -52.380802154541016,
+   "opt_reward": -48.74934252270786,
+   "E_base": -54.74934252270798,
+   "regret": -3.851026573094444,
+   "frac_closed": 0.35816223781761164,
+   "nonfinite_skips": 0,
+   "error": null
+  },
+  {
+   "seed": 9,
+   "plateau": -41.428713262081146,
+   "best": -41.2571816444397,
+   "opt_reward": -36.552018094834274,
+   "E_base": -42.55201809483426,
+   "regret": -4.876695167246872,
+   "frac_closed": 0.18721747212551895,
+   "nonfinite_skips": 0,
+   "error": null
+  }
+ ],
+ "carried_over_seeds_0_9_from": "dim_scaling_consth/results/probe3_expand_ns60_single_seed_td_lambda_d512.json"
+}
