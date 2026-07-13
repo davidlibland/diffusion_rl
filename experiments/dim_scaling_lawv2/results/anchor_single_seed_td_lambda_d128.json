@@ -1,0 +1,81 @@
+{
+  "method": "single_seed_td_lambda",
+  "dim": 128,
+  "problem": {
+    "d": 128,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 6.000000000000011,
+    "reward_scale": 0.11115539416072549,
+    "E_base_r": -27.493367197104025,
+    "E_opt_r": -21.493367197104014,
+    "gap": 24.096710919750972,
+    "bias_val": -24.096710919750972,
+    "V00_analytical": -24.096710205078125
+  },
+  "n_trials": 60,
+  "chosen": [
+    {
+      "trial": 5,
+      "lcb": -25.794539233982338,
+      "params": {
+        "lr": 0.0021907142272152816,
+        "use_grad_decay": false,
+        "n_steps": 68,
+        "expand_frac": 0.22879816549162246,
+        "epoch_rows": 971,
+        "off_policy_frac": 0.144875726456884,
+        "mc_samples": 1,
+        "smc_type": "kt_r",
+        "k": 0.003628358380354917,
+        "random_t": false,
+        "use_guidance": true,
+        "guidance_scale": 0.7792144891192733,
+        "guidance_source": "ema",
+        "ema_decay": 0.91089514052824,
+        "lambda_eff": 0.8180147659224931
+      }
+    },
+    {
+      "trial": 15,
+      "lcb": -26.066441154595786,
+      "params": {
+        "lr": 0.001426467693862481,
+        "use_grad_decay": false,
+        "n_steps": 37,
+        "expand_frac": 0.6861649727755512,
+        "epoch_rows": 988,
+        "off_policy_frac": 0.1663702881886752,
+        "mc_samples": 1,
+        "smc_type": "kt_r",
+        "k": 0.0014769143901007227,
+        "random_t": false,
+        "use_guidance": true,
+        "guidance_scale": 0.239810679772643,
+        "guidance_source": "ema",
+        "ema_decay": 0.9435727163976317,
+        "lambda_eff": 0.5936278446505159
+      }
+    },
+    {
+      "trial": 47,
+      "lcb": -26.134957824184887,
+      "params": {
+        "lr": 0.0015165876325126206,
+        "use_grad_decay": false,
+        "n_steps": 43,
+        "expand_frac": 0.54318435979621,
+        "epoch_rows": 3232,
+        "off_policy_frac": 0.25653891990877786,
+        "mc_samples": 5,
+        "smc_type": "k_Vema",
+        "k": 0.007947535621164879,
+        "random_t": true,
+        "use_guidance": false,
+        "ema_decay": 0.9290695673961182,
+        "lambda_eff": 0.6112642514398541
+      }
+    }
+  ],
+  "elapsed_min": 58.47671986818314
+}

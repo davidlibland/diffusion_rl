@@ -1,0 +1,79 @@
+{
+  "method": "single_seed_mc",
+  "dim": 512,
+  "problem": {
+    "d": 512,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 6.000000000000085,
+    "reward_scale": 0.04006962778224028,
+    "E_base_r": -40.240200766212446,
+    "E_opt_r": -34.24020076621236,
+    "gap": 36.06485459064554,
+    "bias_val": -36.06485459064554,
+    "V00_analytical": -36.06485366821289
+  },
+  "n_trials": 60,
+  "chosen": [
+    {
+      "trial": 48,
+      "lcb": -37.98297393427197,
+      "params": {
+        "lr": 0.0029822196808072118,
+        "use_grad_decay": true,
+        "grad_decay": 7.744501947054153e-05,
+        "n_steps": 42,
+        "expand_frac": 0.3438865963836044,
+        "epoch_rows": 1413,
+        "off_policy_frac": 0.18066204721529816,
+        "mc_samples": 18,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.9042802991872921,
+        "random_t": true,
+        "l": 0.038778008439009914,
+        "use_guidance": true,
+        "guidance_scale": 0.11246473275684125,
+        "guidance_source": "live"
+      }
+    },
+    {
+      "trial": 6,
+      "lcb": -38.08850285431968,
+      "params": {
+        "lr": 0.0016155001304356408,
+        "use_grad_decay": true,
+        "grad_decay": 0.0011040511903162248,
+        "n_steps": 31,
+        "expand_frac": 0.22210781047073025,
+        "epoch_rows": 1108,
+        "off_policy_frac": 0.16880758570181398,
+        "mc_samples": 20,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.7715105777813047,
+        "random_t": true,
+        "l": 0.005693074767644612,
+        "use_guidance": true,
+        "guidance_scale": 0.1317388757203023,
+        "guidance_source": "live"
+      }
+    },
+    {
+      "trial": 3,
+      "lcb": -38.43945316687403,
+      "params": {
+        "lr": 0.000633326877532184,
+        "use_grad_decay": false,
+        "n_steps": 14,
+        "expand_frac": 0.9868869366005173,
+        "epoch_rows": 8160,
+        "off_policy_frac": 0.0993578407670862,
+        "mc_samples": 1,
+        "smc_type": "kt_r",
+        "k": 0.011895896737553546,
+        "random_t": true,
+        "use_guidance": false
+      }
+    }
+  ],
+  "elapsed_min": 56.28423848946889
+}

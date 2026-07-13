@@ -1,0 +1,76 @@
+{
+  "method": "single_seed_mc",
+  "dim": 16,
+  "problem": {
+    "d": 16,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 6.000000000000002,
+    "reward_scale": 0.4269406318604083,
+    "E_base_r": -13.960202937140465,
+    "E_opt_r": -7.960202937140464,
+    "gap": 10.465172839756868,
+    "bias_val": -10.465172839756868,
+    "V00_analytical": -10.46517276763916
+  },
+  "n_trials": 60,
+  "chosen": [
+    {
+      "trial": 22,
+      "lcb": -12.099576637328537,
+      "params": {
+        "lr": 0.0001840906548923713,
+        "use_grad_decay": true,
+        "grad_decay": 0.0003983336002688678,
+        "n_steps": 83,
+        "expand_frac": 0.5473009974976668,
+        "epoch_rows": 15778,
+        "off_policy_frac": 0.21396665610372173,
+        "mc_samples": 1,
+        "smc_type": "k_Vnograd",
+        "k": 0.22436529552829731,
+        "random_t": false,
+        "use_guidance": false
+      }
+    },
+    {
+      "trial": 54,
+      "lcb": -12.195947194667696,
+      "params": {
+        "lr": 0.00029032688406872853,
+        "use_grad_decay": true,
+        "grad_decay": 0.0019655211541822776,
+        "n_steps": 69,
+        "expand_frac": 0.7933661018832624,
+        "epoch_rows": 13704,
+        "off_policy_frac": 0.18620752050537454,
+        "mc_samples": 1,
+        "smc_type": "k_r",
+        "k": 0.08062241939103598,
+        "random_t": false,
+        "use_guidance": true,
+        "guidance_scale": 0.09555485151211547,
+        "guidance_source": "live"
+      }
+    },
+    {
+      "trial": 26,
+      "lcb": -12.3429770240824,
+      "params": {
+        "lr": 0.00010545588671440356,
+        "use_grad_decay": true,
+        "grad_decay": 0.005543918940840365,
+        "n_steps": 108,
+        "expand_frac": 0.5212779586048706,
+        "epoch_rows": 5020,
+        "off_policy_frac": 0.06221049100867543,
+        "mc_samples": 1,
+        "smc_type": "kt_r",
+        "k": 0.5451373648482982,
+        "random_t": false,
+        "use_guidance": false
+      }
+    }
+  ],
+  "elapsed_min": 42.304523762067156
+}

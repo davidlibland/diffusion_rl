@@ -1,0 +1,76 @@
+{
+  "method": "single_seed_td_lambda",
+  "dim": 512,
+  "problem": {
+    "d": 512,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 6.000000000000085,
+    "reward_scale": 0.04006962778224028,
+    "E_base_r": -40.240200766212446,
+    "E_opt_r": -34.24020076621236,
+    "gap": 36.06485459064554,
+    "bias_val": -36.06485459064554,
+    "V00_analytical": -36.06485366821289
+  },
+  "n_trials": 60,
+  "chosen": [
+    {
+      "trial": 27,
+      "lcb": -38.44626397814295,
+      "params": {
+        "lr": 0.0016757498935371347,
+        "use_grad_decay": false,
+        "n_steps": 15,
+        "expand_frac": 0.970729424049902,
+        "epoch_rows": 5422,
+        "off_policy_frac": 0.19922409232907606,
+        "mc_samples": 1,
+        "smc_type": "kt_r",
+        "k": 0.029326020802619746,
+        "random_t": false,
+        "use_guidance": false,
+        "lambda_eff": 0.08595717762654839
+      }
+    },
+    {
+      "trial": 32,
+      "lcb": -38.84093692346349,
+      "params": {
+        "lr": 0.001821338779608382,
+        "use_grad_decay": true,
+        "grad_decay": 7.490478758361044e-05,
+        "n_steps": 12,
+        "expand_frac": 0.6888837192934514,
+        "epoch_rows": 2055,
+        "off_policy_frac": 0.40872312393391397,
+        "mc_samples": 1,
+        "smc_type": "kt_r",
+        "k": 0.1223192307457407,
+        "random_t": false,
+        "use_guidance": false,
+        "lambda_eff": 0.09987821187898002
+      }
+    },
+    {
+      "trial": 4,
+      "lcb": -38.85824865309491,
+      "params": {
+        "lr": 0.0002879775265707035,
+        "use_grad_decay": false,
+        "n_steps": 51,
+        "expand_frac": 0.8872127425763265,
+        "epoch_rows": 3257,
+        "off_policy_frac": 0.05979712296915085,
+        "mc_samples": 8,
+        "smc_type": "k_Vema",
+        "k": 0.019170041589170652,
+        "random_t": true,
+        "use_guidance": false,
+        "ema_decay": 0.9031114893829867,
+        "lambda_eff": 0.5085706911647028
+      }
+    }
+  ],
+  "elapsed_min": 50.19275037447611
+}

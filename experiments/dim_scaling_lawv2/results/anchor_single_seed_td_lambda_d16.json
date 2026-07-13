@@ -1,0 +1,86 @@
+{
+  "method": "single_seed_td_lambda",
+  "dim": 16,
+  "problem": {
+    "d": 16,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 6.000000000000002,
+    "reward_scale": 0.4269406318604083,
+    "E_base_r": -13.960202937140465,
+    "E_opt_r": -7.960202937140464,
+    "gap": 10.465172839756868,
+    "bias_val": -10.465172839756868,
+    "V00_analytical": -10.46517276763916
+  },
+  "n_trials": 60,
+  "chosen": [
+    {
+      "trial": 1,
+      "lcb": -12.374154763751402,
+      "params": {
+        "lr": 0.000160712385120399,
+        "use_grad_decay": false,
+        "n_steps": 34,
+        "expand_frac": 0.7851759613930136,
+        "epoch_rows": 1414,
+        "off_policy_frac": 0.2571172192068058,
+        "mc_samples": 5,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.7886714129990487,
+        "random_t": false,
+        "l": 0.2661901888489056,
+        "use_guidance": true,
+        "guidance_scale": 0.5124661108462079,
+        "guidance_source": "ema",
+        "ema_decay": 0.9490225141010158,
+        "lambda_eff": 0.2587799816000169
+      }
+    },
+    {
+      "trial": 31,
+      "lcb": -12.466370439141437,
+      "params": {
+        "lr": 0.00017970346172592274,
+        "use_grad_decay": true,
+        "grad_decay": 5.782804227336382e-05,
+        "n_steps": 63,
+        "expand_frac": 0.4515731282150203,
+        "epoch_rows": 1596,
+        "off_policy_frac": 0.42438279283291097,
+        "mc_samples": 12,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.07470780032201067,
+        "random_t": false,
+        "l": 0.9475260051836172,
+        "use_guidance": true,
+        "guidance_scale": 0.5892274296843433,
+        "guidance_source": "live",
+        "lambda_eff": 0.3171943386685552
+      }
+    },
+    {
+      "trial": 28,
+      "lcb": -12.467789732492838,
+      "params": {
+        "lr": 0.00025782115970739264,
+        "use_grad_decay": true,
+        "grad_decay": 0.00016270479554202782,
+        "n_steps": 33,
+        "expand_frac": 0.4248711954630543,
+        "epoch_rows": 1000,
+        "off_policy_frac": 0.36879679449718467,
+        "mc_samples": 4,
+        "smc_type": "kV_plus_ltr",
+        "k": 0.35268848156261856,
+        "random_t": false,
+        "l": 0.9473681915005076,
+        "use_guidance": true,
+        "guidance_scale": 0.2759566890582342,
+        "guidance_source": "live",
+        "lambda_eff": 0.21930727869496636
+      }
+    }
+  ],
+  "elapsed_min": 44.43505930105845
+}

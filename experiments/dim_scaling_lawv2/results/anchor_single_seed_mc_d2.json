@@ -1,0 +1,77 @@
+{
+  "method": "single_seed_mc",
+  "dim": 2,
+  "problem": {
+    "d": 2,
+    "calibration": "constant_headroom_nested",
+    "headroom_target": 6.0,
+    "headroom": 5.999999999999999,
+    "reward_scale": 1.947491622736417,
+    "E_base_r": -6.993032937872257,
+    "E_opt_r": -0.9930329378722572,
+    "gap": 2.3532556649489527,
+    "bias_val": -2.3532556649489527,
+    "V00_analytical": -2.3532557487487793
+  },
+  "n_trials": 60,
+  "chosen": [
+    {
+      "trial": 48,
+      "lcb": -1.7740277627192103,
+      "params": {
+        "lr": 0.0001184462147729463,
+        "use_grad_decay": true,
+        "grad_decay": 7.744501947054153e-05,
+        "n_steps": 16,
+        "expand_frac": 0.5186272001218906,
+        "epoch_rows": 1608,
+        "off_policy_frac": 0.06800213780146146,
+        "mc_samples": 20,
+        "smc_type": "kt_r",
+        "k": 0.002869985824509412,
+        "random_t": true,
+        "use_guidance": false
+      }
+    },
+    {
+      "trial": 25,
+      "lcb": -2.096003399596446,
+      "params": {
+        "lr": 0.000137412343054906,
+        "use_grad_decay": true,
+        "grad_decay": 0.008876760144047945,
+        "n_steps": 22,
+        "expand_frac": 0.30630818987533104,
+        "epoch_rows": 6098,
+        "off_policy_frac": 0.14004112188691387,
+        "mc_samples": 8,
+        "smc_type": "k_Vema",
+        "k": 0.005196168750123667,
+        "random_t": true,
+        "use_guidance": false,
+        "ema_decay": 0.9688633717016374
+      }
+    },
+    {
+      "trial": 58,
+      "lcb": -2.24448456971332,
+      "params": {
+        "lr": 0.00011983926987186332,
+        "use_grad_decay": true,
+        "grad_decay": 3.473072209302864e-05,
+        "n_steps": 15,
+        "expand_frac": 0.24110135567646632,
+        "epoch_rows": 5846,
+        "off_policy_frac": 0.051180385435268635,
+        "mc_samples": 9,
+        "smc_type": "k_r",
+        "k": 0.01030925779922184,
+        "random_t": false,
+        "use_guidance": true,
+        "guidance_scale": 0.24553485816796536,
+        "guidance_source": "live"
+      }
+    }
+  ],
+  "elapsed_min": 49.38903490702311
+}
