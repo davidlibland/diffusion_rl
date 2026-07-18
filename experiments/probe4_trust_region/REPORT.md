@@ -64,17 +64,40 @@ permissive"; the tr_twist null (β=1 always) is robust to this (the true KL
 being larger would only mean the budget binds *more*, and it never came
 close), but the ramp speeds are upper bounds on effective ramp slowness.
 
-## Supplements (running)
+## Supplements (complete)
 
-- `tr_oracle_ramp ε=0.03` — a ramp slow enough to span most of training.
-- `tr_unweight ε=1e-4` — the uniform-weight limit (oracle sources, expansion,
-  no unweighting), closing the bias-variance question from reading 3.
+- **Slow ramp (ε=0.03): 20.2±1.4** — β spends most of training ramping
+  (mean-over-updates 0.887) yet the outcome is statistically identical to
+  the instant ramp (−0.3±0.9 vs ε=3.0, p=.75) and still −14.8 below law-v2.
+  Across two orders of magnitude of ramp speed, **concentration harm is
+  ramp-speed-invariant** in every reachable regime. Reading 2 closes: at
+  d=512 there is no rate at which oracle-strength concentration becomes
+  affordable.
+- **Uniform-weight limit (ε=1e-4): 18.0±1.7** — the scan's monotone trend
+  does NOT continue to ε→0. The full ordering within the oracle-source
+  expansion family is a clean bias-variance U:
+
+  | weighting | mean |
+  |---|---|
+  | uniform (no unweighting; biased targets) | 18.0±1.7 |
+  | raw, clamped at 100× (probe 3; unbiased, high variance) | 21.9±2.7 |
+  | **dual-tempered, ε=0.3 (interior optimum)** | **25.2±3.4** |
+
+  Unweighting is earning its keep, but only in tempered form: the
+  correction's bias reduction is real (uniform is worst) and its raw
+  variance is real (clamp beats uniform but loses to temper by 3.3). This
+  is the one adoptable mechanism from probe 4.
 
 ## Verdict for the codebase
 
-Adopt nothing wholesale yet. The trust-region *diagnostic* earned its keep
-(the β trajectory is a one-array answer to "is my twist moving too fast?"),
-and tempered unweighting is the right replacement for the clamp if
-unweighting is kept at all — but the supplements must first rule on whether
-unweighting and slow concentration have any role. The law-v2 family remains
-the best known configuration at every dimension.
+- **Adopt:** the dual temper as the standard form of any importance
+  correction on regression weights (replaces ad-hoc clamps; interior
+  optimum ε≈0.3 here), and the β-trajectory as a standing diagnostic ("is
+  my sampling measure moving faster than ε per epoch?").
+- **Decline:** trust-region twist scheduling for ssmc (the budget never
+  binds — the learned twist is naturally slow; revisit only for ssmc-td's
+  bootstrapped targets, the actually-fast-moving object) and concentration
+  ramps (harm is ramp-speed-invariant).
+- The law-v2 family remains the best known configuration at every
+  dimension; probe 4 refines *why*: its sampling measure already moves
+  slowly, stays broad, and its only importance corrections are mild.
