@@ -1,0 +1,23 @@
+{
+ "problem": "gmm40",
+ "method": "single_seed_mc",
+ "steps": 15000,
+ "seed": 2,
+ "dim": 2,
+ "n_modes": 40,
+ "train_min": 4.536652680238088,
+ "nonfinite_skips": 0,
+ "error": null,
+ "logZ_hat": 0.06003798916935921,
+ "logZ_true": 0.0,
+ "logZ_err": 0.06003798916935921,
+ "frac_finite": 1.0,
+ "mode_cov": 1.0,
+ "mode_cov_ref": 1.0,
+ "energy_w1": 62.174275927375376,
+ "sliced_w2": 0.17030400037765503,
+ "gen_energy_mean": 61.20063018798828,
+ "ref_energy_mean": -0.9736443161964417,
+ "V_rmse_vs_oracle": 0.3945978879928589,
+ "V_bias_vs_oracle": 0.07271582633256912
+}

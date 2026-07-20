@@ -1,0 +1,21 @@
+{
+ "problem": "manywell",
+ "method": "single_seed_mc",
+ "steps": 15000,
+ "seed": 1,
+ "dim": 32,
+ "n_modes": 65536,
+ "train_min": 3.9185177723566693,
+ "nonfinite_skips": 0,
+ "error": null,
+ "logZ_hat": 147.3797607421875,
+ "logZ_true": 164.6956753197969,
+ "logZ_err": 17.31591457760939,
+ "frac_finite": 1.0,
+ "mode_cov": 0.500962495803833,
+ "mode_cov_ref": 0.8446312546730042,
+ "energy_w1": 153.92676401990525,
+ "sliced_w2": 0.8767034411430359,
+ "gen_energy_mean": 16.79143714904785,
+ "ref_energy_mean": -137.1353302001953
+}

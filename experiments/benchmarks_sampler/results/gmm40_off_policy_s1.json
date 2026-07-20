@@ -1,0 +1,23 @@
+{
+ "problem": "gmm40",
+ "method": "off_policy",
+ "steps": 15000,
+ "seed": 1,
+ "dim": 2,
+ "n_modes": 40,
+ "train_min": 4.126940536499023,
+ "nonfinite_skips": 0,
+ "error": null,
+ "logZ_hat": 0.10370837152004242,
+ "logZ_true": 0.0,
+ "logZ_err": 0.10370837152004242,
+ "frac_finite": 1.0,
+ "mode_cov": 1.0,
+ "mode_cov_ref": 1.0,
+ "energy_w1": 610.6267809493886,
+ "sliced_w2": 0.6419254541397095,
+ "gen_energy_mean": 609.671630859375,
+ "ref_energy_mean": -0.9551058411598206,
+ "V_rmse_vs_oracle": 0.47158610820770264,
+ "V_bias_vs_oracle": -0.15361708402633667
+}
