@@ -1,0 +1,23 @@
+{
+ "problem": "gmm40",
+ "method": "single_seed_mc_recipe",
+ "steps": 15000,
+ "seed": 1,
+ "dim": 2,
+ "n_modes": 40,
+ "train_min": 4.315944369633993,
+ "nonfinite_skips": 0,
+ "error": null,
+ "logZ_hat": -0.8050002455711365,
+ "logZ_true": 0.0,
+ "logZ_err": 0.8050002455711365,
+ "frac_finite": 1.0,
+ "mode_cov": 1.0,
+ "mode_cov_ref": 1.0,
+ "energy_w1": 493.95560826252614,
+ "sliced_w2": 0.5376957058906555,
+ "gen_energy_mean": 493.00146484375,
+ "ref_energy_mean": -0.9541372060775757,
+ "V_rmse_vs_oracle": 1.3790487051010132,
+ "V_bias_vs_oracle": -1.1638020277023315
+}

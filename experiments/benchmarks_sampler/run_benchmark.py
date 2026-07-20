@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.join(EXP, "dim_scaling_bs4"))
 sys.path.insert(0, os.path.join(EXP, "dim_scaling_consth"))
 sys.path.insert(0, HERE)
 
+sys.path.insert(0, os.path.join(EXP, "dim_scaling_lawv2"))
 import sweep_consth as sw  # noqa: E402
 from fit_consth import hparams_for_dim  # noqa: E402
 import problem_sampler as ps  # noqa: E402
@@ -120,16 +121,35 @@ def main():
     ap.add_argument("--method", required=True)
     ap.add_argument("--steps", type=int, default=8000)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--recipe", action="store_true",
+                    help="use law-v2 build (expansion + guided proposals)")
+    ap.add_argument("--guidance", type=float, default=None,
+                    help="override guidance_scale (ema source) on the v1 build")
     args = ap.parse_args()
     os.makedirs(RESULTS, exist_ok=True)
 
     prob = make_problem(args.problem, args.seed)
     dim = prob["diag"]["d"]
     hidden = min(256, max(64, 32 * dim))
-    params = hparams_for_dim(args.method, dim)
     L.seed_everything(args.seed, workers=True)
-    model, vm, ds, loader = sw.build(args.method, params, prob, dim, hidden,
-                                     args.seed)
+    if args.recipe:
+        import sweep_lawv2 as sw2
+        from fit_lawv2 import hparams_for_dim as hp2
+        params = hp2(args.method, dim)
+        model, vm, ds, loader = sw2.build(args.method, params, prob, dim,
+                                          hidden, args.seed)
+        tag = args.method + "_recipe"
+    else:
+        params = hparams_for_dim(args.method, dim)
+        tag = args.method
+        if args.guidance is not None:
+            params["use_guidance"] = True
+            params["guidance_scale"] = args.guidance
+            params["guidance_source"] = "ema"
+            params.setdefault("ema_decay", 0.99)
+            tag = f"{args.method}_g{args.guidance:g}"
+        model, vm, ds, loader = sw.build(args.method, params, prob, dim, hidden,
+                                         args.seed)
     t0 = time.time()
     tr = L.Trainer(max_steps=args.steps, limit_val_batches=0, logger=False,
                    enable_checkpointing=False, enable_progress_bar=False,
@@ -146,7 +166,8 @@ def main():
            "train_min": (time.time() - t0) / 60,
            "nonfinite_skips": int(getattr(model, "_nonfinite_count_total", 0)),
            "error": err, **metrics}
-    out_path = f"{RESULTS}/{args.problem}_{args.method}_s{args.seed}.json"
+    rec["method"] = tag
+    out_path = f"{RESULTS}/{args.problem}_{tag}_s{args.seed}.json"
     json.dump(rec, open(out_path, "w"), indent=1)
     print(f"=== {args.problem} / {args.method} (seed {args.seed}, {args.steps} steps) ===")
     print(f"  log Z: hat={rec['logZ_hat']:.2f} true={rec['logZ_true']:.2f} "

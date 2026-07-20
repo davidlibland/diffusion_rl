@@ -49,20 +49,53 @@ oracle. Everything error-free, ~4 min/run on the small nets.
    symmetric base and no recipe. Published FAB reports ~1–2 nat log-Z error
    on MW32, so there is a real gap to close.
 
-## Next steps (clear from the gap)
+## Follow-ups tried (both negative — recorded)
 
-1. **Apply the recipe (law-v2: expansion + guided proposals) to Many-Well.**
-   Our dim-scaling work showed expansion + guidance is exactly what closes the
-   high-d exploration gap; MW32 is a 32-D high-d target, so this is the
-   indicated fix. Needs `sweep_lawv2.build` (augment_fn) instead of the v1
-   build used here.
-2. **Longer training + guidance-scale sweep** on MW32 (runs are ~4 min, cheap
-   to scale to 60k steps / a small sweep).
-3. **Report against published tables** once MW32 is competitive: FAB/PIS/DDS
-   log-Z and sample W2 for MW32; iDEM/FAB metrics for GMM-40.
-4. The clean **learned-V-vs-oracle** axis (GMM) is worth featuring — it
-   isolates value-function quality from sampler quality, which no baseline
-   reports.
+### The dim-scaling recipe does NOT transfer; it hurts
+law-v2 (expansion + guided proposals), the fix indicated by our high-d work:
+
+| config | GMM-40 log-Z err | GMM-40 sliced-W2 | GMM-40 V-RMSE | MW32 log-Z err |
+|---|---|---|---|---|
+| plain ssmc (15k) | **0.08** | **0.28** | **0.54** | **16.3** |
+| ssmc + recipe (15k) | 0.42 | 0.37 | 0.80 | 17.9 |
+| ssmc + recipe (40k) | — | — | — | **121.2** (collapsed) |
+
+The recipe's hyperparameters were fit to the GMM-*drift* constant-headroom
+family, not these driftless Boltzmann targets, so they mis-transfer; expansion
++ guidance over long training on MW32 actively diverges (V(0,0)→43). **Plain
+on-policy ssmc is the best config on both benchmarks.**
+
+### Guidance scale is inert on the Many-Well barrier
+Sweeping guidance_scale ∈ {0.5, 1.5, 4.0} on MW32 (ssmc, 15k) gives
+*bit-for-bit identical* outcomes: log-Z hat 147.7±0.04, P(+)=0.498,
+sliced-W2 0.880 at every scale. Cranking the guided proposal 8× moves nothing.
+
+### Diagnosis: MW32 is a value-representation failure, not a sampling one
+Every method sits at P(+)=0.498 while the target is 0.85 — the controlled
+process is symmetric across each double well. Since guidance (which only
+*uses* the value gradient at generation) is completely inert, the deficit is
+in the learned **value function itself**: it fits the symmetric part of each
+well (6x²−x⁴) but misses the small linear tilt (0.5·x, worth ~1.74 nats/well)
+that makes the + well deeper. A symmetric value has a symmetric gradient, so
+no generation-side knob can recover the asymmetry. The 16-nat log-Z undershoot
+is exactly 16 wells × ~1 nat of missing deep-well mass. **This is squarely a
+value-learning problem — our domain — and the benchmark isolates it cleanly.**
+
+## Next steps
+
+1. **Attack the value-representation gap directly** (not generation knobs):
+   the 16 wells are independent, so a per-well/factorized value head, or an
+   architecture/loss that resolves the sub-dominant linear tilt, is the
+   principled fix. Symmetry-breaking exploration (temperature annealing / the
+   trust-region escort ramp seeding one well) is the alternative.
+2. **Re-fit hyperparameters on the Boltzmann family** rather than reusing the
+   GMM-drift laws — the recipe failure shows the laws don't transfer.
+3. **Report against published tables** once MW32 is competitive: FAB reports
+   ~1–2 nat log-Z error on MW32 (we are at 16); we are far off and now know
+   why.
+4. Feature the **learned-V-vs-oracle** axis (GMM, ~0.5 nats) — it isolates
+   value quality from sampler quality, which no baseline reports, and it is
+   the axis on which MW32's failure is legible.
 
 ## Caveat
 
