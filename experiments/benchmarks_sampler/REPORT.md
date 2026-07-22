@@ -97,7 +97,54 @@ value-learning problem — our domain — and the benchmark isolates it cleanly.
    value quality from sampler quality, which no baseline reports, and it is
    the axis on which MW32's failure is legible.
 
-## Caveat
+## Comparison to published numbers (same target configs)
+
+Our GMM-40 is iDEM's GMM (d=2, 40 modes, loc 40, softplus scale) and our
+Many-Well-32 is Sendera's Manywell (d=32, FAB energy) — identical, so the
+comparison is apples-to-apples on the coordinate-free log-Z axis.
+
+**GMM-40**, log-Z bias (target normalized, true log Z=0) — iDEM Table
+(2402.06121); sample W2 in native coords:
+
+| method | \|Δ log Z\| | sample W2 (native) |
+|---|---|---|
+| PIS | 2.24 | 7.64 |
+| FAB | 1.17 | 12.0 |
+| DDS | 0.36 | 9.31 |
+| iDEM (SOTA) | 0.34 | 7.42 |
+| **ours ssmc** | **0.08** | ≈14 (sliced-W2×50, a lower bound) |
+| ours off-policy | 0.19 | ≈32 |
+
+→ **On log Z we are better than all published methods** (0.08 vs best 0.34);
+on sample W2 we are in the same ballpark but our sliced metric isn't directly
+comparable and iDEM's 7.42 is likely ahead. Mode coverage is complete (40/40),
+matching the good methods. GMM-40 is competitive-to-winning.
+
+**Many-Well-32**, Δ log Z — Sendera Table 1 (2402.05098), 5 runs:
+
+| method | Δ log Z (raw) | Δ log Z (reweighted) |
+|---|---|---|
+| SMC | 14.99 | — |
+| DIS | 10.52 | 3.05 |
+| DDS | 7.36 | 0.23 |
+| PIS | 3.85 | 2.69 |
+| TB (GFlowNet) | 4.01 | 2.67 |
+| best (TB+Expl+LP+LS) | 4.68 | 0.07 |
+| GGNS | 0.29 | — |
+| **ours ssmc** | **16.28** | — (no reweighting applied) |
+
+→ **On MW32 we are not competitive**: 16.3 is worse than every tuned
+diffusion sampler (PIS 3.85 raw; best ≈0.1–0.3 reweighted), on par only with
+untuned plain SMC (14.99). Consistent with the value-representation diagnosis.
+
+**Two caveats that bound the comparison.** (1) We have *not* tuned on this
+family — law-v1 hparams, driftless base, small nets, 15k steps. (2) The
+published raw→reweighted jump (DDS 7.36→0.23, best 4.68→0.07) comes from
+importance-**reweighting** the sampler's own outputs; we report only the raw
+V(0,0) readout and apply no reweighting. We already have exact SMC weights, so
+a reweighted log-Z estimate is the cheapest large lever on the MW32 gap.
+
+## Caveat (metrics)
 
 L=50 (DEM's normalization) makes GMM modes very sharp, inflating energy-W1;
 sliced-W2 and log-Z are the robust GMM metrics. A moderate L≈15 would soften
