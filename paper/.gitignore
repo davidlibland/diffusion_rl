@@ -9,5 +9,5 @@
 *.fls
 
 # keep figure assets (generated but needed to compile)
-!paper/figures/*.pdf
-!paper/figures/*.png
+!figures/*.pdf
+!figures/*.png
