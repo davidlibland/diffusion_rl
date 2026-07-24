@@ -7,3 +7,7 @@
 *.synctex.gz
 *.fdb_latexmk
 *.fls
+
+# keep figure assets (generated but needed to compile)
+!paper/figures/*.pdf
+!paper/figures/*.png
