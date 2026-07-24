@@ -187,11 +187,24 @@ samplers.
 6. (App) on-policy zoo comparison; hyperparameter laws; Spence derivation
    figures.
 
-## Open decisions (need your input)
-- **Venue & length** — sets main-vs-appendix split (workshop 4pp / conference
-  8–9pp / journal). Default assumed: ML conference (~9pp + appendix).
-- **On-policy scope** — how much of the dim-scaling/recipe/law-fitting story
-  is main vs appendix, given it's secondary and the recipe did *not* transfer
-  to GMM-40.
-- **Title / loss name framing** — "Spence loss" confirmed; sub-title emphasis
-  (control vs sampling audience).
+## Locked decisions
+- **Venue & length:** ML conference, ~9pp main + appendix. Budget guide:
+  §1 ~0.75pp, §2 ~1pp, §3 ~0.75pp, §4 (loss) ~2pp, §5 ~1.25pp, §6 ~1pp,
+  §7 ~1.75pp, §8+§9 ~0.5pp. Everything below "keep tight" moves to appendix.
+- **On-policy scope: sparsity + best method only.** §6 states the
+  signal-sparsity argument and the single best on-policy method; §7.1 shows the
+  dim-scaling crossover. **To Appendix B:** the recipe (expansion + finer
+  integration), the hyperparameter-law single-family (law-v2) result, the
+  coverage-vs-concentration probes, the FBRRT/TD-λ/ancestral/guided-proposal
+  zoo, and the trust-region probe. The recipe's non-transfer to GMM-40 is an
+  honest appendix note, not a main-body result.
+- **Name:** "Spence loss" (repo `quad`), per the naming box above.
+
+## Drafting order (recommended)
+1. §4 Bregman/Spence — **drafted** (`sections/04_bregman.tex`).
+2. §3 exp-MSE pathology + Fig 1 (gradient-vs-error, generatable from the loss).
+3. §2 Setting (H-martingale targets) + App. D proofs + App. A Spence derivation.
+4. §5 off-policy loss ablation (Table 1) — pull numbers from bs4_moons/dim_scaling.
+5. §7 experiments (dim-scaling Fig 3, 2-moons Fig 2, GMM-40 Table 2).
+6. §6 sparsity + best method; App. B zoo.
+7. §1 intro + §8 related + §9 conclusion last, once the story is fixed.
