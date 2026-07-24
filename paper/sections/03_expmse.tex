@@ -2,4 +2,66 @@
 \section{The problem with exponential-space squared error}
 \label{sec:03_expmse}
 
-% TODO
+The value $\Vf(x,t)=\log\E_{\Base}[e^{r(X_1)}\mid X_t=x]$ is a conditional
+log-partition function, and the H-martingale property (\S\ref{sec:02_setting})
+supplies \emph{conditionally unbiased} targets in \emph{exponential} space:
+$e^{\Vf(x_t)}=\E[e^{q}\mid x_t]$ for a one-step target $q$ (the terminal
+reward, or a bootstrapped value). A network predicts the value in log space,
+$p=\Vf_\theta(x_t)$; matching $e^{p}$ to the unbiased target $e^{q}$ with
+squared error gives
+\begin{equation}
+  L_{\mathrm{MSE}}(p,q)=\big(e^{p}-e^{q}\big)^2,
+  \qquad
+  \frac{\partial L_{\mathrm{MSE}}}{\partial p}=2e^{p}\big(e^{p}-e^{q}\big)
+    =2e^{2p}-2e^{p+q}.
+  \label{eq:mse-grad}
+\end{equation}
+Both tails are pathological, but asymmetrically so
+(Fig.~\ref{fig:loss_curves}, left).
+
+\paragraph{Over-prediction explodes (recoverable).}
+As $p\to+\infty$ the gradient grows like $2e^{2p}$ and overflows single
+precision once $p\gtrsim 44$ nats (the square needs $e^{2p}$). This is a
+nuisance but a benign one: the gradient merely needs to be a full-size,
+correctly-signed step, so saturating it to a large finite value (or clipping)
+recovers a usable update.
+
+\paragraph{Under-prediction vanishes (unrecoverable).}
+As $p\to-\infty$ the gradient behaves like $-2e^{p+q}\to 0$. This is exactly
+the regime where the model is \emph{most wrong}: it assigns near-zero value
+$e^{p}\approx 0$ to a state whose true value $e^{q}$ is large --- a rare,
+high-reward target it has failed to find. The learning signal there is not
+merely ill-scaled, it is \emph{absent}, and no amount of gradient clipping can
+manufacture a gradient that has decayed to zero. In the high-dimensional,
+signal-sparse regime of \S\ref{sec:06_sparsity_onpolicy}, where the useful
+targets are precisely the rare large ones, this is the dominant failure mode.
+
+\paragraph{Empirical pathology.}
+Beyond the asymptotics, the finite-precision behavior is severe. In our
+convergence runs the naive loss skipped or aborted a large fraction of batches
+on overflow (e.g.\ $18\%$ of batches in one FBRRT run once predictions reached
+moderate magnitude), and a \emph{single} non-finite prediction propagated
+through the shared value network to poison every subsequent batch. A
+stabilized implementation with the exact gradient of \eqref{eq:mse-grad}
+saturated to the float range (our \texttt{exp\_mse}) removes the overflow and
+the poisoning, but it cannot remove the vanishing gradient, which is a property
+of the divergence, not the arithmetic. Fixing it requires changing the loss
+while keeping the unbiased exponential-space target --- exactly what the
+Bregman family affords (\S\ref{sec:04_bregman}).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/loss_curves}
+  \caption{Loss value (top) and gradient $\partial L/\partial v_{\rm pred}$
+    (bottom) of $D_F(e^{v_{\rm pred}}, e^{v_{\rm true}})$ as functions of the
+    prediction $v_{\rm pred}$, for three targets $v_{\rm true}\in\{-2,0,2\}$
+    (dots mark the minimizer $v_{\rm pred}=v_{\rm true}$; symmetric-log axes).
+    \textbf{Squared error} vanishes for under-predictions
+    ($v_{\rm pred}\!<\!v_{\rm true}$, gradient $\to 0$) and explodes for
+    over-predictions. \textbf{Itakura--Saito} bounds the under-prediction
+    gradient at $-1$ (removing the vanishing pathology) but still explodes for
+    over-predictions. \textbf{Spence} (ours) is quadratic on both sides: the
+    gradient is linear in $v_{\rm pred}$ everywhere, so neither tail vanishes
+    nor explodes exponentially.}
+  \label{fig:loss_curves}
+\end{figure}

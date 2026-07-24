@@ -38,13 +38,19 @@ $\partial L/\partial p = 2e^{p}(e^{p}-e^{q}) = 2e^{2p}-2e^{p+q}$, which
 under-prediction pathology of \S\ref{sec:03_expmse}.
 
 \paragraph{Itakura--Saito ($\varphi(u)=-\ln u$).}
-$D_{\mathrm{IS}}(e^{q},e^{p}) = e^{q-p}-(q-p)-1$; its gradient in $p$ is
-$1-e^{q-p}$, a \emph{linear} (bounded-gradient) tail for over-predictions that
-removes the vanishing problem, but it still explodes for under-predictions.
-It is \emph{scale-invariant} ($D_{\mathrm{IS}}(cu,cv)=D_{\mathrm{IS}}(u,v)$)
-and is the negative log-likelihood of a gamma/exponential observation model,
-giving a natural uncertainty interpretation for $\Vf$. A useful midpoint, but
-one-sided.
+With the prediction as the first argument (Lemma~\ref{lem:minimizer}),
+$D_{\mathrm{IS}}(e^{p},e^{q}) = e^{p-q}-(p-q)-1$, whose gradient in $p$ is
+\begin{equation}
+  \frac{\partial L_{\mathrm{IS}}}{\partial p}=e^{p-q}-1.
+\end{equation}
+As $p\to-\infty$ this tends to $-1$: a bounded, \emph{non-vanishing}
+corrective signal for under-predictions, exactly removing squared error's
+worst pathology. It still explodes as $p\to+\infty$ ($e^{p-q}$), but that is
+the recoverable, clippable direction. Itakura--Saito is moreover
+\emph{scale-invariant} ($D_{\mathrm{IS}}(cu,cv)=D_{\mathrm{IS}}(u,v)$) and is
+the negative log-likelihood of a gamma/exponential observation model, giving a
+natural uncertainty interpretation for $\Vf$. A useful midpoint --- it fixes
+the harder tail --- but one-sided (Fig.~\ref{fig:loss_curves}, middle).
 
 % ---------------------------------------------------------------------------
 \subsection{The Spence loss}
@@ -95,8 +101,8 @@ $\Vf=\log\E[e^{q}\mid x_t]$ (Lemma~\ref{lem:minimizer}).}
 loss & under-predict ($p\!\to\!-\infty$) & over-predict ($p\!\to\!+\infty$)
      & scale-inv. & uncertainty model \\
 \midrule
-squared error   & vanishes ($e^{p+q}$)     & explodes ($e^{2p}$) & no  & Gaussian (exp) \\
-Itakura--Saito  & explodes                 & linear (bounded)    & yes & gamma \\
+squared error   & vanishes ($\to 0$)       & explodes ($e^{2p}$) & no  & Gaussian (exp) \\
+Itakura--Saito  & bounded ($\to -1$)       & explodes ($e^{p-q}$) & yes & gamma \\
 \textbf{Spence (ours)} & \textbf{quadratic} ($p\,e^{q}$) & \textbf{quadratic} ($p$) & no & gamma-like \\
 \bottomrule
 \end{tabular}
