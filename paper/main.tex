@@ -1,0 +1,68 @@
+\documentclass{article}
+% Swap for the target venue's style file when chosen (neurips/icml/tmlr...).
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx,booktabs,microtype}
+\usepackage[numbers]{natbib}
+\usepackage{hyperref}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{definition}{Definition}
+
+% Notation
+\newcommand{\Vf}{V}                                  % value function
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Base}{\mathrm{base}}
+\newcommand{\Breg}{D_{\varphi}}
+\newcommand{\Spence}{\mathrm{Li}_2}                  % dilogarithm
+
+\title{The Spence Loss: Well-Conditioned Value-Function Learning\\
+       for Reward-Guided Diffusion}
+\author{David Li-Bland \and \ldots}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Reward-guided diffusion and diffusion fine-tuning are, through
+entropy-regularized stochastic control, the problem of learning a value
+function $\Vf(x,t)=\log\E_{\Base}[\exp r(X_1)\mid X_t=x]$---a conditional
+log-partition function whose gradient is the optimal control. The unbiased
+Monte-Carlo target for $\Vf$ lives in exponential space, so squared-error
+regression has gradients that explode for over-predictions and, worse, vanish
+for under-predictions, where the model is most wrong and gradient clipping
+cannot help. We observe that every Bregman divergence has the value function
+as its population minimizer, and introduce the \emph{Spence loss}%
+\footnote{Named for the Spence (dilogarithm) function $\Spence$ appearing in
+its value; in our code and experiments it is the \texttt{quad} loss.}: the
+Bregman divergence whose gradient has quadratic tails on both sides, with a
+closed-form numerically-stable gradient. We place it in a family with squared
+error and the Itakura--Saito divergence. A secondary contribution analyzes why
+high-dimensional value learning is signal-sparse and studies on-policy
+importance-sampling schemes. We validate on 2-moons, a dimensional-scaling
+benchmark designed for clean statistical reads, and GMM-40, where our
+log-partition estimate is competitive with published diffusion samplers.
+\end{abstract}
+
+\input{sections/01_intro}
+\input{sections/02_setting}
+\input{sections/03_expmse}
+\input{sections/04_bregman}
+\input{sections/05_offpolicy_exp}
+\input{sections/06_sparsity_onpolicy}
+\input{sections/07_experiments}
+\input{sections/08_related}
+\input{sections/09_conclusion}
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\appendix
+\input{sections/A_spence}
+\input{sections/B_onpolicy_zoo}
+\input{sections/C_experimental_details}
+\input{sections/D_proofs}
+
+\end{document}
