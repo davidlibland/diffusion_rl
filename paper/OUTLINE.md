@@ -208,3 +208,11 @@ samplers.
 5. §7 experiments (dim-scaling Fig 3, 2-moons Fig 2, GMM-40 Table 2).
 6. §6 sparsity + best method; App. B zoo.
 7. §1 intro + §8 related + §9 conclusion last, once the story is fixed.
+
+# Building the PDF
+
+No system LaTeX; use the self-contained `tectonic` engine:
+
+    tectonic -X compile main.tex --outdir build
+
+(one-time: download the static binary from the tectonic GitHub releases).
