@@ -1,5 +1,197 @@
 % !TEX root = ../main.tex
-\section{ value functions for reward-guided diffusion}
+\section{Setting: value functions for reward-guided diffusion}
 \label{sec:02_setting}
 
-% TODO
+% ---------------------------------------------------------------------------
+\subsection{The base process and the tilted target}
+
+Fix a time horizon $t\in[0,1]$ and a base diffusion on $\mathbb{R}^{d}$,
+\begin{equation}
+  \mathrm{d}X_t = f(X_t,t)\,\mathrm{d}t + \sqrt{2a}\,\mathrm{d}W_t,
+  \qquad X_0 = 0,
+  \label{eq:base-sde}
+\end{equation}
+with $a>0$ a scalar diffusion coefficient and $W$ a standard $d$-dimensional
+Brownian motion. Write $\mathbb{P}$ for the induced path measure, $\E_{\Base}$
+and $p_{\Base}$ for expectations and marginals under it, and
+$\mathcal{L}=f\cdot\nabla + a\Delta$ for its generator. Given a terminal reward
+$r:\mathbb{R}^{d}\to\mathbb{R}$, the object we wish to sample from is the
+\emph{reward-tilted} path measure
+\begin{equation}
+  \frac{\mathrm{d}\mathbb{P}^{\star}}{\mathrm{d}\mathbb{P}}
+  \;=\; \frac{e^{r(X_1)}}{Z},
+  \qquad
+  Z \;=\; \E_{\Base}\!\big[e^{r(X_1)}\big],
+  \label{eq:tilt}
+\end{equation}
+whose terminal marginal is $p^{\star}(x)\propto p_{\Base}(x)\,e^{r(x)}$. This is
+the common form of reward-guided generation and of diffusion fine-tuning
+\citep{uehara2024finetuning}, and it also covers Boltzmann sampling: to target
+$\pi\propto e^{-E}$ one sets $r = -E - \log p_{\Base}$, which is how we
+instantiate the GMM-40 benchmark in \S\ref{sec:07_experiments}.
+
+Nothing below depends on $f$ having a particular form: if $\mathbb{P}$ is a
+pretrained diffusion or flow model, $f$ is its learned drift and the whole
+development applies unchanged.\footnote{Note the time convention: $t$ runs from
+a deterministic start $X_0=0$ to the model's samples at $t=1$, as in the
+diffusion-sampler literature \citep{zhang2021pis,vargas2023dds}, rather than
+the denoising direction of DDPM-style presentations.}
+
+\paragraph{The base family we use.}
+\label{subsec:base-family}
+Our base processes are \emph{pinned interpolants}: $X_0=0$, a prescribed
+terminal marginal $\nu$, and a Brownian bridge between the two given
+$X_1=x_1$. The induced drift $f(x,t)=\E[(X_1-X_t)/(1-t)\mid X_t=x]$ vanishes
+exactly when $\nu=\mathcal{N}(0,2aI)$, recovering driftless Brownian motion
+(the case used for the Boltzmann benchmarks); taking $\nu$ to be a Gaussian
+mixture gives a base model with nontrivial but analytically known $f$, $\Vf$
+and $\log Z$, which is the controlled setting of our dimensional-scaling study
+(\S\ref{sec:07_experiments}). The family is convenient because it makes exact
+ground truth and a closed-form bridge available at once
+(\S\ref{subsec:targets}).
+
+% ---------------------------------------------------------------------------
+\subsection{Control formulation and the value function}
+
+Realizing \eqref{eq:tilt} means adding a drift. For a control $u$ giving the
+controlled dynamics $\mathrm{d}X_t=(f+u)\,\mathrm{d}t+\sqrt{2a}\,\mathrm{d}W_t$
+with path measure $\mathbb{P}^{u}$, Girsanov's theorem gives
+$\mathrm{KL}(\mathbb{P}^{u}\,\|\,\mathbb{P})=\E_{\mathbb{P}^u}\!\int_0^1
+\tfrac{1}{4a}\|u_t\|^{2}\,\mathrm{d}t$, so \eqref{eq:tilt} is the solution of
+the entropy-regularized control problem
+\begin{equation}
+  \max_{u}\ \ \E_{\mathbb{P}^{u}}\!\left[\,r(X_1)
+    - \int_0^1 \frac{\|u_t\|^{2}}{4a}\,\mathrm{d}t\right],
+  \label{eq:control}
+\end{equation}
+whose optimum is $\log Z$. The central object is the \emph{soft value function}
+\begin{equation}
+  \Vf(x,t) \;=\; \log \E_{\Base}\!\big[\,e^{r(X_1)} \,\big|\, X_t=x\,\big],
+  \label{eq:value}
+\end{equation}
+a conditional log-partition function. It solves the HJB equation
+$\partial_t \Vf + f\cdot\nabla \Vf + a\Delta \Vf + a\|\nabla \Vf\|^{2}=0$ with
+terminal condition $\Vf(\cdot,1)=r$, the optimal control is
+\begin{equation}
+  u^{\star}(x,t) \;=\; 2a\,\nabla_x \Vf(x,t),
+  \label{eq:optimal-control}
+\end{equation}
+and, since $X_0=0$ is deterministic, $\Vf(0,0)=\log Z$ --- the normalizing
+constant, which is the headline metric on external sampler benchmarks
+(\S\ref{sec:07_experiments}). Learning $\Vf$ therefore solves the sampling
+problem, the fine-tuning problem, and the free-energy-estimation problem at
+once, and everything downstream reduces to \emph{regressing $\Vf$ from
+Monte-Carlo targets}.
+
+% ---------------------------------------------------------------------------
+\subsection{The H-martingale property}
+\label{subsec:hmartingale}
+
+Exponentiating \eqref{eq:value} linearizes the HJB equation. Writing
+$h = e^{\Vf}$, Feynman--Kac gives $\partial_t h + \mathcal{L}h = 0$: $h$ is
+space-time harmonic for the base process, so $h(X_t,t)$ is a $\mathbb{P}$-martingale,
+and \eqref{eq:optimal-control} is exactly the Doob $h$-transform drift
+$f + 2a\nabla\log h$. Concretely, for any $0\le t<s\le 1$,
+\begin{equation}
+  \boxed{\ e^{\Vf(x,t)} \;=\; \E_{\Base}\!\big[\,e^{\Vf(X_s,\,s)}\,\big|\,X_t=x\,\big]\ }
+  \label{eq:hmart}
+\end{equation}
+with the terminal case $\Vf(\cdot,1)=r$. We call \eqref{eq:hmart} the
+H-martingale property; it is the source of every target in this paper, and two
+of its features drive the design.
+
+\paragraph{(i) Targets are unbiased in exponential space --- and only there.}
+Equation \eqref{eq:hmart} says that a \emph{single} draw of $X_s$ from the base
+kernel supplies a scalar $q = \Vf(X_s,s)$ (or $q=r(X_1)$ when $s=1$) satisfying
+\begin{equation}
+  \E\big[e^{q}\,\big|\,X_t=x\big] \;=\; e^{\Vf(x,t)}.
+  \label{eq:unbiased-target}
+\end{equation}
+The estimator is unbiased for $e^{\Vf}$, not for $\Vf$: the natural log-space
+plug-ins are both biased low by a Jensen gap (\S\ref{sec:03_expmse}). This is a
+property of the log-partition function rather than of a particular scheme, and
+it is what forces the regression into exponential space --- and hence into the
+conditioning problem of \S\ref{sec:03_expmse}--\S\ref{sec:04_bregman}.
+
+\paragraph{(ii) The identity is twist-independent.}
+Suppose we do not want to draw $X_s$ from the base kernel --- for instance
+because base samples rarely reach high-reward regions
+(\S\ref{sec:06_sparsity_onpolicy}). Proposing instead under any twisted drift
+$f+u$ and correcting by the Radon--Nikodym ratio
+$\rho = \mathrm{d}\mathbb{P}/\mathrm{d}\mathbb{P}^{u}$ restores \eqref{eq:hmart}:
+\begin{equation}
+  e^{\Vf(x,t)} \;=\; \E_{\mathbb{P}^{u}}\!\big[\,\rho\, e^{\Vf(X_s,s)}\,\big|\,X_t=x\,\big],
+  \qquad
+  \log\rho \;=\; -\,\frac{u\cdot\Delta B}{2a} \;-\; \frac{\|u\|^{2}\Delta t}{4a},
+  \label{eq:girsanov}
+\end{equation}
+where $\Delta B\sim\mathcal{N}(0,2a\Delta t\,I)$ is the realized noise of one
+Euler--Maruyama step of size $\Delta t$ \citep{singhal2025fksteering}; for the
+learned twist $u=2a\nabla \Vf_\theta$ this reduces to
+$\log\rho = -\nabla \Vf_\theta\cdot\Delta B - a\|\nabla \Vf_\theta\|^{2}\Delta t$.
+The twist $u$ is therefore \emph{free}: it
+changes the variance of the target, never its mean. The proposal is a
+variance-reduction device, not a modeling choice --- which is what licenses the
+importance-sampling and SMC machinery of \S\ref{sec:06_sparsity_onpolicy}
+without changing the object being learned.
+
+% ---------------------------------------------------------------------------
+\subsection{How training pairs are formed}
+\label{subsec:targets}
+
+A learner $\Vf_\theta$ is fit to pairs $(x_t, q)$ satisfying
+\eqref{eq:unbiased-target}. We use three constructions, all instances of
+\eqref{eq:hmart}.
+
+\paragraph{Off-policy (bridge) anchors.}
+Draw a terminal point $x_1\sim\nu$ from the base terminal marginal, place $x_t$
+on the base bridge to it, and take $q=r(x_1)$. For the pinned interpolants of
+\S\ref{sec:02_setting} that bridge is the Brownian bridge in closed form,
+\begin{equation}
+  x_t \;=\; t\,x_1 + \sqrt{2a\,t(1-t)}\;\varepsilon,
+  \qquad \varepsilon\sim\mathcal{N}(0,I),
+  \label{eq:fwd-bridge}
+\end{equation}
+so the sampled joint $(x_t,x_1)$ is \emph{exactly} the base joint and $q$ is
+unbiased by \eqref{eq:hmart}. What matters is that $x_1$ is drawn from the base
+marginal $\nu$: anchoring on a reward-aware or held-out data distribution
+instead breaks the conditional and biases the targets. These anchors are cheap
+and cover the whole marginal; their weakness is precisely that $x_1$ ignores
+$r$, which is what fails in high dimension
+(\S\ref{sec:06_sparsity_onpolicy}).
+
+\paragraph{On-policy (bootstrapped) targets.}
+Roll a sequential-Monte-Carlo sweep forward from $X_0=0$ under the current
+twist $u=2a\nabla \Vf_\theta$, and form $q$ at each step by aggregating the
+learner's own values at the next step --- for us, a log-mean-exp over the
+sibling particles sharing a resampled parent, which is the empirical
+right-hand side of \eqref{eq:hmart}. As in temporal-difference learning, such
+targets are conditionally unbiased for the Bellman backup of the \emph{current}
+$\Vf_\theta$ rather than for $\Vf$ itself; by \eqref{eq:hmart} the fixed point
+of that backup is $\Vf$.
+
+\paragraph{Backward-noising expansion.}
+Because $e^{\Vf}$ is harmonic, a target attached at $(x_s,s)$ remains valid at
+any point noised \emph{backwards} from it under the base backward kernel. For
+the pinned interpolants this kernel is available in closed form and, notably,
+does not depend on the terminal law $\nu$ at all:
+\begin{equation}
+  X_t \,\big|\, X_s = x_s \;\sim\; \mathcal{N}\!\Big(\tfrac{t}{s}\,x_s,\;
+    2a\,\tfrac{t(s-t)}{s}\,I\Big),
+  \qquad t<s,
+  \label{eq:backward-kernel}
+\end{equation}
+because conditioning a Brownian bridge on an interior point leaves a Brownian
+bridge to that point, whatever the endpoint distribution. The expansion is
+therefore available for base models with nontrivial drift, not only for
+Brownian motion. Since $x_s$ came from the base marginal and $x_t$ from the
+base backward kernel, the pair $(x_t, q)$ carries the base joint law and
+\eqref{eq:hmart} applies unchanged. This turns one trajectory into many
+training pairs at earlier, noisier times, and is the mechanism behind our best
+on-policy variant (\S\ref{sec:06_sparsity_onpolicy}).
+
+\medskip
+\noindent In every case the learning problem has the same shape: given pairs
+$(x_t,q)$ with $\E[e^{q}\mid x_t] = e^{\Vf(x_t,t)}$, fit $p=\Vf_\theta(x_t)$.
+The rest of the paper concerns the two remaining degrees of freedom --- the
+divergence applied to $(p,q)$, and the sampler that produces the pairs.

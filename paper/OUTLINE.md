@@ -67,14 +67,44 @@ published samplers.
   gradient vs error for MSE/IS/Spence).
 - Contributions list.
 
-### 2. Setting: value functions for reward-guided diffusion
-- Base diffusion dX = f dt + √(2a) dW; terminal reward r; target ∝ p_base·e^r.
-- Entropy-regularized control (Uehara et al. 2402.15194 as the anchor);
-  soft value = log-partition; optimal control = ∇V.
-- The **H-martingale property** e^{V(X_t)} = E[e^{V(X_{t+dt})}|X_t]: gives
-  twist-independent *unbiased* regression targets (the object we regress onto).
-- How targets are formed: bridge sampling (x_t), terminal reward or bootstrapped
-  value as q. (Off-policy vs on-policy foreshadowed.)
+### 2. Setting: value functions for reward-guided diffusion — **drafted**
+- Base diffusion dX = f dt + √(2a) dW, X_0=0, t: 0→1; terminal reward r;
+  tilted path measure dP*/dP = e^{r(X_1)}/Z. Note the *sampler* time convention
+  (0 = point mass → 1 = samples), not the DDPM denoising direction.
+- **The base family is the pinned interpolant**, and this had to be pinned down
+  from the code, not assumed: X_0=0, terminal marginal ν, Brownian bridge in
+  between, induced drift f = E[(X_1−X_t)/(1−t) | X_t]. It is **zero iff
+  ν = N(0,2aI)**. The dim-scaling problems use a GMM ν, so f ≠ 0 there —
+  verified by simulating the SDE and matching its terminal law to `gmm_sample`
+  (std 1.02–1.23 vs driftless BM's 1.414).
+- Entropy-regularized control (Uehara et al. 2402.15194); KL = E∫|u|²/(4a)dt;
+  soft value = log-partition; **optimal control u* = 2a∇V**; V(0,0) = log Z.
+- The **H-martingale property** e^{V(x,t)} = E_base[e^{V(X_s,s)}|X_t=x], with
+  two consequences that drive the paper: (i) targets are unbiased in *exp*
+  space and only there; (ii) the identity is **twist-independent** via Girsanov
+  — the proposal is a variance-reduction device, not a modeling choice. This is
+  what licenses §6.
+- How targets are formed — all three instances of the same identity:
+  off-policy bridge anchors (x_1 must come from the **base marginal ν**;
+  reward-aware anchoring would bias them), on-policy bootstrapped SMC targets
+  (TD-style: unbiased for the *backup* of the current V_θ, fixed point = V),
+  and backward-noising expansion.
+- **Non-obvious and worth keeping:** the backward kernel
+  N((t/s)x_s, 2a·t(s−t)/s·I) **does not depend on ν** — conditioning a Brownian
+  bridge on an interior point leaves a Brownian bridge — so the expansion trick
+  works for base models with nontrivial drift, not just BM. Verified numerically
+  against the GMM base (third moments agree to 1e−4).
+
+> **Verification status.** All §2 identities were checked numerically on an
+> analytic linear-reward instance: HJB residual 0; H-martingale at intermediate
+> s and at s=1; Girsanov twist-independence under a deliberately non-optimal
+> twist; backward-kernel marginal; and the KL formula. Re-run before submission
+> if the conventions change.
+
+> **Budget note.** §2 currently runs ~1.6pp against a ~1pp budget. Cut
+> candidates, in order: the "base family" paragraph → App. C; eq (girsanov)'s
+> specialization to the learned twist → inline; the three target constructions
+> → compress to one paragraph + pointer, since §6 re-derives the expansion.
 
 ### 3. The problem with exp-space squared error — **drafted**
 - Two parameterizations; the unbiased MC target is E[e^r] (exp space).
@@ -233,15 +263,18 @@ published samplers.
 ## Drafting order (recommended)
 1. §4 Bregman/Spence — **drafted** (`sections/04_bregman.tex`).
 2. §3 exp-MSE pathology + Fig 1 — **drafted** (`sections/03_expmse.tex`).
-3. §2 Setting (H-martingale targets) + App. D proofs + App. A Spence derivation.
-   → **next up.** App. A must carry: the F/F'' derivation from w, the
-   dilogarithm identities, the branch-wise gradient, and the w-sandwiching
-   remark (Spence lies between the MSE and IS weights *asymptotically* — the
-   global sandwich fails in a small band near u≈0.6, so do not overstate).
-4. §5 off-policy loss ablation (Table 1) — pull numbers from bs4_moons/dim_scaling.
-5. §7 experiments (dim-scaling Fig 3, 2-moons Fig 2, GMM-40 Table 2).
-6. §6 sparsity + best method; App. B zoo.
-7. §1 intro + §8 related + §9 conclusion last, once the story is fixed.
+3. §2 Setting (H-martingale targets) — **drafted** (`sections/02_setting.tex`).
+4. App. D proofs + App. A Spence derivation. → **next up.** App. A must carry:
+   the φ/φ'' derivation from w, the dilogarithm identities, the branch-wise
+   gradient, and the w-sandwiching remark (Spence lies between the MSE and IS
+   weights *asymptotically* — the global sandwich fails in a small band near
+   u≈0.6, so do not overstate). App. D: H-martingale unbiasedness, the Bregman
+   minimizer (now a two-line consequence of the weight form), and the
+   Girsanov/twist-independence statement.
+5. §5 off-policy loss ablation (Table 1) — pull numbers from bs4_moons/dim_scaling.
+6. §7 experiments (dim-scaling Fig 3, 2-moons Fig 2, GMM-40 Table 2).
+7. §6 sparsity + best method; App. B zoo.
+8. §1 intro + §8 related + §9 conclusion last, once the story is fixed.
 
 # Building the PDF
 
