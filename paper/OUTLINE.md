@@ -14,38 +14,44 @@ Reward-guided diffusion / diffusion fine-tuning is, via entropy-regularized
 stochastic control, the problem of learning a value function
 V(x,t) = log E_base[exp(r(X_1)) | X_t=x] — a conditional log-partition
 function — whose gradient is the optimal control. Learning V by regression is
-natural but the unbiased Monte-Carlo target lives in *exp* space, so the
-standard squared-error loss has gradients that **explode** for over-predictions
-and, worse, **vanish** for under-predictions (where the model is most wrong and
-clipping cannot help). We observe that any Bregman divergence has the value
-function as its population minimizer, freeing us to choose the generating
-potential for conditioning rather than convenience. We introduce the **Spence
-loss**, the Bregman divergence whose gradient has **quadratic tails on both
-sides** — bounded curvature, non-vanishing under-prediction signal — with a
-closed-form numerically-stable gradient and a value expressed through the
-Spence (dilogarithm) function. It sits in a family with squared error and the
-Itakura–Saito divergence as reference points. A secondary contribution
-analyzes why high-dimensional value learning is signal-sparse (log-E-exp is a
-soft-max dominated by rare, hard-to-find high-value targets) and studies
-on-policy / importance-sampling schemes to combat it. We validate on 2-moons,
-a carefully-designed dimensional-scaling benchmark, and the GMM-40 sampler
-benchmark, where our log-partition estimate is competitive with published
-samplers.
+natural but the unbiased Monte-Carlo target lives in *exp* space (regressing in
+log space is well-conditioned but biased by the Jensen gap, which is exactly the
+signal we want), so the standard squared-error loss has gradients that
+**explode** for over-predictions and, worse, **vanish** for under-predictions
+(where the model is most wrong and clipping cannot help). We observe that any
+Bregman divergence has the value function as its population minimizer, and that
+such a loss acts on the optimizer only through a scalar **gradient weight**
+w(u) = u·φ''(u) multiplying the exp-space residual — so the design space *is*
+the choice of w. Squared error (w = 2u) and Itakura–Saito (w = 1/u) are its
+opposite extremes. We introduce the **Spence loss**, obtained by *solving* for
+the weight w(u) = ln u/(u−1) that makes the gradient **linear in the log-space
+prediction on both sides**, with a closed-form numerically-stable gradient and
+a value expressed through the Spence (dilogarithm) function. A secondary
+contribution analyzes why high-dimensional value learning is signal-sparse
+(log-E-exp is a soft-max dominated by rare, hard-to-find high-value targets)
+and studies on-policy / importance-sampling schemes to combat it. We validate
+on 2-moons, a carefully-designed dimensional-scaling benchmark, and the GMM-40
+sampler benchmark, where our log-partition estimate is competitive with
+published samplers.
 
 ## Contributions (as a list for the intro)
 
-1. **The Spence loss** — a Bregman divergence tailored to learning the
-   conditional log-partition / value function, with quadratic gradient tails
-   on both sides, a closed-form stabilized gradient, and a Spence-function
-   value; the first loss to fix *both* the exploding- and (critically) the
-   vanishing-gradient pathologies of exp-space regression.
-2. **A Bregman-divergence view of value learning**, placing squared error and
-   the Itakura–Saito divergence as endpoints of a design space and giving
-   criteria (tail behavior, scale-invariance, uncertainty model) for choosing
-   the potential.
+1. **A gradient-weight view of value learning.** Every Bregman divergence
+   applied to the unbiased exp-space target has V as its population minimizer,
+   and reduces to a single positive weight w(u) = u·φ''(u) on the residual
+   e^p − e^q. This turns "pick a potential" into "pick a tail profile", and
+   places squared error (w = 2u) and Itakura–Saito (w = 1/u) as the two
+   extremes — the first inverting the second's asymmetry rather than fixing it.
+2. **The Spence loss** — derived by solving for the weight w(u) = ln u/(u−1)
+   whose gradient is linear in the log-space prediction in *both* tails, so
+   neither over- nor under-predictions blow up or die. Closed-form gradient
+   p(e^p−e^q)/(e^p−1), a numerically stable branch-wise implementation finite
+   for all float inputs, and a value expressed via the Spence function.
 3. **A signal-sparsity analysis** of high-dimensional value learning and an
-   on-policy importance-sampling scheme, with a carefully-designed
-   dimensional-scaling benchmark that yields clean statistical reads.
+   on-policy importance-sampling scheme that closes the gap to off-policy
+   training across dimension 2–512, with a carefully-designed
+   dimensional-scaling benchmark that yields clean statistical reads. (Scoped:
+   the tuned on-policy recipe does not transfer unchanged to GMM-40; see §9.)
 4. **Empirical validation** on 2-moons, dimensional scaling, and GMM-40
    (log-partition estimate competitive with / better than published samplers).
 
@@ -70,41 +76,62 @@ samplers.
 - How targets are formed: bridge sampling (x_t), terminal reward or bootstrapped
   value as q. (Off-policy vs on-policy foreshadowed.)
 
-### 3. The problem with exp-space squared error
+### 3. The problem with exp-space squared error — **drafted**
 - Two parameterizations; the unbiased MC target is E[e^r] (exp space).
-- Squared error D(e^p,e^q)=(e^p−e^q)²: gradient dL/dp = 2e^p(e^p−e^q)
+- Squared error D(e^q,e^p)=(e^q−e^p)²: gradient dL/dp = 2e^p(e^p−e^q)
   = 2e^{2p} − 2e^{p+q}. **Explodes** as p→+∞ (e^{2p}); **vanishes** as p→−∞
   (e^p→0) exactly when the model is most wrong. Vanishing is unrecoverable
   (clipping only bounds the explosion).
+- **"Why not regress in log space?"** — the obvious escape, and it must be
+  closed early or the reader stops here. (p−q)² is perfectly conditioned but
+  minimized by E[q], not log E[e^q]; the Jensen gap ≈ ½Var(q|x_t) is largest
+  precisely in the heavy-tailed regime, and *is* the soft-max signal. So the
+  exp-space target is forced; only the divergence is negotiable.
 - Empirical pathology: overflow, skipped batches, and "weight poisoning" (one
   non-finite prediction spike propagates) — our forensics from the loss work.
+  The stabilized `exp_mse` is the baseline throughout, so comparisons isolate
+  the divergence and not the arithmetic. Numbers forward-referenced to §5.
   [artifact: losses/exp_mse.py, the nonfinite-skip diagnostics]
 
-### 4. Bregman divergences for value learning
-- Definition D_φ(p,q)=φ(p)−φ(q)−⟨∇φ(q),p−q⟩; squared error = quadratic φ.
-- **Key lemma:** for any strictly convex φ, the population minimizer of
-  E_q[D_φ(u, e^q)] over u is E[e^q]; so p=log u=log E[e^q]=V. *Every* Bregman
-  divergence is a proper loss for the value — choose φ for conditioning.
-  [App. A proof]
-- Design criteria: gradient tail behavior in the natural variable p;
-  scale-invariance; implied noise/uncertainty model.
-- **Itakura–Saito** (φ=−ln u): linear tail resolves vanishing on one side,
-  still explodes on the other; **scale-invariant**; corresponds to a
-  **gamma / exponential** noise model (uncertainty in V). A useful midpoint.
-- **The Spence loss (ours):** Bregman divergence with F''(u) = −ln u/(u(1−u)).
-  - Closed-form gradient dL/dp = p(e^p−e^q)/(e^p−1); zero iff p=q; population
-    minimizer = V.
-  - **Quadratic tails both sides:** p→+∞ ⇒ dL/dp→p (no e^{2p} blow-up);
-    p→−∞ ⇒ dL/dp→p·e^q (non-vanishing corrective signal).
+### 4. Bregman divergences for value learning — **drafted**
+- Definition D_φ(T,u)=φ(T)−φ(u)−φ'(u)(T−u). **Argument order matters**: the
+  prediction goes in the *second* slot — that is the one whose minimizer is
+  the plain mean. (Swapped, the minimizer is a quasi-arithmetic mean: the
+  *harmonic* mean for φ=−ln u. Verified numerically; footnote in the paper.)
+- **Key lemma (now one line):** ∂/∂p D_φ(e^q, e^p) = w(e^p)·(e^p − e^q) with
+  w(u) := u·φ''(u) > 0. Linear in the target ⇒ population minimizer is
+  log E[e^q] = V for *every* strictly convex φ. [App. D proof]
+- **The design space is the weight w.** A Bregman loss reaches the optimizer
+  only through w. Criteria: tail behavior of w·(residual) in p;
+  scale-invariance; implied noise model.
+  - **Squared error:** w = 2u — grows with the prediction ⇒ explodes above,
+    dies below.
+  - **Itakura–Saito** (φ=−ln u): w = 1/u ⇒ dL/dp = 1 − e^{q−p}. Saturates at
+    +1 for over-prediction, **explodes** for under-prediction. It *inverts*
+    squared error's asymmetry rather than removing it — and that is the point:
+    it trades the unrecoverable failure (vanishing) for the clippable one.
+    Scale-invariant; gamma/exponential noise model.
+- **The Spence loss (ours):** *derived*, not asserted. Demand dL/dp ~ p as
+  p→+∞ and ~ p·e^q as p→−∞; read off w(u) ~ ln u/u and w(u) ~ −ln u; the
+  simplest smooth positive interpolant is **w(u) = ln u/(u−1)** (= reciprocal
+  logarithmic mean of 1 and u; F''(u) = ln u/(u(u−1)); w(1)=1).
+  - Closed-form gradient dL/dp = p(e^p−e^q)/(e^p−1); zero iff p=q (the
+    apparent zero at p=0 is cancelled by the pole); minimizer = V.
+  - **Both tails linear in the prediction** — state precisely: linear in p,
+    *not* in the error p−q, and the under-prediction branch carries curvature
+    e^q. Own that: it breaks scale-invariance and it up-weights exactly the
+    rare high-value targets that dominate the log-sum-exp (ties to §6).
   - **Value via the Spence function** S(x)=Li₂(1−e^x): hence the name;
     monitored value only (gradient uses the closed form).
   - **Numerically stable branch-wise gradient** (expm1 forms) finite for all
     float inputs — fixes the naive-autograd NaN at p≳88.
     [artifact: losses/log_quadratic_bregman.py, algorithms/spence.py,
      tests/losses/ symbolic verification]
-  - Uncertainty interpretation (gamma-like) — to develop.
-- **Comparison table:** MSE / Itakura–Saito / Spence × {under-predict tail,
-  over-predict tail, scale-inv, uncertainty model, minimizer=V}.
+  - Implied observation model via Bregman↔exponential-family duality
+    (Banerjee et al. 2005): φ* is not a standard named family, so we report
+    the correspondence, not a closed-form likelihood. **Do not claim "gamma".**
+- **Comparison table:** MSE / Itakura–Saito / Spence × {w(u), under-predict
+  tail, over-predict tail, scale-inv, noise model}.
 
 ### 5. Off-policy experiments: the loss in isolation
 - Controlled comparison Spence vs exp-MSE vs MSE at fixed setups.
@@ -176,8 +203,11 @@ samplers.
   optimal-twist / zero-variance connection.
 
 ## Figures & tables (planned)
-1. Fig 1 (teaser): gradient magnitude vs prediction error for MSE / IS /
-   Spence — the two-sided quadratic-tail story. (Generatable from the loss.)
+1. Fig 1: value + gradient vs prediction for MSE / IS / Spence at shared
+   v_true ∈ {−2,0,2} — the two-sided linear-tail story. **Built**
+   (`figures/gen_loss_curves.py`, imports the repo's real Spence value/gradient
+   so figure and shipped loss cannot drift). Currently placed in §3; if §1
+   needs a teaser, reuse the bottom row only.
 2. Fig 2: 2-moons value field & samples, Spence vs MSE.
 3. Table 1: off-policy loss ablation — stability + accuracy + 2×2 damage.
 4. Fig 3: dimensional scaling — frac_closed vs d (loss ablation; on- vs
@@ -202,8 +232,12 @@ samplers.
 
 ## Drafting order (recommended)
 1. §4 Bregman/Spence — **drafted** (`sections/04_bregman.tex`).
-2. §3 exp-MSE pathology + Fig 1 (gradient-vs-error, generatable from the loss).
+2. §3 exp-MSE pathology + Fig 1 — **drafted** (`sections/03_expmse.tex`).
 3. §2 Setting (H-martingale targets) + App. D proofs + App. A Spence derivation.
+   → **next up.** App. A must carry: the F/F'' derivation from w, the
+   dilogarithm identities, the branch-wise gradient, and the w-sandwiching
+   remark (Spence lies between the MSE and IS weights *asymptotically* — the
+   global sandwich fails in a small band near u≈0.6, so do not overstate).
 4. §5 off-policy loss ablation (Table 1) — pull numbers from bs4_moons/dim_scaling.
 5. §7 experiments (dim-scaling Fig 3, 2-moons Fig 2, GMM-40 Table 2).
 6. §6 sparsity + best method; App. B zoo.

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Shared loss-family figure: value and gradient of D_F(e^{v_pred}, e^{v_true})
+"""Shared loss-family figure: value and gradient of D_F(e^{v_true}, e^{v_pred})
 as functions of v_pred, for a few v_true (reused across all three losses).
 
 Spence uses the repo's actual value/gradient (losses/log_quadratic_bregman);
-MSE and Itakura-Saito are the standard Bregman divergences with prediction as
-the first argument (so E[D(pred, Target)] is minimized at pred = E[Target]).
+MSE and Itakura-Saito are the standard Bregman divergences with the prediction
+as the SECOND argument -- the slot whose population minimizer is the plain mean,
+argmin_u E[D(T, u)] = E[T].  (With the slots swapped one gets a quasi-arithmetic
+mean instead: the harmonic mean of T for Itakura-Saito.)
 
 Output: paper/figures/loss_curves.{pdf,png}
 """
@@ -27,18 +29,18 @@ COLORS = ["#1b9e77", "#7570b3", "#d95f02"]
 VP = np.linspace(-6.0, 8.0, 1400)
 
 
-def mse_value(p, t):      # (e^p - e^t)^2
-    return (np.exp(p) - np.exp(t)) ** 2
+def mse_value(p, t):      # (e^t - e^p)^2   (symmetric; slot order immaterial)
+    return (np.exp(t) - np.exp(p)) ** 2
 
 def mse_grad(p, t):       # 2 e^p (e^p - e^t)
     return 2 * np.exp(p) * (np.exp(p) - np.exp(t))
 
-def is_value(p, t):       # P/T - log(P/T) - 1,  P=e^p, T=e^t
-    lr = p - t
+def is_value(p, t):       # D_IS(T, P) = T/P - log(T/P) - 1,  P=e^p, T=e^t
+    lr = t - p
     return np.exp(lr) - lr - 1.0
 
-def is_grad(p, t):        # e^{p-t} - 1
-    return np.exp(p - t) - 1.0
+def is_grad(p, t):        # 1 - e^{t-p}
+    return 1.0 - np.exp(t - p)
 
 def spence_value(p, t):
     P = torch.tensor(p, dtype=torch.float64)
@@ -53,11 +55,11 @@ def spence_grad(p, t):
 
 LOSSES = [
     ("Squared error", mse_value, mse_grad,
-     r"$D(e^{p},e^{t})=(e^{p}-e^{t})^2$"),
+     "$w(u)=2u$\n" + r"$\partial_p L = 2e^{p}(e^{p}-e^{t})$"),
     ("Itakura--Saito", is_value, is_grad,
-     r"$D_{\mathrm{IS}}=e^{p-t}-(p-t)-1$"),
+     "$w(u)=1/u$\n" + r"$\partial_p L = 1-e^{t-p}$"),
     ("Spence (ours)", spence_value, spence_grad,
-     r"$\partial_p L = p\,(e^{p}-e^{t})/(e^{p}-1)$"),
+     r"$w(u)=\ln u/(u-1)$" + "\n" + r"$\partial_p L = p\,(e^{p}-e^{t})/(e^{p}-1)$"),
 ]
 
 
@@ -87,6 +89,15 @@ def main():
                       fontsize=8, color="0.3",
                       arrowprops=dict(arrowstyle="->", color="0.5"))
     ax[1, 0].annotate("explodes", xy=(6.5, 3e5), xytext=(1.5, 3e5),
+                      fontsize=8, color="0.3",
+                      arrowprops=dict(arrowstyle="->", color="0.5"))
+    ax[1, 1].annotate("explodes", xy=(-5, -2e2), xytext=(-3.5, -3e4),
+                      fontsize=8, color="0.3",
+                      arrowprops=dict(arrowstyle="->", color="0.5"))
+    ax[1, 1].annotate("bounded", xy=(6.5, 1.0), xytext=(2.0, 30),
+                      fontsize=8, color="0.3",
+                      arrowprops=dict(arrowstyle="->", color="0.5"))
+    ax[1, 2].annotate("linear both sides", xy=(-5.0, -30), xytext=(-5.5, -3e3),
                       fontsize=8, color="0.3",
                       arrowprops=dict(arrowstyle="->", color="0.5"))
     fig.tight_layout()
