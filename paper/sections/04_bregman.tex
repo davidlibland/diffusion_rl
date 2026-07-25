@@ -5,105 +5,181 @@
 % ---------------------------------------------------------------------------
 \subsection{Any Bregman divergence learns the value function}
 
-For a strictly convex, differentiable potential $\varphi$, the Bregman
-divergence is
+For a strictly convex, differentiable potential $\varphi$ on $(0,\infty)$, the
+Bregman divergence of a prediction $u$ from a target $T$ is
 \begin{equation}
-  \Breg(u, v) = \varphi(u) - \varphi(v) - \varphi'(v)\,(u - v).
+  \Breg(T, u) = \varphi(T) - \varphi(u) - \varphi'(u)\,(T - u).
+  \label{eq:bregman-def}
 \end{equation}
-Squared error is the special case $\varphi(u)=u^2$. The property we exploit:
+Squared error is the special case $\varphi(u)=u^{2}$, giving
+$\Breg(T,u)=(T-u)^{2}$. The order of the arguments matters: the prediction must
+occupy the \emph{second} slot, which is the one whose minimizer is a plain
+mean.\footnote{With the arguments swapped, $\arg\min_u\E[\Breg(u,T)]$ solves
+$\varphi'(u)=\E[\varphi'(T)]$, a quasi-arithmetic mean --- the harmonic mean of
+$T$ for $\varphi=-\ln u$, not $\E[T]$.}
 
 \begin{lemma}[Bregman divergences are proper losses for the value]
 \label{lem:minimizer}
-Let the regression target be $e^{q}$ with $q$ a conditionally-unbiased
-estimate of the value (the H-martingale target, \S\ref{sec:02_setting}). For
-any strictly convex $\varphi$,
+Let the regression target be $e^{q}$, with $q$ such that
+$\E[e^{q}\mid x_t]=e^{\Vf(x_t)}$ (the H-martingale target,
+\S\ref{sec:02_setting}). Parameterize the prediction in log space, $u=e^{p}$.
+Then for any strictly convex $\varphi$,
 \begin{equation}
-  \arg\min_{u}\ \E_{q\mid x_t}\!\big[\Breg(u,\, e^{q})\big] \;=\; \E[e^{q}\mid x_t],
+  \frac{\partial}{\partial p}\,\Breg\big(e^{q},\,e^{p}\big)
+  \;=\; w(e^{p})\,\big(e^{p}-e^{q}\big),
+  \qquad
+  w(u) \;:=\; u\,\varphi''(u) \;>\; 0,
+  \label{eq:weight-grad}
 \end{equation}
-so the minimizing prediction in log space is $p^\star=\log\E[e^{q}\mid x_t]=\Vf(x_t)$.
+and consequently
+$\arg\min_{p}\ \E_{q\mid x_t}\!\big[\Breg(e^{q},e^{p})\big] = \Vf(x_t)$.
 \end{lemma}
-\noindent Thus the choice of $\varphi$ does \emph{not} bias the learned value;
-it is free to be chosen for \emph{conditioning}. (Proof in
-App.~\ref{sec:D_proofs}.)
+
+\begin{proof}[Proof sketch]
+Differentiating \eqref{eq:bregman-def} in $u$, the $\varphi'(u)$ terms cancel
+and leave $\varphi''(u)(u-T)$; the chain rule contributes
+$\mathrm{d}u/\mathrm{d}p = u$. Because \eqref{eq:weight-grad} is \emph{linear}
+in the target, taking expectations gives
+$\E[\partial L/\partial p] = w(e^{p})\,(e^{p}-\E[e^{q}\mid x_t])$, which is
+negative below $e^{\Vf}$ and positive above it. Full proof in
+App.~\ref{sec:D_proofs}.
+\end{proof}
+
+\noindent Two consequences drive the rest of this section. First, the choice of
+$\varphi$ does \emph{not} bias the learned value, so it is free to be chosen for
+\emph{conditioning}. Second, \eqref{eq:weight-grad} says that a Bregman loss
+acts on the optimizer only through the scalar \emph{gradient weight} $w$
+multiplying the raw exp-space residual $e^{p}-e^{q}$. \textbf{The design space
+is exactly the choice of a positive weight function $w$ on $(0,\infty)$}, and
+the two losses we have met are its opposite extremes.
 
 % ---------------------------------------------------------------------------
-\subsection{Design criteria and two reference points}
+\subsection{Two reference points}
 
-We parameterize the prediction in log space, $u=e^{p}$, and ask how the
-gradient $\partial L/\partial p$ behaves as the log-error $p-q\to\pm\infty$.
+\paragraph{Squared error: $w(u)=2u$.}
+The weight \emph{grows} with the prediction, so
+$\partial L/\partial p = 2e^{p}(e^{p}-e^{q})$ explodes like $e^{2p}$ for
+over-predictions and, because $w(u)\to0$ as $u\to0$, is driven to zero for
+under-predictions --- the unrecoverable pathology of \S\ref{sec:03_expmse}.
 
-\paragraph{Squared error ($\varphi(u)=u^2$).}
-$\partial L/\partial p = 2e^{p}(e^{p}-e^{q}) = 2e^{2p}-2e^{p+q}$, which
-\emph{explodes} as $p\to+\infty$ and \emph{vanishes} as $p\to-\infty$ --- the
-under-prediction pathology of \S\ref{sec:03_expmse}.
-
-\paragraph{Itakura--Saito ($\varphi(u)=-\ln u$).}
-With the prediction as the first argument (Lemma~\ref{lem:minimizer}),
-$D_{\mathrm{IS}}(e^{p},e^{q}) = e^{p-q}-(p-q)-1$, whose gradient in $p$ is
+\paragraph{Itakura--Saito: $w(u)=1/u$.}
+Taking $\varphi(u)=-\ln u$ gives
+$D_{\mathrm{IS}}(e^{q},e^{p}) = e^{q-p}-(q-p)-1$ and
 \begin{equation}
-  \frac{\partial L_{\mathrm{IS}}}{\partial p}=e^{p-q}-1.
+  \frac{\partial L_{\mathrm{IS}}}{\partial p}=1-e^{q-p}.
+  \label{eq:is-grad}
 \end{equation}
-As $p\to-\infty$ this tends to $-1$: a bounded, \emph{non-vanishing}
-corrective signal for under-predictions, exactly removing squared error's
-worst pathology. It still explodes as $p\to+\infty$ ($e^{p-q}$), but that is
-the recoverable, clippable direction. Itakura--Saito is moreover
-\emph{scale-invariant} ($D_{\mathrm{IS}}(cu,cv)=D_{\mathrm{IS}}(u,v)$) and is
-the negative log-likelihood of a gamma/exponential observation model, giving a
-natural uncertainty interpretation for $\Vf$. A useful midpoint --- it fixes
-the harder tail --- but one-sided (Fig.~\ref{fig:loss_curves}, middle).
+The weight decays fast enough to cancel the residual entirely on the
+over-prediction side: as $p\to+\infty$ the gradient saturates at $+1$, a
+bounded, correctly-signed step. On the under-prediction side it now
+\emph{explodes} like $-e^{q-p}$. Itakura--Saito therefore does not remove
+squared error's asymmetry so much as \emph{invert} it, and that is precisely
+why it helps: it converts the unrecoverable failure (a gradient that has
+decayed to zero) into the recoverable one (a gradient that is too large, which
+clipping fixes). It is moreover \emph{scale-invariant}
+($D_{\mathrm{IS}}(cT,cu)=D_{\mathrm{IS}}(T,u)$, equivalently \eqref{eq:is-grad}
+depends on $q-p$ alone) and is the negative log-likelihood of a
+gamma/exponential observation model, giving a natural uncertainty
+interpretation for $\Vf$. A useful midpoint, but still one-sided
+(Fig.~\ref{fig:loss_curves}, middle).
 
 % ---------------------------------------------------------------------------
 \subsection{The Spence loss}
 \label{subsec:spence}
 
-We propose the Bregman divergence generated by the potential $F$ with
+Rather than pick a potential and inspect its tails, we ask directly what weight
+$w$ we want. Writing $u=e^{p}$ and reading off \eqref{eq:weight-grad}, the two
+requirements are:
+\begin{align}
+  p\to+\infty\ (u\to\infty):\quad & w(u)\,u \sim \ln u
+    &&\Longrightarrow\quad w(u)\sim \ln u\,/\,u, \label{eq:req-over}\\
+  p\to-\infty\ (u\to 0):\quad & -\,w(u)\,e^{q} \sim e^{q}\ln u
+    &&\Longrightarrow\quad w(u)\sim -\ln u, \label{eq:req-under}
+\end{align}
+i.e.\ in both directions the gradient should grow \emph{linearly in the log-space
+prediction} $p=\ln u$. The simplest smooth positive function meeting both is
 \begin{equation}
-  F''(u) = -\,\frac{\ln u}{u\,(1-u)},
+  \boxed{\ w(u) \;=\; \frac{\ln u}{u-1}\ }
+  \qquad\Longleftrightarrow\qquad
+  \varphi''(u) \;=\; \frac{\ln u}{u\,(u-1)},
+  \label{eq:spence-weight}
 \end{equation}
-applied to $u=e^{p}$ against the target $e^{q}$. Its gradient with respect to
-the prediction has the closed form
+which is positive on all of $(0,\infty)$ (both factors change sign at $u=1$)
+and extends smoothly through the removable singularity with $w(1)=1$. It is the
+reciprocal of the logarithmic mean of $1$ and $u$, and at both extremes it lies
+between the squared-error and Itakura--Saito weights: the Spence loss
+interpolates the two reference points rather than adding a third unrelated
+one. The choice is not unique --- \eqref{eq:req-over}--\eqref{eq:req-under} fix
+only the asymptotics --- but \eqref{eq:spence-weight} is the member with a
+closed-form gradient and a dilogarithm value (App.~\ref{sec:A_spence}).
+Substituting it into \eqref{eq:weight-grad} gives
 \begin{equation}
   \boxed{\ \frac{\partial L}{\partial p} \;=\; p\,\frac{e^{p}-e^{q}}{e^{p}-1}\ }
   \label{eq:spence-grad}
 \end{equation}
-which is zero iff $p=q$ and, by Lemma~\ref{lem:minimizer}, has population
-minimizer $\Vf$.
+zero iff $p=q$ (the apparent zero at $p=0$ is cancelled by the pole of
+$p/(e^{p}-1)\to1$), with population minimizer $\Vf$ by
+Lemma~\ref{lem:minimizer}.
 
-\paragraph{Two-sided quadratic tails.}
-From \eqref{eq:spence-grad},
+\paragraph{Both tails linear in the prediction.}
+By construction,
 \begin{align}
-  p\to+\infty:\quad & \frac{\partial L}{\partial p}\to p
-    &&\text{(no $e^{2p}$ blow-up; over-prediction is quadratically penalized),}\\
-  p\to-\infty:\quad & \frac{\partial L}{\partial p}\to p\,e^{q}
-    &&\text{(non-vanishing corrective signal for under-prediction).}
+  p\to+\infty:\quad & \frac{\partial L}{\partial p}\to p,
+    &&\text{no $e^{2p}$ blow-up,}\\
+  p\to-\infty:\quad & \frac{\partial L}{\partial p}\to p\,e^{q},
+    &&\text{non-vanishing corrective signal.}
 \end{align}
-Both tails are linear in $p$, i.e.\ the loss is quadratic on both sides --- the
-first loss to fix both pathologies of exponential-space regression at once.
+We stress what is and is not being claimed. The gradient is linear in the
+\emph{prediction} $p$, not in the error $p-q$, so the loss grows like
+$\tfrac12 p^{2}$ for over-predictions and like $\tfrac12 p^{2}e^{q}$ for
+under-predictions: it is quadratic in $p$ on both sides, but with
+target-dependent curvature on the under-prediction branch. That $e^{q}$ factor
+is the reason the loss is not scale-invariant, and it is deliberate --- it
+up-weights exactly the rare high-value targets that dominate the log-sum-exp
+and are hardest to find (\S\ref{sec:06_sparsity_onpolicy}), while still growing
+only polynomially in $p$. To our knowledge this is the first Bregman divergence
+proposed for exp-space value regression with both tails controlled in this
+sense; the alternative strand of work attacks the same conditioning problem by
+changing the \emph{objective} rather than the divergence (log-variance and
+adjoint losses, \S\ref{sec:08_related}).
 
 \paragraph{Value via the Spence function.}
-The divergence value (used only for monitoring; the gradient uses
+The divergence value (used only for monitoring; training uses
 \eqref{eq:spence-grad}) is expressible through the Spence function
 $S(x)=\Spence(1-e^{x})$, using the dilogarithm identity
-$S'(x)=-\,x e^{x}/(e^{x}-1)=x/\mathrm{expm1}(-x)$; hence the name. Full
-derivation, the numerically stable branch-wise gradient (finite for all float
-inputs, unlike the naive autograd which NaNs for $p\gtrsim 88$), and the
-gamma-like uncertainty interpretation are in App.~\ref{sec:A_spence}.
+$S'(x)=-\,x e^{x}/(e^{x}-1)=x/\mathrm{expm1}(-x)$; hence the name. The full
+derivation and the numerically stable branch-wise gradient --- finite for all
+float inputs, unlike naive autograd, which returns NaN for $p\gtrsim 88$ in
+single precision --- are in App.~\ref{sec:A_spence}.
+
+\paragraph{Implied observation model.}
+By the duality between regular Bregman divergences and regular exponential
+families \citep{banerjee2005clustering}, minimizing any $\Breg$ is maximum
+likelihood under the exponential family whose cumulant is the convex conjugate
+$\varphi^{*}$; squared error recovers a Gaussian and Itakura--Saito a gamma.
+For \eqref{eq:spence-weight} the conjugate is not a standard named family, so
+we report the correspondence rather than a closed-form likelihood; the
+practical content of the weight is the tail behavior above.
 
 % ---------------------------------------------------------------------------
 \begin{table}[t]
 \centering
-\caption{The value-learning loss family. Tails give $\partial L/\partial p$ as
-the log-error $\to\pm\infty$. All three share the same minimizer,
-$\Vf=\log\E[e^{q}\mid x_t]$ (Lemma~\ref{lem:minimizer}).}
+\caption{The value-learning loss family, organized by the gradient weight $w$
+of \eqref{eq:weight-grad}. Tails give $\partial L/\partial p$ as the prediction
+$p\to\pm\infty$ at fixed target $q$. All three share the same minimizer,
+$\Vf=\log\E[e^{q}\mid x_t]$ (Lemma~\ref{lem:minimizer}); they differ only in
+conditioning.}
 \label{tab:loss-family}
-\begin{tabular}{lcccc}
+\small
+\begin{tabular}{lccccc}
 \toprule
-loss & under-predict ($p\!\to\!-\infty$) & over-predict ($p\!\to\!+\infty$)
-     & scale-inv. & uncertainty model \\
+loss & weight $w(u)$ & under-predict ($p\!\to\!-\infty$) & over-predict ($p\!\to\!+\infty$)
+     & scale-inv. & noise model \\
 \midrule
-squared error   & vanishes ($\to 0$)       & explodes ($e^{2p}$) & no  & Gaussian (exp) \\
-Itakura--Saito  & bounded ($\to -1$)       & explodes ($e^{p-q}$) & yes & gamma \\
-\textbf{Spence (ours)} & \textbf{quadratic} ($p\,e^{q}$) & \textbf{quadratic} ($p$) & no & gamma-like \\
+squared error   & $2u$ & \emph{vanishes} ($\to 0$) & explodes ($e^{2p}$) & no  & Gaussian \\
+Itakura--Saito  & $1/u$ & explodes ($-e^{q-p}$)    & bounded ($\to +1$)  & yes & gamma \\
+\textbf{Spence (ours)} & $\dfrac{\ln u}{u-1}$ & \textbf{linear} ($p\,e^{q}$)
+                & \textbf{linear} ($p$) & no & implicit \\
 \bottomrule
 \end{tabular}
 \end{table}

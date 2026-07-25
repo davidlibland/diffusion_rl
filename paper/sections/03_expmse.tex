@@ -10,7 +10,7 @@ reward, or a bootstrapped value). A network predicts the value in log space,
 $p=\Vf_\theta(x_t)$; matching $e^{p}$ to the unbiased target $e^{q}$ with
 squared error gives
 \begin{equation}
-  L_{\mathrm{MSE}}(p,q)=\big(e^{p}-e^{q}\big)^2,
+  L_{\mathrm{MSE}}(p,q)=\big(e^{q}-e^{p}\big)^2,
   \qquad
   \frac{\partial L_{\mathrm{MSE}}}{\partial p}=2e^{p}\big(e^{p}-e^{q}\big)
     =2e^{2p}-2e^{p+q}.
@@ -36,32 +36,48 @@ manufacture a gradient that has decayed to zero. In the high-dimensional,
 signal-sparse regime of \S\ref{sec:06_sparsity_onpolicy}, where the useful
 targets are precisely the rare large ones, this is the dominant failure mode.
 
+\paragraph{Why not regress in log space?}
+The obvious escape is to drop the exponentials and fit $(p-q)^2$ directly,
+which is perfectly conditioned. It is also biased. Squared error in $q$ is
+minimized by $\E[q\mid x_t]$, whereas the value is
+$\Vf=\log\E[e^{q}\mid x_t]$; by Jensen the two differ by the log-partition gap
+\begin{equation}
+  \Vf(x_t)-\E[q\mid x_t]\;=\;\log\E\big[e^{q-\E[q]}\big]\;\ge\;0,
+  \qquad \approx \tfrac12\mathrm{Var}(q\mid x_t)\ \text{for small spread,}
+  \label{eq:jensen-gap}
+\end{equation}
+and this gap is \emph{largest} in exactly the heavy-tailed, high-dimensional
+regime the method is meant to handle: it is the quantity that a soft-max is all
+about, so discarding it discards the signal. Unbiasedness pins us to the
+exponential-space target; only the divergence applied to it is negotiable. That
+is the opening the Bregman family exploits (\S\ref{sec:04_bregman}).
+
 \paragraph{Empirical pathology.}
 Beyond the asymptotics, the finite-precision behavior is severe. In our
 convergence runs the naive loss skipped or aborted a large fraction of batches
-on overflow (e.g.\ $18\%$ of batches in one FBRRT run once predictions reached
-moderate magnitude), and a \emph{single} non-finite prediction propagated
-through the shared value network to poison every subsequent batch. A
-stabilized implementation with the exact gradient of \eqref{eq:mse-grad}
-saturated to the float range (our \texttt{exp\_mse}) removes the overflow and
-the poisoning, but it cannot remove the vanishing gradient, which is a property
-of the divergence, not the arithmetic. Fixing it requires changing the loss
-while keeping the unbiased exponential-space target --- exactly what the
-Bregman family affords (\S\ref{sec:04_bregman}).
+on overflow --- in one FBRRT run, $18\%$ of batches once predictions reached
+moderate magnitude --- and a \emph{single} non-finite prediction propagated
+through the shared value network to poison every subsequent batch. We report
+the full stability audit in \S\ref{sec:05_offpolicy_exp}. A stabilized
+implementation with the exact gradient of \eqref{eq:mse-grad} saturated to the
+float range (our \texttt{exp\_mse}) removes the overflow and the poisoning, and
+it is the baseline we compare against throughout, so that the comparison
+isolates the divergence rather than the arithmetic. What it cannot remove is
+the vanishing gradient, which is a property of the divergence itself.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/loss_curves}
   \caption{Loss value (top) and gradient $\partial L/\partial v_{\rm pred}$
-    (bottom) of $D_F(e^{v_{\rm pred}}, e^{v_{\rm true}})$ as functions of the
+    (bottom) of $D_F(e^{v_{\rm true}}, e^{v_{\rm pred}})$ as functions of the
     prediction $v_{\rm pred}$, for three targets $v_{\rm true}\in\{-2,0,2\}$
     (dots mark the minimizer $v_{\rm pred}=v_{\rm true}$; symmetric-log axes).
     \textbf{Squared error} vanishes for under-predictions
     ($v_{\rm pred}\!<\!v_{\rm true}$, gradient $\to 0$) and explodes for
-    over-predictions. \textbf{Itakura--Saito} bounds the under-prediction
-    gradient at $-1$ (removing the vanishing pathology) but still explodes for
-    over-predictions. \textbf{Spence} (ours) is quadratic on both sides: the
-    gradient is linear in $v_{\rm pred}$ everywhere, so neither tail vanishes
-    nor explodes exponentially.}
+    over-predictions. \textbf{Itakura--Saito} inverts this: the
+    over-prediction gradient saturates at $+1$, while under-predictions now
+    explode --- trading the unrecoverable pathology for a clippable one.
+    \textbf{Spence} (ours) is linear in $v_{\rm pred}$ in both tails, so
+    neither side vanishes nor explodes exponentially.}
   \label{fig:loss_curves}
 \end{figure}
