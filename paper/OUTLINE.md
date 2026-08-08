@@ -84,11 +84,37 @@ published samplers.
   space and only there; (ii) the identity is **twist-independent** via Girsanov
   — the proposal is a variance-reduction device, not a modeling choice. This is
   what licenses §6.
-- How targets are formed — all three instances of the same identity:
-  off-policy bridge anchors (x_1 must come from the **base marginal ν**;
-  reward-aware anchoring would bias them), on-policy bootstrapped SMC targets
-  (TD-style: unbiased for the *backup* of the current V_θ, fixed point = V),
-  and backward-noising expansion.
+- ρ is the **Girsanov exponential over [t,s]**, not a single Euler increment:
+  ρ = exp(−(1/2a)∫u·dB − (1/4a)∫‖u‖²dτ), an exponential martingale with unit
+  mean under Novikov. The per-step factor −u·ΔB/(2a) − ‖u‖²Δt/(4a) is the
+  Euler *discretization* of it (and is what the SMC code accumulates).
+  Verified over 1/4/32 steps with an adapted, state-dependent, deliberately
+  non-optimal twist.
+- How targets are formed. **Split them into two kinds and keep the distinction
+  visible:** *anchored* targets terminate at the true r and satisfy
+  E[e^q|x_t] = e^{V(x_t,t)} exactly, no matter how wrong V_θ is; *bootstrapped*
+  targets substitute V_θ at a later time and satisfy no such identity.
+  - off-policy bridge anchors — x_1 must come from the **base marginal ν**;
+    reward-aware anchoring would bias them.
+  - **Cost caveat (do not drop):** anchors are cheap *per sample* (no
+    trajectory integrated, one call to r each) but that is not cheap *in
+    total* — being uninformative about where r is large, they can need many
+    more reward evaluations to reach a given accuracy. When r is expensive (QM
+    calculation, docking score, simulator rollout) the binding budget is total
+    calls to r, and the ranking between constructions can invert. Our
+    benchmarks have cheap analytic rewards, so we report sample counts;
+    flagged as a limitation in §9.
+  - on-policy bootstrapped SMC targets — q = log((1/k)Σ ρ_i e^{v_i}) over
+    siblings of a resampled parent. **Define the backup operator explicitly**
+    (T_s W)(x,t) = log E_base[e^{W(X_s,s)}|X_t=x]; then the *only* guarantee is
+    E[e^q|x_t] = e^{(T_s V_θ)(x_t,t)} — unbiased in exp space for the backup of
+    the current network and nothing else. Never write "unbiased target" without
+    saying unbiased *for what*: since e^{V_θ} is not harmonic, the children's
+    values need not estimate the true value at the parent, and error at time s
+    is inherited, not corrected. What makes the scheme work is that the
+    terminal step carries q = r(X_1) exactly and anchoring propagates
+    backwards. V is a fixed point (T_s V = V) but we claim no convergence.
+  - backward-noising expansion.
 - **Non-obvious and worth keeping:** the backward kernel
   N((t/s)x_s, 2a·t(s−t)/s·I) **does not depend on ν** — conditioning a Brownian
   bridge on an interior point leaves a Brownian bridge — so the expansion trick
@@ -214,6 +240,10 @@ published samplers.
 - Limitations: Many-Well-32 (value-representation failure — held out;
   App. or one honest paragraph); untuned transfer; molecular n-body (EGNN)
   and committor/φ⁴ targets as future work.
+- **Reward-call budget.** All our benchmarks have cheap analytic rewards, so we
+  measure cost in samples seen. Under an expensive r (QM, docking, simulator)
+  the relevant budget is total evaluations of r, and the off-policy/on-policy
+  ranking could differ. Say this plainly; §2.4 forward-references it.
 
 ---
 
