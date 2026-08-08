@@ -116,20 +116,34 @@ conditioning problem of \S\ref{sec:03_expmse}--\S\ref{sec:04_bregman}.
 \paragraph{(ii) The identity is twist-independent.}
 Suppose we do not want to draw $X_s$ from the base kernel --- for instance
 because base samples rarely reach high-reward regions
-(\S\ref{sec:06_sparsity_onpolicy}). Proposing instead under any twisted drift
-$f+u$ and correcting by the Radon--Nikodym ratio
-$\rho = \mathrm{d}\mathbb{P}/\mathrm{d}\mathbb{P}^{u}$ restores \eqref{eq:hmart}:
+(\S\ref{sec:06_sparsity_onpolicy}). Propose instead under any adapted twist
+$u$, giving the drift $f+u$ and path measure $\mathbb{P}^{u}$, and correct by
+the Radon--Nikodym derivative of the base law with respect to it. By Girsanov's
+theorem, restricted to the interval $[t,s]$,
 \begin{equation}
-  e^{\Vf(x,t)} \;=\; \E_{\mathbb{P}^{u}}\!\big[\,\rho\, e^{\Vf(X_s,s)}\,\big|\,X_t=x\,\big],
-  \qquad
-  \log\rho \;=\; -\,\frac{u\cdot\Delta B}{2a} \;-\; \frac{\|u\|^{2}\Delta t}{4a},
+  \rho_{t\to s} \;=\; \frac{\mathrm{d}\mathbb{P}}{\mathrm{d}\mathbb{P}^{u}}
+  \bigg|_{[t,s]}
+  \;=\; \exp\!\left(
+    -\frac{1}{2a}\int_t^s u_\tau\cdot \mathrm{d}B_\tau
+    \;-\; \frac{1}{4a}\int_t^s \|u_\tau\|^{2}\,\mathrm{d}\tau
+  \right),
+  \label{eq:girsanov-rho}
+\end{equation}
+where $\mathrm{d}B_\tau=\sqrt{2a}\,\mathrm{d}W^{u}_\tau$ is the driving noise
+under $\mathbb{P}^{u}$ (so the stochastic integral is an It\^o integral against
+the noise actually realized by the sampler). Under Novikov's condition
+$\rho_{t\to s}$ is an exponential martingale with unit mean, and \eqref{eq:hmart}
+becomes
+\begin{equation}
+  e^{\Vf(x,t)} \;=\; \E_{\mathbb{P}^{u}}\!\big[\,\rho_{t\to s}\, e^{\Vf(X_s,s)}\,\big|\,X_t=x\,\big].
   \label{eq:girsanov}
 \end{equation}
-where $\Delta B\sim\mathcal{N}(0,2a\Delta t\,I)$ is the realized noise of one
-Euler--Maruyama step of size $\Delta t$ \citep{singhal2025fksteering}; for the
-learned twist $u=2a\nabla \Vf_\theta$ this reduces to
-$\log\rho = -\nabla \Vf_\theta\cdot\Delta B - a\|\nabla \Vf_\theta\|^{2}\Delta t$.
-The twist $u$ is therefore \emph{free}: it
+In an Euler--Maruyama discretization \eqref{eq:girsanov-rho} factorizes over
+steps, each contributing
+$-\,u\cdot\Delta B/(2a) - \|u\|^{2}\Delta t/(4a)$ with
+$\Delta B\sim\mathcal{N}(0,2a\Delta t\,I)$; this per-step ratio is the
+incremental weight used in twisted-SMC samplers
+\citep{singhal2025fksteering}. The twist $u$ is therefore \emph{free}: it
 changes the variance of the target, never its mean. The proposal is a
 variance-reduction device, not a modeling choice --- which is what licenses the
 importance-sampling and SMC machinery of \S\ref{sec:06_sparsity_onpolicy}
@@ -139,9 +153,13 @@ without changing the object being learned.
 \subsection{How training pairs are formed}
 \label{subsec:targets}
 
-A learner $\Vf_\theta$ is fit to pairs $(x_t, q)$ satisfying
-\eqref{eq:unbiased-target}. We use three constructions, all instances of
-\eqref{eq:hmart}.
+A learner $\Vf_\theta$ is fit to pairs $(x_t, q)$. It is worth separating two
+kinds. \emph{Anchored} targets terminate at the true reward and satisfy
+\eqref{eq:unbiased-target} exactly, so $e^{q}$ is unbiased for $e^{\Vf(x_t,t)}$
+however wrong the current $\Vf_\theta$ is. \emph{Bootstrapped} targets
+substitute the learner's own value at a later time, and satisfy no such
+identity. Both appear below; the distinction matters, and we are explicit about
+which guarantee is in force.
 
 \paragraph{Off-policy (bridge) anchors.}
 Draw a terminal point $x_1\sim\nu$ from the base terminal marginal, place $x_t$
@@ -153,22 +171,57 @@ on the base bridge to it, and take $q=r(x_1)$. For the pinned interpolants of
   \label{eq:fwd-bridge}
 \end{equation}
 so the sampled joint $(x_t,x_1)$ is \emph{exactly} the base joint and $q$ is
-unbiased by \eqref{eq:hmart}. What matters is that $x_1$ is drawn from the base
+anchored in the sense above. What matters is that $x_1$ is drawn from the base
 marginal $\nu$: anchoring on a reward-aware or held-out data distribution
-instead breaks the conditional and biases the targets. These anchors are cheap
-and cover the whole marginal; their weakness is precisely that $x_1$ ignores
-$r$, which is what fails in high dimension
-(\S\ref{sec:06_sparsity_onpolicy}).
+instead breaks the conditional and biases the targets.
+
+These anchors are cheap \emph{per sample} --- no trajectory is integrated, and
+each pair costs a single evaluation of $r$ --- and they cover the whole
+marginal. Two caveats. First, $x_1$ is drawn without regard to $r$, which is
+what fails in high dimension (\S\ref{sec:06_sparsity_onpolicy}). Second, cheap
+per sample is not the same as cheap in total: because the anchors are
+uninformative about where $r$ is large, reaching a given accuracy can take many
+more of them, and hence many more reward evaluations, than a targeted scheme.
+When $r$ is itself expensive --- a quantum-chemistry calculation, a docking
+score, a simulator rollout --- total calls to $r$, not wall-clock per sample,
+is the budget that binds, and the ranking between the constructions can invert.
+Our benchmarks all have cheap analytic rewards, so we report sample counts
+rather than reward-call counts; we flag this as a limitation in
+\S\ref{sec:09_conclusion}.
 
 \paragraph{On-policy (bootstrapped) targets.}
 Roll a sequential-Monte-Carlo sweep forward from $X_0=0$ under the current
-twist $u=2a\nabla \Vf_\theta$, and form $q$ at each step by aggregating the
-learner's own values at the next step --- for us, a log-mean-exp over the
-sibling particles sharing a resampled parent, which is the empirical
-right-hand side of \eqref{eq:hmart}. As in temporal-difference learning, such
-targets are conditionally unbiased for the Bellman backup of the \emph{current}
-$\Vf_\theta$ rather than for $\Vf$ itself; by \eqref{eq:hmart} the fixed point
-of that backup is $\Vf$.
+twist $u=2a\nabla \Vf_\theta$. A particle at $(x_t,t)$ spawns $k$ children at
+$s=t+\Delta t$ under the guided kernel; writing $\rho_i$ for the per-step ratio
+of \eqref{eq:girsanov-rho} and $v_i = \Vf_\theta(x^{(i)}_s, s)$, the target
+attached to the parent is the log-mean-exp over its siblings,
+\begin{equation}
+  q \;=\; \log\Big(\tfrac{1}{k}\textstyle\sum_{i=1}^{k}\rho_i\,e^{v_i}\Big).
+  \label{eq:bootstrap-target}
+\end{equation}
+It is worth being exact about what this estimates. Define the one-step backup
+operator $\mathcal{T}_s$ acting on a candidate value function $W$ by
+\begin{equation}
+  (\mathcal{T}_s W)(x,t) \;=\; \log\E_{\Base}\!\big[\,e^{W(X_s,s)}\,\big|\,X_t=x\,\big].
+  \label{eq:backup-op}
+\end{equation}
+The children are i.i.d.\ from the guided kernel given the parent, so by
+\eqref{eq:girsanov}
+\begin{equation}
+  \E\big[e^{q}\mid x_t\big] \;=\; e^{(\mathcal{T}_s \Vf_\theta)(x_t,t)}.
+  \label{eq:backup-unbiased}
+\end{equation}
+That is the whole guarantee: \eqref{eq:bootstrap-target} is an exp-space
+unbiased estimate of the backup of \emph{the current network}, and of nothing
+else. In particular it is not an estimate of $\Vf(x_t,t)$. Because
+$e^{\Vf_\theta}$ is not harmonic, the children's values need not be good
+estimates of the true value at the parent, and whatever error $\Vf_\theta$
+carries at time $s$ is inherited rather than corrected. What keeps the
+recursion honest is the terminal step, where the children carry $q=r(X_1)$
+exactly; the scheme is useful to the extent that this anchoring propagates
+backwards. By \eqref{eq:hmart} the true value is a fixed point,
+$\mathcal{T}_s\Vf=\Vf$, but we prove nothing about convergence to it and treat
+the bootstrap as an empirical device throughout.
 
 \paragraph{Backward-noising expansion.}
 Because $e^{\Vf}$ is harmonic, a target attached at $(x_s,s)$ remains valid at
