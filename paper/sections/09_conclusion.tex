@@ -13,6 +13,17 @@ residual. Choosing that weight to be $\ln y/(y-1)$ gives gradients linear in the
 prediction on both sides, in closed form, with a numerically stable
 implementation. It is a drop-in replacement for a loss function.
 
+What the measurements support is narrower than that construction might suggest,
+and we would rather state it than let the framing carry it. The Spence weight
+repairs exponential-space squared error on both metrics at every dimension we
+ran, and beats generalised KL on value fidelity, so controlling both tails is
+demonstrably better than controlling one. It does not dominate the family:
+above $d=2$, unclipped Itakura--Saito is the more accurate value estimator. The
+durable contribution is therefore the reduction itself --- that loss design
+here is the choice of a single positive weight, and that squared error is a
+poor choice of it --- rather than a claim that our weight is the best available
+one.
+
 \paragraph{Limitations.}
 The empirical claims are narrower than the analysis.
 
