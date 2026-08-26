@@ -64,8 +64,11 @@ latency-bound rather than throughput-bound: many single-threaded CPU processes
 in parallel outperform the GPU by roughly a factor of five.
 
 \paragraph{Reproducibility.}
-Every dimensional-scaling number in the paper is recomputed from per-seed
-records by \texttt{figures/collect\_results.py}, which writes the
+Every dimensional-scaling number in the paper --- including the
+Appendix~\ref{sec:B_onpolicy_zoo} arms and their paired tests --- is recomputed
+from per-seed records by \texttt{figures/collect\_results.py}, which writes the
 \texttt{results.json} consumed by the figure scripts, so text and figures
-cannot disagree. The loss figure imports the shipped loss implementation
+cannot disagree. The loss-ablation numbers are produced the same way, by
+\texttt{analyse\_ablation.py} and \texttt{make\_ablation\_table.py}, which emit
+Table~\ref{tab:ablation} directly rather than through a transcription step. The loss figure imports the shipped loss implementation
 directly rather than reimplementing it.
