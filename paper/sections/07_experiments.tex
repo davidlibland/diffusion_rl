@@ -31,17 +31,14 @@ the across-seed spread of these tasks is large relative to the effects, and
 unpaired error bars would hide most of what we report.
 
 Every number below is $n=30$ seeds at $15$k gradient steps, scored by the
-smoothed-tail plateau of validation reward. Gradient steps are the matched
+smoothed-tail plateau of validation reward, and recomputed from per-seed
+records by one script rather than transcribed. Gradient steps are the matched
 budget, and that choice favours the on-policy arms: each of their steps is fed
 by an SMC sweep with tens of integration steps and several children per
 particle, where an off-policy step costs one closed-form bridge draw and one
-reward evaluation. On a compute- or reward-call-matched axis the comparison
-would look different, and we have not run it;
-\S\ref{sec:09_conclusion} records this as a limitation rather than leaving it
-implicit. Full protocol in
-App.~\ref{sec:C_experimental_details}; all dimensional-scaling numbers are
-recomputed from per-seed records by a single script
-(\texttt{figures/collect\_results.py}) rather than transcribed.
+reward call. A compute- or reward-call-matched axis would look different and we
+have not run it (\S\ref{sec:09_conclusion}). Full protocol in
+App.~\ref{sec:C_experimental_details}.
 
 \subsection{On-policy sampling across dimension}
 \label{subsec:dimscaling}

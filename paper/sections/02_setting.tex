@@ -39,16 +39,14 @@ the denoising direction of DDPM-style presentations.}
 
 \paragraph{The base family we use.}
 \label{subsec:base-family}
-Our base processes are \emph{pinned interpolants} \citep{albergo2023interpolants,lipman2023flowmatching}: $X_0=0$, a prescribed
-terminal marginal $\nu$, and a Brownian bridge between the two given
-$X_1=x_1$. The induced drift $f(x,t)=\E[(X_1-X_t)/(1-t)\mid X_t=x]$ vanishes
-exactly when $\nu=\mathcal{N}(0,2aI)$, recovering driftless Brownian motion
-(the case used for the Boltzmann benchmarks); taking $\nu$ to be a Gaussian
-mixture gives a base model with nontrivial but analytically known $f$, $\Vf$
-and $\log Z$, which is the controlled setting of our dimensional-scaling study
-(\S\ref{sec:07_experiments}). The family is convenient because it makes exact
-ground truth and a closed-form bridge available at once
-(\S\ref{subsec:targets}).
+Our base processes are \emph{pinned interpolants}
+\citep{albergo2023interpolants,lipman2023flowmatching}: $X_0=0$, a prescribed
+terminal marginal $\nu$, and a Brownian bridge between the two given $X_1=x_1$.
+The induced drift $f(x,t)=\E[(X_1-X_t)/(1-t)\mid X_t=x]$ vanishes exactly when
+$\nu=\mathcal{N}(0,2aI)$; taking $\nu$ to be a Gaussian mixture instead gives a
+base model with nontrivial but analytically known $f$, $\Vf$ and $\log Z$,
+which is what makes the study of \S\ref{sec:07_experiments} possible. Details
+in App.~\ref{sec:C_experimental_details}.
 
 % ---------------------------------------------------------------------------
 \subsection{Control formulation and the value function}
