@@ -23,6 +23,7 @@ import lightning as L
 HERE = os.path.dirname(os.path.abspath(__file__))
 EXP = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(EXP, "dim_scaling_bs4"))
+sys.path.insert(0, os.path.join(EXP, "dim_scaling_consth"))
 sys.path.insert(0, os.path.join(EXP, "dim_scaling_lawv2"))
 sys.path.insert(0, HERE)
 os.environ.setdefault("OPT_SKIP_NONFINITE", "1")

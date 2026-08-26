@@ -2,8 +2,12 @@
 \section{Proofs}
 \label{sec:D_proofs}
 
-Throughout we assume $Z=\E_{\Base}[e^{r(X_1)}]<\infty$, which makes
-$\Vf$ finite and every conditional expectation below well defined.
+Throughout we assume $Z=\E_{\Base}[e^{r(X_1)}]<\infty$, which makes $\Vf$
+finite and every conditional expectation below well defined. For
+Lemma~\ref{lem:minimizer} we assume in addition that
+$\E[\varphi(e^{q})\mid x_t]<\infty$; this is what licenses differentiating
+under the expectation, and it is strictly stronger than $Z<\infty$ for
+potentials that grow superlinearly (see the remark following the lemma).
 
 \subsection{The H-martingale property}
 
@@ -33,21 +37,21 @@ anchors every target in \S\ref{subsec:targets}.
 \subsection{Bregman divergences are proper losses for the value}
 
 \begin{proof}[Proof of Lemma~\ref{lem:minimizer}]
-Fix $x_t$ and write $T=e^{q}$ for the (random) target and $u=e^{p}$ for the
-prediction. Differentiating the definition \eqref{eq:bregman-def} in $u$, the
+Fix $x_t$ and write $T=e^{q}$ for the (random) target and $y=e^{p}$ for the
+prediction. Differentiating the definition \eqref{eq:bregman-def} in $y$, the
 first-order terms cancel,
 \begin{equation}
-  \frac{\partial}{\partial u}\Big[\varphi(T)-\varphi(u)-\varphi'(u)(T-u)\Big]
-  = -\varphi'(u)-\varphi''(u)(T-u)+\varphi'(u)
-  = \varphi''(u)\,(u-T),
+  \frac{\partial}{\partial y}\Big[\varphi(T)-\varphi(y)-\varphi'(y)(T-y)\Big]
+  = -\varphi'(y)-\varphi''(y)(T-y)+\varphi'(y)
+  = \varphi''(y)\,(y-T),
 \end{equation}
-and the chain rule with $\mathrm{d}u/\mathrm{d}p=u$ gives
+and the chain rule with $\mathrm{d}y/\mathrm{d}p=y$ gives
 \eqref{eq:weight-grad}:
-$\partial L/\partial p = w(u)(u-T)$ with $w(u)=u\varphi''(u)>0$ by strict
-convexity.
+$\partial L/\partial p = w(y)(y-T)$ with $w(y)=y\varphi''(y)>0$.
 
-The key structural point is that this is \emph{affine} in the target, so the
-expectation passes through it:
+The key structural point is that this is \emph{affine} in the target, so under
+the stated integrability the expectation passes through it (dominated
+convergence on any compact $p$-interval, where $w(e^{p})$ is bounded):
 \begin{equation}
   \E_{q\mid x_t}\!\left[\frac{\partial L}{\partial p}\right]
   = w(e^{p})\,\Big(e^{p}-\E[e^{q}\mid x_t]\Big)
@@ -65,8 +69,8 @@ which is the point: the potential is free, and only $w$ --- the conditioning
 
 \begin{remark}[The argument order is not cosmetic]
 Had the prediction occupied the \emph{first} slot, the derivative would be
-$\varphi'(u)-\E[\varphi'(T)]$ and the minimiser the quasi-arithmetic mean
-$(\varphi')^{-1}(\E[\varphi'(T)])$ --- for $\varphi=-\ln u$, the harmonic mean
+$\varphi'(y)-\E[\varphi'(T)]$ and the minimiser the quasi-arithmetic mean
+$(\varphi')^{-1}(\E[\varphi'(T)])$ --- for $\varphi=-\ln y$, the harmonic mean
 of $T$, not $\E[T]$. Squared error is symmetric and so hides the distinction;
 Itakura--Saito does not.
 \end{remark}

@@ -31,7 +31,14 @@ the across-seed spread of these tasks is large relative to the effects, and
 unpaired error bars would hide most of what we report.
 
 Every number below is $n=30$ seeds at $15$k gradient steps, scored by the
-smoothed-tail plateau of validation reward. Full protocol in
+smoothed-tail plateau of validation reward. Gradient steps are the matched
+budget, and that choice favours the on-policy arms: each of their steps is fed
+by an SMC sweep with tens of integration steps and several children per
+particle, where an off-policy step costs one closed-form bridge draw and one
+reward evaluation. On a compute- or reward-call-matched axis the comparison
+would look different, and we have not run it;
+\S\ref{sec:09_conclusion} records this as a limitation rather than leaving it
+implicit. Full protocol in
 App.~\ref{sec:C_experimental_details}; all dimensional-scaling numbers are
 recomputed from per-seed records by a single script
 (\texttt{figures/collect\_results.py}) rather than transcribed.
@@ -58,6 +65,19 @@ Figure~\ref{fig:dimscaling} shows the result that motivates
 dimension --- for the Monte-Carlo-target method, $+11.2$ points at $d=8$,
 $+4.5$ at $d=16$ and $+2.4$ at $d=32$, all $p<0.05$; the TD($\lambda$) variant
 reaches $+13.4$ at $d=8$ --- and the advantage decays as $d$ grows.
+
+That decay deserves comment, because it runs opposite to the naive reading of
+\S\ref{sec:06_sparsity_onpolicy}: if on-policy sampling exists to fight signal
+sparsity, and sparsity worsens with dimension, the advantage should grow. It
+does not, and Remark~\ref{rem:kl-fixed} says why. The constant-headroom
+calibration holds $\mathrm{KL}(\mathbb{P}^{\star}\|\mathbb{P})$ at $1.4$--$2.6$
+nats at \emph{every} dimension, so the importance-sampling cost this method
+addresses does not in fact grow along this axis. What does grow is the volume
+the value network must represent, a capacity and coverage problem rather than a
+sampling one --- consistent with concentration becoming actively harmful at
+$d=512$ (App.~\ref{subsec:b-failures}). We therefore do not read
+Fig.~\ref{fig:dimscaling} as evidence about how the sparsity benefit scales
+with sparsity; it is not designed to measure that.
 
 The interesting part is the failure mode of the naive version. Hyperparameter
 laws fitted without the expansion and step-count knobs (dotted) track
@@ -90,10 +110,12 @@ $\Vf(0,0)$.
 \begin{table}[t]
 \centering\small
 \caption{GMM-40, log-partition bias against published samplers on the same
-target ($\log Z=0$). Baseline numbers are from \citet{akhoundsadegh2024idem}.
-Our sample metric is a sliced Wasserstein rescaled to native coordinates and is
-a lower bound, so it is \emph{not} directly comparable to the baselines'
-$W_2$; we report it for completeness rather than as a claim.}
+target ($\log Z=0$). Baseline numbers are from \citet{akhoundsadegh2024idem}
+and are single reported values. Ours is the mean absolute error over $15$ runs
+($5$ seeds $\times$ $3$ head initialisations, see text) with its standard
+error. We do not report a sample-distance number: our sliced metric is a lower
+bound and is not comparable to the baselines' $W_2$, and quoting it beside them
+would invite exactly the comparison it cannot support.}
 \label{tab:gmm40}
 \begin{tabular}{lcc}
 \toprule
@@ -104,18 +126,30 @@ FAB \citep{midgley2021fab} & 1.17 & 12.0 \\
 DDS \citep{vargas2023dds}  & 0.36 & 9.31 \\
 iDEM \citep{akhoundsadegh2024idem} & 0.34 & 7.42 \\
 \midrule
-ours, off-policy           & 0.19 & --- \\
-\textbf{ours, on-policy}   & \textbf{0.08} & --- \\
+ours, on-policy ($n=15$)   & $0.30\pm0.07$ & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 Table~\ref{tab:gmm40} reports the comparison. The learned value recovers
-$\log Z$ to $0.08$ nats, ahead of the best published number we found on this
-target, and mode coverage is complete ($40/40$). The on-policy sampler roughly halves the
-off-policy error on this target ($0.08$ against $0.19$), but at $d=2$ and with
-the plain twisted sweep rather than the tuned recipe, so this is a consistency
-check and not a reproduction of the dimensional-scaling result.
+$\log Z$ to $0.30\pm0.07$ nats over $15$ runs, comparable to the best published
+numbers on this target ($0.34$ and $0.36$) rather than ahead of them, with
+complete mode coverage ($40/40$). We stress the seeding, because a single run
+of ours scored $0.08$ and reporting that number would have been misleading:
+$|\Delta\log Z|$ is a high-variance quantity and a favourable draw is cheap.
+
+\paragraph{The estimate is learned, not initialised.}
+One threat to this measurement deserves an explicit check. GMM-40 is normalised
+so that $\log Z=0$, and our value head is initialised with a constant bias
+which for this target is also $0$ --- so the network begins at the answer, and
+a small final error could mean it simply never moved. To rule that out we
+re-ran with the head initialised $\pm4$ nats away from the truth. The learned
+$\Vf(0,0)$ returns to zero from both: $-0.035\pm0.161$ from $-4$ and
+$-0.170\pm0.133$ from $+4$, i.e.\ the network travels the full four nats. The
+offset arms are in fact \emph{more} accurate than the unshifted one
+($0.23$ against $0.45$ mean absolute error), which is the opposite of what an
+initialisation artifact would produce. Table~\ref{tab:gmm40} pools all three
+initialisations for this reason.
 
 Three scope conditions, since the headline is a favourable number.
 First, we compare on $\log Z$ and mode coverage; our sample-distance metric is

@@ -41,19 +41,19 @@ usable is that in log space the whole family collapses:
 \begin{equation}
   \frac{\partial}{\partial p}\,\Breg\big(e^{q},e^{p}\big)
   \;=\; w(e^{p})\,\big(e^{p}-e^{q}\big),
-  \qquad w(u)=u\,\varphi''(u)>0 .
+  \qquad w(y)=y\,\varphi''(y)>0 .
   \label{eq:intro-weight}
 \end{equation}
 A Bregman loss reaches the optimizer only through the scalar weight $w$, so
 designing one means choosing a positive function on $(0,\infty)$ and nothing
-else. Squared error is $w(u)=2u$, growing with the prediction, which is why it
-explodes above and dies below; Itakura--Saito is $w(u)=1/u$, which inverts the
+else. Squared error is $w(y)=2y$, growing with the prediction, which is why it
+explodes above and dies below; Itakura--Saito is $w(y)=1/y$, which inverts the
 asymmetry rather than removing it. Both are power laws, and no power law will
-do: with $w(u)\propto u^{\beta-1}$ the gradient grows like $e^{\beta p}$, so it
+do: with $w(y)\propto y^{\beta-1}$ the gradient grows like $e^{\beta p}$, so it
 is exponential for every $\beta>0$ and flat at $\beta=0$.
 
 Solving \eqref{eq:intro-weight} for a weight whose gradient grows linearly in
-$p$ in both directions gives $w(u)=\ln u/(u-1)$, the reciprocal logarithmic
+$p$ in both directions gives $w(y)=\ln y/(y-1)$, the reciprocal logarithmic
 mean, and with it a loss we call the \emph{Spence loss}: its gradient is
 $p\,(e^{p}-e^{q})/(e^{p}-1)$ in closed form, and its value is expressible
 through the Spence function $\Spence(1-e^{x})$, which names it.
@@ -74,13 +74,13 @@ coverage at small $t$.
 \begin{itemize}\itemsep2pt
 \item We show that a Bregman loss applied to the unbiased exponential-space
   target acts on the optimizer only through the gradient weight
-  $w(u)=u\varphi''(u)$ of \eqref{eq:intro-weight}, which reduces loss design
+  $w(y)=y\varphi''(y)$ of \eqref{eq:intro-weight}, which reduces loss design
   for value functions to the choice of one positive function, and places
   squared error and Itakura--Saito as the $\beta=2$ and $\beta=0$ members of a
   power-law family none of whose members has controlled tails
   (\S\ref{sec:04_bregman}).
 \item We derive the Spence loss by solving for the weight
-  $w(u)=\ln u/(u-1)$ whose gradient is linear in the log-space prediction in
+  $w(y)=\ln y/(y-1)$ whose gradient is linear in the log-space prediction in
   both tails, give its closed-form gradient and dilogarithm value, and give a
   branch-wise evaluation that is finite for every finite float input, unlike
   automatic differentiation of the divergence
@@ -96,7 +96,9 @@ coverage at small $t$.
   from $2$ to $512$, and that the naive version instead collapses to $7.8$
   points below off-policy at $d=512$
   (\S\ref{sec:06_sparsity_onpolicy}, \S\ref{sec:07_experiments}).
-\item On GMM-40 the learned value recovers $\log Z$ to $0.08$ nats with
-  complete mode coverage, ahead of the published samplers we compare against
-  on that target (\S\ref{subsec:gmm40}).
+\item On GMM-40 the learned value recovers $\log Z$ to $0.30\pm0.07$ nats
+  over $15$ runs with complete mode coverage, comparable to the best published
+  samplers on that target, and we verify by re-initialising the value head
+  $\pm4$ nats away from the truth that the estimate is learned rather than
+  inherited from initialisation (\S\ref{subsec:gmm40}).
 \end{itemize}

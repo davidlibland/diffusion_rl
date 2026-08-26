@@ -35,6 +35,7 @@ hedged in text as a scope condition, **OPEN** not yet supported.
 | # | Claim | Evidence | Status |
 |---|---|---|---|
 | E1 | **Spence beats exp-MSE** | `experiments/loss_ablation` | **OPEN — running** |
+| E2b | Generalised KL (beta=1) is a real competitor, not a strawman | added as a 5th arm after review | **OPEN — running** |
 | E2 | IS is an intermediate, better than MSE, worse than Spence | same | **OPEN — running** |
 | E3 | log-space MSE converges but to a biased value | same (`v_bias` column) | **OPEN — running** |
 | E4 | On-policy beats off-policy at `d=8..32` | n=30 paired, `p<0.05`; `results.json` | E |
@@ -44,7 +45,9 @@ hedged in text as a scope condition, **OPEN** not yet supported.
 | E8 | Staleness explains none of the gain | `_sub` arms match within noise | E |
 | E9 | Concentration harms at `d=512` even with oracle twist | App. B | E |
 | E10 | Trust region inert for the learned twist | beta=1.0 at all ~50 updates | E |
-| E11 | GMM-40 log-Z bias 0.08, ahead of published | 3 seeds; **n is small — hedge** | E/H |
+| E11 | GMM-40 log-Z bias **0.30 +- 0.07**, comparable to published | 15 runs (5 seeds x 3 head inits); **corrected from a single-run 0.08** | E |
+| E13 | The GMM-40 estimate is learned, not inherited from the head init | +-4 nat offset probe: converges back, offsets MORE accurate (0.23 vs 0.45) | V |
+| E14 | Benchmark KL(P*||P) is 1.4-2.6 nats and flat in d | computed per instance; caps the sparsity cost by design | V |
 | E12 | Many-Well-32 not competitive; cause diagnosed | reported as held-out negative | E |
 
 ## Scope conditions carried in the text (S9)
@@ -55,4 +58,7 @@ hedged in text as a scope condition, **OPEN** not yet supported.
 | H2 | On-policy recipe does not transfer to Boltzmann targets | S6, S7.3, S9 |
 | H3 | Headroom fixed at 6 nats; width capped at 256 | S9 |
 | H4 | GMM-40 sample metric not comparable to published `W2` | S7.3 |
-| H5 | Loss ablation is off-policy only, so it isolates the divergence but says nothing about loss x sampler interaction | S5 — **must be stated when written** |
+| H5 | Loss ablation is off-policy only; isolates the divergence, says nothing about loss x sampler interaction | S5 |
+| H6 | Fig. 2 matches GRADIENT STEPS, which favours the on-policy arms in compute and reward calls | S7.1, S9 |
+| H7 | The benchmark holds KL fixed, so it tests on-policy sampling AT fixed sparsity, not the scaling of the benefit WITH sparsity | S6 Remark 1, S7.2, S9 |
+| H8 | Backward-noising is exact only for base-distributed points; approximate under the twist | S2.4, S6.3 |

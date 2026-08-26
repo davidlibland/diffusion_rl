@@ -1,0 +1,13 @@
+{
+ "offset": 4.0,
+ "seed": 2,
+ "steps": 8000,
+ "method": "single_seed_mc",
+ "v00_init": 4.116974830627441,
+ "logZ_hat": 0.1315450668334961,
+ "logZ_true": 0.0,
+ "logZ_err": 0.1315450668334961,
+ "moved": -3.9854297637939453,
+ "train_min": 2.660811924934387,
+ "error": null
+}

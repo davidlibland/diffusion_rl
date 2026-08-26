@@ -5,37 +5,37 @@
 \subsection{From the gradient weight to the potential}
 
 By Lemma~\ref{lem:minimizer}, a Bregman loss in log space reaches the
-optimizer only through the weight $w(u)=u\varphi''(u)$ in
+optimizer only through the weight $w(y)=u\varphi''(y)$ in
 \eqref{eq:weight-grad}. We therefore specify $w$ and recover $\varphi$, rather
 than the other way round.
 
 Requirements \eqref{eq:req-over}--\eqref{eq:req-under} ask that the gradient
-grow linearly in $p=\ln u$ in both directions, giving $w(u)\sim \ln u/u$ as
-$u\to\infty$ and $w(u)\sim-\ln u$ as $u\to0$. The choice
+grow linearly in $p=\ln y$ in both directions, giving $w(y)\sim \ln y/y$ as
+$y\to\infty$ and $w(y)\sim-\ln y$ as $y\to0$. The choice
 \begin{equation}
-  w(u)=\frac{\ln u}{u-1},
+  w(y)=\frac{\ln y}{y-1},
   \qquad\text{hence}\qquad
-  \varphi''(u)=\frac{w(u)}{u}=\frac{\ln u}{u\,(u-1)},
+  \varphi''(y)=\frac{w(y)}{y}=\frac{\ln y}{y\,(y-1)},
   \label{eq:a-phi2}
 \end{equation}
-meets both. It is positive on all of $(0,\infty)$, since $\ln u$ and $u-1$
-change sign together at $u=1$, and the singularity there is removable with
-$w(1)=1$. Equivalently $w(u)=1/L(1,u)$, the reciprocal of the logarithmic mean
+meets both. It is positive on all of $(0,\infty)$, since $\ln y$ and $y-1$
+change sign together at $y=1$, and the singularity there is removable with
+$w(1)=1$. Equivalently $w(y)=1/L(1,y)$, the reciprocal of the logarithmic mean
 $L(a,b)=(b-a)/(\ln b-\ln a)$.
 
 Integrating \eqref{eq:a-phi2} twice gives the potential
 \begin{equation}
-  \varphi(u) \;=\; (1-u)\,\Spence(1-u) \;-\; \tfrac12\,u\ln^{2}u .
+  \varphi(y) \;=\; (1-y)\,\Spence(1-y) \;-\; \tfrac12\,y\ln^{2}y .
   \label{eq:a-phi}
 \end{equation}
 The two constants of integration are immaterial: a Bregman divergence is
-unchanged by adding an affine function of $u$ to its potential, since the
+unchanged by adding an affine function of $y$ to its potential, since the
 added terms cancel between $\varphi(T)-\varphi(U)$ and $\varphi'(U)(T-U)$.
 
 \subsection{Closed forms}
 
-Write $S(x)=\Spence(1-e^{x})$. Substituting $u=e^{p}$ for the prediction and
-$T=e^{q}$ for the target into $\Breg(T,u)$ with \eqref{eq:a-phi} gives the
+Write $S(x)=\Spence(1-e^{x})$. Substituting $y=e^{p}$ for the prediction and
+$T=e^{q}$ for the target into $\Breg(T,y)$ with \eqref{eq:a-phi} gives the
 divergence in closed form,
 \begin{equation}
   L(p,q) \;=\; \Breg\big(e^{q},e^{p}\big)
@@ -108,15 +108,15 @@ correctly-signed step.
 \subsection{Where the Spence weight sits}
 
 The three weights of Table~\ref{tab:loss-family} are ordered at both extremes:
-as $u\to\infty$, $1/u < \ln u/(u-1) < 2u$, and as $u\to0^{+}$,
-$2u < \ln u/(u-1) < 1/u$. In this asymptotic sense the Spence loss
+as $y\to\infty$, $1/y < \ln y/(y-1) < 2y$, and as $y\to0^{+}$,
+$2y < \ln y/(y-1) < 1/y$. In this asymptotic sense the Spence loss
 interpolates squared error and Itakura--Saito rather than introducing an
 unrelated third behaviour.
 
 The ordering is asymptotic and not global, and it is worth being precise about
-which half fails. Against Itakura--Saito it never fails: $w(u)<1/u$ for every
-$u<1$ and $w(u)>1/u$ for every $u>1$, the two crossing exactly once, at $u=1$,
-where both equal $1$. Against squared error it does fail: $2u<w(u)$ holds only
-on $(0,u^{\star})$ with $u^{\star}=0.62614\ldots$ the root of
-$2u(u-1)=\ln u$, and on $(u^{\star},1)$ --- that is, for predictions
+which half fails. Against Itakura--Saito it never fails: $w(y)<1/y$ for every
+$y<1$ and $w(y)>1/y$ for every $y>1$, the two crossing exactly once, at $y=1$,
+where both equal $1$. Against squared error it does fail: $2y<w(y)$ holds only
+on $(0,y^{\star})$ with $y^{\star}=0.62614\ldots$ the root of
+$2y(y-1)=\ln y$, and on $(y^{\star},1)$ --- that is, for predictions
 $p\in(-0.468,0)$ --- the Spence weight drops below the squared-error weight.

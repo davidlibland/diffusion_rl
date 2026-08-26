@@ -5,39 +5,41 @@
 % ---------------------------------------------------------------------------
 \subsection{Any Bregman divergence learns the value function}
 
-For a strictly convex, differentiable potential $\varphi$ on $(0,\infty)$, the
-Bregman divergence \citep{bregman1967relaxation} of a prediction $u$ from a
+For a twice continuously differentiable potential $\varphi$ on $(0,\infty)$
+with $\varphi''>0$, the
+Bregman divergence \citep{bregman1967relaxation} of a prediction $y$ from a
 target $T$ is
 \begin{equation}
-  \Breg(T, u) = \varphi(T) - \varphi(u) - \varphi'(u)\,(T - u).
+  \Breg(T, y) = \varphi(T) - \varphi(y) - \varphi'(y)\,(T - y).
   \label{eq:bregman-def}
 \end{equation}
-Squared error is the special case $\varphi(u)=u^{2}$, giving
-$\Breg(T,u)=(T-u)^{2}$. The order of the arguments matters: the prediction must
+Squared error is the special case $\varphi(y)=y^{2}$, giving
+$\Breg(T,y)=(T-y)^{2}$. The order of the arguments matters: the prediction must
 occupy the \emph{second} slot, which is the one whose minimizer is a plain
-mean.\footnote{With the arguments swapped, $\arg\min_u\E[\Breg(u,T)]$ solves
-$\varphi'(u)=\E[\varphi'(T)]$, a quasi-arithmetic mean --- the harmonic mean of
-$T$ for $\varphi=-\ln u$, not $\E[T]$.}
+mean.\footnote{With the arguments swapped, $\arg\min_y\E[\Breg(y,T)]$ solves
+$\varphi'(y)=\E[\varphi'(T)]$, a quasi-arithmetic mean --- the harmonic mean of
+$T$ for $\varphi=-\ln y$, not $\E[T]$.}
 
 The fact that a Bregman divergence is minimised in expectation by the mean is
 classical --- it is the Savage representation of proper scoring rules
 \citep{savage1971elicitation,gneiting2007proper}, and Bregman divergences are
 exactly the losses with that property \citep{banerjee2005clustering}. What we
 add is the reparameterisation: because the value is a \emph{log}-partition
-function, the network predicts $p=\log u$, and in that variable the whole
+function, the network predicts $p=\log y$, and in that variable the whole
 family collapses onto a single scalar weight.
 
 \begin{lemma}[Gradient weight; the minimiser is classical]
 \label{lem:minimizer}
 Let the regression target be $e^{q}$, with $q$ such that
 $\E[e^{q}\mid x_t]=e^{\Vf(x_t)}$ (the H-martingale target,
-\S\ref{sec:02_setting}). Parameterize the prediction in log space, $u=e^{p}$.
-Then for any strictly convex $\varphi$,
+\S\ref{sec:02_setting}). Parameterize the prediction in log space, $y=e^{p}$.
+Suppose further that $\E[\varphi(e^{q})\mid x_t]<\infty$, so the divergence has
+finite expectation. Then
 \begin{equation}
   \frac{\partial}{\partial p}\,\Breg\big(e^{q},\,e^{p}\big)
   \;=\; w(e^{p})\,\big(e^{p}-e^{q}\big),
   \qquad
-  w(u) \;:=\; u\,\varphi''(u) \;>\; 0,
+  w(y) \;:=\; y\,\varphi''(y) \;>\; 0,
   \label{eq:weight-grad}
 \end{equation}
 and consequently
@@ -45,14 +47,26 @@ $\arg\min_{p}\ \E_{q\mid x_t}\!\big[\Breg(e^{q},e^{p})\big] = \Vf(x_t)$.
 \end{lemma}
 
 \begin{proof}[Proof sketch]
-Differentiating \eqref{eq:bregman-def} in $u$, the $\varphi'(u)$ terms cancel
-and leave $\varphi''(u)(u-T)$; the chain rule contributes
-$\mathrm{d}u/\mathrm{d}p = u$. Because \eqref{eq:weight-grad} is \emph{linear}
+Differentiating \eqref{eq:bregman-def} in $y$, the $\varphi'(y)$ terms cancel
+and leave $\varphi''(y)(y-T)$; the chain rule contributes
+$\mathrm{d}y/\mathrm{d}p = y$. Because \eqref{eq:weight-grad} is \emph{linear}
 in the target, taking expectations gives
 $\E[\partial L/\partial p] = w(e^{p})\,(e^{p}-\E[e^{q}\mid x_t])$, which is
 negative below $e^{\Vf}$ and positive above it. Full proof in
 App.~\ref{sec:D_proofs}.
 \end{proof}
+
+\begin{remark}[The integrability hypothesis is not decorative]
+$\E[e^{q}]<\infty$ alone does not give $\E[\Breg(e^{q},e^{p})]<\infty$. For
+squared error the divergence carries an $\E[e^{2q}]$ term, which a
+heavy-tailed target can easily make infinite --- and heavy-tailed targets are
+exactly the regime of \S\ref{sec:06_sparsity_onpolicy}. Where that happens the
+squared-error objective is $+\infty$ for every $p$ and its minimiser is not
+defined, while the Spence loss, whose value grows only quadratically in $p$
+against a linear factor $e^{q}$, remains finite under the weaker condition
+$\E[e^{q}]<\infty$. The hypothesis therefore separates the family rather than
+merely tidying it.
+\end{remark}
 
 \noindent Two consequences drive the rest of this section. First, the choice of
 $\varphi$ does \emph{not} bias the learned value, so it is free to be chosen for
@@ -65,14 +79,14 @@ the two losses we have met are its opposite extremes.
 % ---------------------------------------------------------------------------
 \subsection{Two reference points}
 
-\paragraph{Squared error: $w(u)=2u$.}
+\paragraph{Squared error: $w(y)=2y$.}
 The weight \emph{grows} with the prediction, so
 $\partial L/\partial p = 2e^{p}(e^{p}-e^{q})$ explodes like $e^{2p}$ for
-over-predictions and, because $w(u)\to0$ as $u\to0$, is driven to zero for
+over-predictions and, because $w(y)\to0$ as $y\to0$, is driven to zero for
 under-predictions --- the unrecoverable pathology of \S\ref{sec:03_expmse}.
 
-\paragraph{Itakura--Saito: $w(u)=1/u$.}
-Taking $\varphi(u)=-\ln u$ gives the Itakura--Saito divergence
+\paragraph{Itakura--Saito: $w(y)=1/y$.}
+Taking $\varphi(y)=-\ln y$ gives the Itakura--Saito divergence
 \citep{itakura1968analysis}, for which
 $D_{\mathrm{IS}}(e^{q},e^{p}) = e^{q-p}-(q-p)-1$ and
 \begin{equation}
@@ -96,15 +110,15 @@ uncertainty interpretation for $\Vf$. A useful midpoint, but still one-sided
 \paragraph{Why not simply retune $\beta$?}
 Squared error and Itakura--Saito are the $\beta=2$ and $\beta=0$ members of the
 $\beta$-divergence family \citep{fevotte2011beta,cichocki2010families}, whose
-weight is the power law $w(u)\propto u^{\beta-1}$. It is natural to ask whether
-some intermediate $\beta$ already does what we want. With $w(u)=u^{\beta-1}$
+weight is the power law $w(y)\propto y^{\beta-1}$. It is natural to ask whether
+some intermediate $\beta$ already does what we want. With $w(y)=y^{\beta-1}$
 the gradient is $e^{\beta p}-e^{(\beta-1)p+q}$, so as $p\to+\infty$ it grows
 like $e^{\beta p}$: exponentially for every $\beta>0$, and flat for $\beta=0$.
 Linear growth in $p$ is therefore attainable at no value of $\beta$, and a
 power-law weight cannot produce log-linear tails.
 
 We want to be careful about what that does and does not rule out. One member of
-the family, $\beta=1$ --- constant weight, $\varphi(u)=u\ln u-u$, the
+the family, $\beta=1$ --- constant weight, $\varphi(y)=y\ln y-y$, the
 generalised KL or I-divergence --- has gradient $e^{p}-e^{q}$, which tends to
 $-e^{q}$ as $p\to-\infty$: bounded and non-zero. By the criterion of
 \S\ref{sec:03_expmse}, that already removes squared error's \emph{fatal}
@@ -121,25 +135,25 @@ question, which is why the ablation includes both.
 \label{subsec:spence}
 
 Rather than pick a potential and inspect its tails, we ask directly what weight
-$w$ we want. Writing $u=e^{p}$ and reading off \eqref{eq:weight-grad}, the two
+$w$ we want. Writing $y=e^{p}$ and reading off \eqref{eq:weight-grad}, the two
 requirements are:
 \begin{align}
-  p\to+\infty\ (u\to\infty):\quad & w(u)\,u \sim \ln u
-    &&\Longrightarrow\quad w(u)\sim \ln u\,/\,u, \label{eq:req-over}\\
-  p\to-\infty\ (u\to 0):\quad & -\,w(u)\,e^{q} \sim e^{q}\ln u
-    &&\Longrightarrow\quad w(u)\sim -\ln u, \label{eq:req-under}
+  p\to+\infty\ (y\to\infty):\quad & w(y)\,u \sim \ln y
+    &&\Longrightarrow\quad w(y)\sim \ln y\,/\,u, \label{eq:req-over}\\
+  p\to-\infty\ (y\to 0):\quad & -\,w(y)\,e^{q} \sim e^{q}\ln y
+    &&\Longrightarrow\quad w(y)\sim -\ln y, \label{eq:req-under}
 \end{align}
 i.e.\ in both directions the gradient should grow \emph{linearly in the log-space
-prediction} $p=\ln u$. The simplest smooth positive function meeting both is
+prediction} $p=\ln y$. The simplest smooth positive function meeting both is
 \begin{equation}
-  \boxed{\ w(u) \;=\; \frac{\ln u}{u-1}\ }
+  \boxed{\ w(y) \;=\; \frac{\ln y}{y-1}\ }
   \qquad\Longleftrightarrow\qquad
-  \varphi''(u) \;=\; \frac{\ln u}{u\,(u-1)},
+  \varphi''(y) \;=\; \frac{\ln y}{y\,(y-1)},
   \label{eq:spence-weight}
 \end{equation}
-which is positive on all of $(0,\infty)$ (both factors change sign at $u=1$)
+which is positive on all of $(0,\infty)$ (both factors change sign at $y=1$)
 and extends smoothly through the removable singularity with $w(1)=1$. It is the
-reciprocal of the logarithmic mean of $1$ and $u$ \citep{carlson1972logmean}, and at both extremes it lies
+reciprocal of the logarithmic mean of $1$ and $y$ \citep{carlson1972logmean}, and at both extremes it lies
 between the squared-error and Itakura--Saito weights: the Spence loss
 interpolates the two reference points rather than adding a third unrelated
 one. The choice is not unique --- \eqref{eq:req-over}--\eqref{eq:req-under} fix
@@ -197,9 +211,13 @@ By the duality between regular Bregman divergences and regular exponential
 families \citep{banerjee2005clustering,azoury2001relative}, minimizing any $\Breg$ is maximum
 likelihood under the exponential family whose cumulant is the convex conjugate
 $\varphi^{*}$; squared error recovers a Gaussian and Itakura--Saito a gamma.
-For \eqref{eq:spence-weight} the conjugate is not a standard named family, so
-we report the correspondence rather than a closed-form likelihood; the
-practical content of the weight is the tail behavior above.
+For \eqref{eq:spence-weight} the conjugate is not a standard named family, but
+it has one notable feature. Since $\varphi'(y)=-\Spence(1-y)-\tfrac12\ln^{2}y$
+increases to $\pi^{2}/6$ as $y\to\infty$ and to $-\infty$ as $y\to0^{+}$, the
+natural parameter of the implied family is \emph{bounded above} by
+$\pi^{2}/6$. The loss therefore behaves like the log-likelihood of a family
+whose natural parameter saturates, which is a second way of seeing why
+over-predictions cannot produce unbounded gradients.
 
 % ---------------------------------------------------------------------------
 \begin{table}[t]
@@ -213,12 +231,12 @@ conditioning.}
 \small
 \begin{tabular}{lccccc}
 \toprule
-loss & weight $w(u)$ & under-predict ($p\!\to\!-\infty$) & over-predict ($p\!\to\!+\infty$)
+loss & weight $w(y)$ & under-predict ($p\!\to\!-\infty$) & over-predict ($p\!\to\!+\infty$)
      & scale-inv. & noise model \\
 \midrule
-squared error   & $2u$ & \emph{vanishes} ($\to 0$) & explodes ($e^{2p}$) & no  & Gaussian \\
-Itakura--Saito  & $1/u$ & explodes ($-e^{q-p}$)    & bounded ($\to +1$)  & yes & gamma \\
-\textbf{Spence (ours)} & $\dfrac{\ln u}{u-1}$ & \textbf{linear} ($p\,e^{q}$)
+squared error   & $2y$ & \emph{vanishes} ($\to 0$) & explodes ($e^{2p}$) & no  & Gaussian \\
+Itakura--Saito  & $1/y$ & explodes ($-e^{q-p}$)    & bounded ($\to +1$)  & yes & gamma \\
+\textbf{Spence (ours)} & $\dfrac{\ln y}{y-1}$ & \textbf{linear} ($p\,e^{q}$)
                 & \textbf{linear} ($p$) & no & implicit \\
 \bottomrule
 \end{tabular}

@@ -20,6 +20,23 @@ reference to $r$ (\S\ref{subsec:targets}), so their useful-target rate decays
 on that schedule. Every anchor still carries a valid target; almost all of them
 carry an uninformative one.
 
+\begin{remark}[Our benchmark holds this cost fixed, by construction]
+\label{rem:kl-fixed}
+The constant-headroom calibration of \S\ref{subsec:design} bounds the very
+quantity this argument turns on. Writing the headroom as
+$\E_{\mathbb{P}^{\star}}[r]-\E_{\Base}[r]=6$ nats and using
+$\log Z=\max_u\{\E[r]-\mathrm{KL}\}$, one gets
+$\mathrm{KL}(\mathbb{P}^{\star}\|\mathbb{P})
+ =\E_{\mathbb{P}^{\star}}[r]-\log Z\le 6$, and measured on our instances it
+is $1.4$--$2.6$ nats and \emph{flat} in $d$ ($1.36$, $2.10$, $2.55$, $2.60$,
+$1.83$ at $d=2,8,32,128,512$). The importance-sampling cost is therefore
+bounded and roughly dimension-independent here. That is the design working as
+intended --- dimension is the only factor varying --- but it means the study
+tests on-policy sampling \emph{at} fixed sparsity rather than testing how the
+benefit scales \emph{with} sparsity. We return to this in
+\S\ref{sec:07_experiments} and \S\ref{sec:09_conclusion}.
+\end{remark}
+
 The way out is already available. By \S\ref{sec:02_setting}(ii) the
 H-martingale identity survives \emph{any} adapted twist once the Girsanov ratio
 \eqref{eq:girsanov-rho} is applied, so the sampler may be chosen freely to put
