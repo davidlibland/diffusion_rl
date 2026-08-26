@@ -23,10 +23,9 @@ $T$ for $\varphi=-\ln y$, not $\E[T]$.}
 The fact that a Bregman divergence is minimised in expectation by the mean is
 classical --- it is the Savage representation of proper scoring rules
 \citep{savage1971elicitation,gneiting2007proper}, and Bregman divergences are
-exactly the losses with that property \citep{banerjee2005clustering}. What we
-add is the reparameterisation: because the value is a \emph{log}-partition
-function, the network predicts $p=\log y$, and in that variable the whole
-family collapses onto a single scalar weight.
+exactly the losses with that property \citep{banerjee2005clustering}. What we add is the reparameterisation. Because the value is a
+\emph{log}-partition function the network predicts $p=\log y$, and in that
+variable the whole family collapses onto a single scalar weight.
 
 \begin{lemma}[Gradient weight; the minimiser is classical]
 \label{lem:minimizer}

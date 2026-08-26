@@ -52,12 +52,13 @@ a tuned-versus-tuned claim less clean than it looks.
 Two axes, because they can disagree, and the reason they can matters. The
 control only ever sees $\nabla \Vf_\theta$, so a value function that is wrong
 by a slowly-varying offset still steers correctly; conversely a loss can score
-well on control while learning a badly biased value. Since the pathology of
-\S\ref{sec:03_expmse} is about the \emph{magnitude} of the learned value in
-under-predicted regions, the value axis is where we expect it to show, and a
-control-only comparison could miss it entirely. \emph{Control quality} is the fraction of
-the calibrated $6$-nat headroom closed, the same score used throughout
-\S\ref{sec:07_experiments}. \emph{Value quality} is the RMSE of $\Vf_\theta$
+well on control while learning a badly biased value. The pathology of
+\S\ref{sec:03_expmse} concerns the \emph{magnitude} of the learned value in
+under-predicted regions, so the value axis is where it should show, and a
+control-only comparison could miss it entirely.
+
+\emph{Control quality} is the fraction of the calibrated $6$-nat headroom
+closed, the same score used throughout \S\ref{sec:07_experiments}. \emph{Value quality} is the RMSE of $\Vf_\theta$
 against the \emph{analytic} value over the base marginal --- available because
 this problem family has $\Vf$ in closed form (App.~\ref{sec:C_experimental_details}) ---
 together with its signed mean, which exposes bias rather than variance. We also

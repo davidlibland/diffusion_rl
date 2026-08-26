@@ -27,10 +27,10 @@ of. The target is therefore stuck in exponential space, and the obvious loss,
 squared error between $e^{p}$ and $e^{q}$, behaves badly there. Its gradient is
 $2e^{p}(e^{p}-e^{q})$, which explodes as $e^{2p}$ when the model over-predicts
 and, more seriously, decays to zero when it under-predicts. The second case is
-the one that matters: it is exactly the state whose true value is large and
-whose predicted value is small --- a rare, high-reward target the model has
-failed to find --- and gradient clipping, which tames the first pathology,
-cannot manufacture a gradient that has already vanished.
+the one that matters. It is exactly the state whose true value is large and
+whose predicted value is small: a rare, high-reward target the model has failed
+to find. Gradient clipping tames the first pathology, but it cannot manufacture
+a gradient that has already vanished.
 
 Our starting observation is that this loss was never forced on us. For any
 strictly convex $\varphi$, the Bregman divergence $\Breg(e^{q},e^{p})$ has the
@@ -65,10 +65,10 @@ $e^{\mathrm{KL}(\mathbb{P}^{\star}\|\mathbb{P})}$ samples
 \citep{chatterjee2018sample}. Because the H-martingale identity survives any
 adapted twist once the Girsanov ratio is applied, the sampler is free, and the
 learned value is itself the optimal twist. The second half of this paper
-studies that loop, where the useful finding is a negative one: at high
-dimension, concentrating the sampler on the reward corridor --- even with an
-oracle twist --- is worse than not doing so, and what helps instead is widening
-coverage at small $t$.
+studies that loop. The useful finding there is a negative one: at high
+dimension, concentrating the sampler on the reward corridor is worse than not
+doing so, even with an oracle twist. What helps instead is widening coverage at
+small $t$.
 
 \paragraph{Contributions.}
 \begin{itemize}\itemsep2pt
