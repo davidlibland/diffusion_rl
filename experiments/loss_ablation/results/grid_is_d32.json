@@ -99,6 +99,30 @@
    "v_nonfinite": 0,
    "skips": 0,
    "error": null
+  },
+  {
+   "seed": 8,
+   "plateau": -13.1770980656147,
+   "opt_reward": -9.39414504351777,
+   "E_base": -15.394145043517769,
+   "frac_closed": 0.36950782965051143,
+   "v_rmse": 1.7530785487419478,
+   "v_bias": 1.0435005851507186,
+   "v_nonfinite": 0,
+   "skips": 0,
+   "error": null
+  },
+  {
+   "seed": 9,
+   "plateau": -14.071011528372765,
+   "opt_reward": -10.472624233017603,
+   "E_base": -16.4726242330176,
+   "frac_closed": 0.4002687841074728,
+   "v_rmse": 1.7095352015882153,
+   "v_bias": 0.704965799689293,
+   "v_nonfinite": 0,
+   "skips": 0,
+   "error": null
   }
  ]
 }
