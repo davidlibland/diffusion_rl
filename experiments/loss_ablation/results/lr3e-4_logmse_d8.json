@@ -27,6 +27,18 @@
    "v_nonfinite": 0,
    "skips": 0,
    "error": null
+  },
+  {
+   "seed": 2,
+   "plateau": -6.3965093823415895,
+   "opt_reward": -3.226142696710187,
+   "E_base": -9.226142696710188,
+   "frac_closed": 0.47160555239476637,
+   "v_rmse": 2.839887529063793,
+   "v_bias": -2.5653491224467753,
+   "v_nonfinite": 0,
+   "skips": 0,
+   "error": null
   }
  ]
 }

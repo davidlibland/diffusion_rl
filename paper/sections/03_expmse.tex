@@ -52,6 +52,16 @@ about, so discarding it discards the signal. Unbiasedness pins us to the
 exponential-space target; only the divergence applied to it is negotiable. That
 is the opening the Bregman family exploits (\S\ref{sec:04_bregman}).
 
+It is worth being clear about what this costs and what it does not. Nothing
+here says the log-space fit is a \emph{bad controller}. The control reads only
+$\nabla \Vf_\theta$, and a value function displaced by a slowly-varying offset
+still points the same way, so a well-conditioned but biased loss can steer
+perfectly well while getting $\Vf$ itself wrong. The measurement in
+\S\ref{sec:05_offpolicy_exp} bears this out, and sharply. What the bias costs
+is the value: $\Vf(0,0)$ is $\log Z$, so a scheme that gives up unbiasedness
+gives up the free energy, the log-partition estimate, and every downstream use
+of the value that is not the gradient.
+
 \paragraph{Empirical pathology.}
 Beyond the asymptotics, the finite-precision behavior is severe; the
 overflow-avoidance patterns we rely on are standard
