@@ -1,1 +1,32 @@
-no grid results yet
+
+=== headroom closed (%), mean +- s.e. ===
+arm                         d=2             d=8            d=32           d=128
+Spence              76.5+-1.5       53.1+-3.3       33.4+-2.0       24.9+-2.1  
+exp-MSE             71.8+-1.2       46.8+-3.1       34.3+-2.4       13.1+-3.2  
+Itakura-Saito       71.5+-1.8       52.4+-2.9       35.7+-2.2       23.3+-2.1  
+gen. KL (beta=1)     77.4+-1.2       52.7+-3.5       36.1+-2.3       27.8+-2.5  
+log-MSE (biased)     87.1+-2.5       62.7+-3.7       46.4+-2.3       36.8+-2.6  
+
+=== value RMSE vs analytic oracle (nats) ===
+arm                         d=2             d=8            d=32           d=128
+Spence              1.30+-0.07      1.40+-0.04      1.81+-0.08      1.91+-0.07 
+exp-MSE             1.67+-0.07      1.77+-0.05      2.26+-0.09      2.61+-0.12 
+Itakura-Saito       1.42+-0.09      1.30+-0.05      1.54+-0.05      1.69+-0.07 
+gen. KL (beta=1)     1.43+-0.07      1.52+-0.04      1.91+-0.08      2.13+-0.08 
+log-MSE (biased)     4.59+-0.27      3.22+-0.16      2.43+-0.11      1.98+-0.06 
+
+=== signed value bias (nats) -- log-MSE should show the Jensen deficit ===
+arm                         d=2             d=8            d=32           d=128
+Spence                    +0.22           +0.46           +0.88           +0.89
+exp-MSE                   +0.43           +0.65           +1.18           +1.29
+Itakura-Saito             +0.29           +0.40           +0.72           +0.81
+gen. KL (beta=1)           +0.29           +0.55           +0.95           +1.06
+log-MSE (biased)           -4.09           -2.92           -1.91           -1.44
+
+=== paired delta vs exp-MSE, headroom closed (same instances) ===
+  Spence           d2:  +4.7*(n=12) d8:  +6.4*(n=12) d32:  -0.9 (n=12) d128: +11.8*(n=12)
+  Itakura-Saito    d2:  -0.3 (n=12) d8:  +5.6*(n=12) d32:  +1.3 (n=12) d128: +10.1*(n=12)
+  gen. KL (beta=1) d2:  +5.6*(n=12) d8:  +5.9*(n=12) d32:  +1.8*(n=12) d128: +14.7*(n=12)
+  log-MSE (biased) d2: +15.3*(n=12) d8: +15.9*(n=12) d32: +12.0*(n=12) d128: +23.7*(n=12)
+
+wrote /home/dlibland/dev/diffusion_rl/experiments/loss_ablation/ablation.json
