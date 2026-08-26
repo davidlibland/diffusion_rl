@@ -103,8 +103,12 @@ clipping fixes). It is moreover \emph{scale-invariant}
 ($D_{\mathrm{IS}}(cT,cy)=D_{\mathrm{IS}}(T,y)$, equivalently \eqref{eq:is-grad}
 depends on $q-p$ alone) and is the negative log-likelihood of a
 gamma/exponential observation model \citep{fevotte2009isnmf}, giving a natural
-uncertainty interpretation for $\Vf$. A useful midpoint, but still one-sided
-(Fig.~\ref{fig:loss_curves}, middle).
+uncertainty interpretation for $\Vf$. It is one-sided
+(Fig.~\ref{fig:loss_curves}, middle), and we should say at the outset that
+one-sidedness turns out to cost it little: in \S\ref{sec:05_offpolicy_exp} it
+is the most accurate value estimator of any arm above $d=2$. What it gives up
+is that its surviving tail explodes, so it relies on the clipping or saturation
+that a two-sided weight makes unnecessary.
 
 \paragraph{Why not simply retune $\beta$?}
 Squared error and Itakura--Saito are the $\beta=2$ and $\beta=0$ members of the
@@ -126,8 +130,10 @@ handles. Generalised KL is thus a genuine competitor and not a straw arm, and
 we include it as such in \S\ref{sec:05_offpolicy_exp}. The claim we make for
 the Spence loss is correspondingly narrow: it is the member whose gradient is
 linear in $p$ on \emph{both} sides, and so the one that needs no clipping at
-all. Whether that buys anything over a clipped competitor is an empirical
-question, which is why the ablation includes both.
+all. Whether that buys anything over a
+\emph{clipped} competitor is an empirical question that our ablation does not
+settle: we clip no arm, so \S\ref{sec:05_offpolicy_exp} compares the losses as
+derived rather than as they would be deployed.
 
 % ---------------------------------------------------------------------------
 \subsection{The Spence loss}

@@ -27,7 +27,7 @@ $(\text{plateau}-\E_{\Base}[r])/6$.
 
 \paragraph{Network and optimization.}
 A residual MLP value network $\Vf_\theta(x,t)$ with hidden width
-$\min(256,\max(64,32d))$, Adam, gradient batch size $4$. The output head is
+$\min(256,\max(64,32d))$, Adam \citep{kingma2015adam}, gradient batch size $4$. The output head is
 biased by the analytic $\Vf(0,0)$, and the loss is evaluated on inputs shifted
 by the same constant: with a log-partition gap of tens of nats the raw
 exponential-space gradients carry a factor $e^{\Vf(0,0)}$ and fall below Adam's
@@ -42,9 +42,9 @@ terminal reward; the plateau is the mean of the last $8$ points of an
 $8$-point rolling mean. Runs are $15$k steps for the dimensional-scaling grid.
 
 \paragraph{Hyperparameter laws.}
-Rather than tuning per dimension, we run Optuna TPE+Hyperband anchor sweeps at
+Rather than tuning per dimension, we run Optuna \citep{akiba2019optuna} TPE+Hyperband \citep{li2018hyperband} anchor sweeps at
 $d\in\{2,16,128,512\}$ and fit each hyperparameter against $\log d$ by
-Theil--Sen regression, choosing between a constant and a sloped model by
+Theil--Sen regression \citep{theil1950rank}, choosing between a constant and a sloped model by
 leave-one-out error with a $10\%$ bias toward constants. A method is then one
 configuration \emph{family}, evaluated at every dimension without further
 tuning.

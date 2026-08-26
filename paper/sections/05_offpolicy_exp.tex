@@ -67,43 +67,47 @@ count non-finite batches, the stability axis of \S\ref{sec:03_expmse}.
 \input{sections/05_results_table}
 
 \paragraph{What the comparison shows.}
-Four readings, all paired on the same instances. The first is the one we set
-out to test; the third is not the one we expected.
+Four readings, all paired on the same instances. Significance is uncorrected
+across the four dimensions, and the $d\ge8$ cells carry fewer seeds than
+$d=2$; we say which comparisons survive that and which do not.
 
-\emph{The Spence loss reliably repairs exponential-space squared error.} On
-value RMSE it is better at every dimension we ran ($-0.37$ to $-0.75$ nats,
-significant at $d=2$ and $d=32$), and on control it is ahead at every
-dimension. This is the claim of \S\ref{subsec:spence} and it holds: a weight
-with both tails controlled learns a more faithful value than one whose
-under-prediction gradient vanishes.
+\emph{The Spence loss repairs exponential-space squared error on value
+fidelity, at every dimension.} The paired advantage is $0.36$--$0.61$ nats
+($p<0.05$ at all four dimensions). On control it is ahead at every dimension
+too, but unevenly: $+4.7$, $+5.4$, $+0.4$, $+14.4$ points, significant
+everywhere except $d=32$, where the two are indistinguishable. The control
+story is therefore not a uniform repair but a large gain at $d=128$, where
+squared error collapses to $8.4\%$ headroom closed, and a smaller one below.
 
-\emph{It also beats generalised KL on value, everywhere.} The $\beta=1$ member
-is tied with ours on control at every dimension, but its value RMSE is worse at
-all four ($-0.10$ to $-0.23$ in our favour). Fixing one tail is not the same as
-fixing both, and the difference shows up where the theory says it should.
+\emph{It beats generalised KL on value at every dimension, and loses to it on
+control at three of four.} The value gap runs $0.09$--$0.21$ nats in our favour
+and is significant at all four dimensions. The control comparison points the
+other way: $-0.95$, $+0.41$, $-1.79$, $-2.92$ points, none significant
+individually, but negative at three of four. We apply the same standard here
+that we apply to ourselves below: a consistent direction across dimensions is
+not noise, so the honest statement is that generalised KL is at least as good a
+controller as ours, on this benchmark, while estimating the value less well.
 
-\emph{But it does not dominate the family: Itakura--Saito is the better value
-estimator above $d=2$.} We win that comparison at $d=2$ ($-0.12$,
-significant) and lose it at $d=8$, $32$ and $128$ ($+0.11$, $+0.20$, $+0.16$;
-significant at $d=128$), with control statistically tied throughout. The
-direction is consistent across three dimensions, so we do not read it as
-noise. A reader is entitled to conclude that on this benchmark, above two
-dimensions, a divergence from 1968 estimates the value at least as well as
-ours. What remains true and is worth separating out: Itakura--Saito achieves
-this with a gradient that explodes for under-predictions, so it depends on the
-clipping or saturation that our weight makes unnecessary; we did not clip any
-arm (App.~\ref{subsec:a-numerics} saturates only where the true gradient
-leaves the float range). Whether the tail control buys anything once a
-competitor is properly clipped is the experiment we did not run, and it is the
-one we would run next.
+\emph{It does not dominate the family: Itakura--Saito is the better value
+estimator above $d=2$.} We win at $d=2$ ($-0.12$, $p=0.002$) and lose at
+$d=32$ and $d=128$ ($+0.19$, $p=0.025$; $+0.15$, $p=0.003$), with $d=8$ a wash.
+Control is statistically tied throughout. On this benchmark, above two
+dimensions, a divergence from 1968 estimates the value better than ours. What
+remains true and is worth separating: Itakura--Saito achieves this with a
+gradient that explodes for under-predictions, so it depends on the clipping or
+saturation our weight makes unnecessary, and no arm here was clipped. Whether
+tail control buys anything against a properly clipped competitor is the
+experiment that would settle the matter, and we did not run it.
 
 \emph{Conditioning and unbiasedness are different goods.} The log-space arm is
 the strongest controller in the table at every dimension --- by $12$ to $26$
 points --- while carrying a value bias of $1.6$ to $4.1$ nats in the direction
-\eqref{eq:jensen-gap} predicts. A loss can be well conditioned and wrong. If
-the value is wanted only as a gradient that trade is available and cheap; if
-$\Vf$ itself is the object --- and $\Vf(0,0)=\log Z$ --- it is not a trade at
-all, which is the argument of \S\ref{sec:03_expmse} made empirical.
+\eqref{eq:jensen-gap} predicts. A loss can be well conditioned and wrong. For
+an application that reads only $\nabla \Vf$ --- which includes reward-guided
+generation and fine-tuning, the settings of \S\ref{sec:01_intro} --- that trade
+is available and cheap, and our results say to take it. The unbiased target
+earns its keep when $\Vf$ itself is the object, and since $\Vf(0,0)=\log Z$
+that includes every free-energy and log-partition use.
 
 \paragraph{One axis separates nothing.}
 We counted non-finite batches per arm and found none, in any arm, at any
