@@ -11,9 +11,9 @@ import json
 c = json.load(open("chosen_lr.json"))
 for k, v in sorted(c.items()):
     loss, d = k.rsplit("_d", 1)
-    print(f"{loss} {d} {v['lr']:.6g} 16 8000 grid")
+    print(f"{loss} {d} {v['lr']:.6g} 12 8000 grid")
 PY
-echo "=== grid: $(wc -l < joblist_grid.txt) cells x 16 seeds ==="
+echo "=== grid: $(wc -l < joblist_grid.txt) cells x 12 seeds ==="
 xargs -a joblist_grid.txt -P 26 -L 1 ./job.sh
 python analyse_ablation.py | tee logs/ablation_summary.txt
 echo "=== GRID COMPLETE ==="

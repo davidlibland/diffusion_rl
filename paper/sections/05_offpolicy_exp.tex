@@ -38,9 +38,15 @@ rigged comparison, and it is the first thing a reader should suspect. We
 therefore re-tune the learning rate per (loss, dimension) over a grid spanning
 $10^{-5}$ to $3\times10^{-3}$ on separate tuning seeds at a shorter budget, and
 run the reported grid on fresh seeds at the chosen value. Each arm is thus
-reported at its own best learning rate rather than at ours. We flag any arm
-whose chosen rate lands on the boundary of the grid, since that would mean the
-grid was too narrow to be fair to it.
+reported at its own best learning rate rather than at ours.
+
+One caveat about that grid. At the larger dimensions several arms --- including
+ours --- select the smallest rate offered, $10^{-5}$, so their optima may lie
+outside the range and the tuning is truncated. It is truncated identically for
+every arm, so the comparison remains matched, and it is a comparison of best
+rates \emph{within} $[10^{-5},3\times10^{-3}]$ rather than of global optima. We
+mention it because a boundary optimum is exactly the kind of detail that makes
+a tuned-versus-tuned claim less clean than it looks.
 
 \paragraph{Metrics.}
 Two axes, because they can disagree, and the reason they can matters. The

@@ -27,6 +27,18 @@
    "v_nonfinite": 20000,
    "skips": 201,
    "error": "RuntimeError: Predictions are not finite"
+  },
+  {
+   "seed": 2,
+   "plateau": -8.558971344289326,
+   "opt_reward": -3.226142696710187,
+   "E_base": -9.226142696710188,
+   "frac_closed": 0.111195225403477,
+   "v_rmse": 1.9806178061413167,
+   "v_bias": 1.2843230577528477,
+   "v_nonfinite": 0,
+   "skips": 0,
+   "error": null
   }
  ]
 }
