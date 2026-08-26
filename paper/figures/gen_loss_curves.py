@@ -2,9 +2,10 @@
 """Shared loss-family figure: value and gradient of D_F(e^{v_true}, e^{v_pred})
 as functions of v_pred, for a few v_true (reused across all three losses).
 
-Spence uses the repo's actual value/gradient (losses/log_quadratic_bregman);
-MSE and Itakura-Saito are the standard Bregman divergences with the prediction
-as the SECOND argument -- the slot whose population minimizer is the plain mean,
+Spence and Itakura-Saito use the repo's shipped implementations, so the figure
+cannot drift from the trained losses; squared error is inlined (it is symmetric,
+so slot order is immaterial).  The prediction is the SECOND Bregman argument --
+the slot whose population minimizer is the plain mean,
 argmin_u E[D(T, u)] = E[T].  (With the slots swapped one gets a quasi-arithmetic
 mean instead: the harmonic mean of T for Itakura-Saito.)
 
@@ -23,6 +24,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 sys.path.insert(0, os.path.join(ROOT, "src"))
 from diffusion_rl.losses.log_quadratic_bregman import (  # noqa: E402
     _log_quadratic_bregman_value, log_quadratic_bregman_grad)
+from diffusion_rl.losses.itakura_saito import (  # noqa: E402
+    itakura_saito, itakura_saito_grad)
 
 V_TRUE = [-2.0, 0.0, 2.0]
 COLORS = ["#1b9e77", "#7570b3", "#d95f02"]
@@ -35,12 +38,15 @@ def mse_value(p, t):      # (e^t - e^p)^2   (symmetric; slot order immaterial)
 def mse_grad(p, t):       # 2 e^p (e^p - e^t)
     return 2 * np.exp(p) * (np.exp(p) - np.exp(t))
 
-def is_value(p, t):       # D_IS(T, P) = T/P - log(T/P) - 1,  P=e^p, T=e^t
-    lr = t - p
-    return np.exp(lr) - lr - 1.0
+def is_value(p, t):       # repo implementation: D_IS(e^t, e^p)
+    P = torch.tensor(p, dtype=torch.float64)
+    T = torch.full_like(P, t)
+    return itakura_saito(P, T).numpy()
 
-def is_grad(p, t):        # 1 - e^{t-p}
-    return 1.0 - np.exp(t - p)
+def is_grad(p, t):
+    P = torch.tensor(p, dtype=torch.float64)
+    T = torch.full_like(P, t)
+    return itakura_saito_grad(P, T).numpy()
 
 def spence_value(p, t):
     P = torch.tensor(p, dtype=torch.float64)
