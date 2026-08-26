@@ -29,9 +29,10 @@ $(\text{plateau}-\E_{\Base}[r])/6$.
 A residual MLP value network $\Vf_\theta(x,t)$ with hidden width
 $\min(256,\max(64,32d))$, Adam \citep{kingma2015adam}, gradient batch size $4$. The output head is
 biased by the analytic $\Vf(0,0)$, and the loss is evaluated on inputs shifted
-by the same constant: with a log-partition gap of tens of nats the raw
-exponential-space gradients carry a factor $e^{\Vf(0,0)}$ and fall below Adam's
-$\varepsilon$. Shifting by a constant leaves the minimizer at $p=q$ and is
+by the same constant: $\log Z$ is large and \emph{negative} on this family
+($-2.4$ at $d=2$ falling to $-36.1$ at $d=512$), so the raw exponential-space
+gradients carry a factor $e^{\Vf(0,0)}$ of order $10^{-1}$ down to $10^{-16}$
+and disappear below Adam's $\varepsilon$. Shifting by a constant leaves the minimizer at $p=q$ and is
 again a Bregman divergence, in the tilted variables. This shift is applied
 identically to every loss arm; note that Itakura--Saito and log-space squared
 error are invariant to it, which is one of Itakura--Saito's advantages.

@@ -45,6 +45,16 @@ have diagnosed but not fixed the cause (\S\ref{subsec:gmm40}). Until that is
 closed, the GMM-40 result should be read as one favourable external
 target rather than as a general claim about Boltzmann sampling.
 
+\emph{No pretrained model.} This is the largest gap. \S\ref{sec:02_setting}
+observes that if the base process is a pretrained diffusion or flow model then
+$f$ is its learned drift and nothing in the development changes, and we believe
+that, but we never test it: every experiment here uses analytic base processes
+--- Gaussian-mixture interpolants and driftless Brownian motion --- with
+residual MLPs at gradient batch size $4$ on synthetic tilts. Whether the
+conditioning differences we measure survive at the scale and with the learned
+drifts of an actual reward-guided diffusion is untested, and a reader should
+weight the results accordingly.
+
 \emph{Scope of the benchmark.} The dimensional-scaling study fixes headroom at
 $6$ nats and caps network width at $256$ for $d\ge8$. Both the crossover
 dimension between on- and off-policy training and the size of the loss effect
