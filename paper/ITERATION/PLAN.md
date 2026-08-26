@@ -68,3 +68,20 @@ benchmark, off-policy only (isolates the loss from the sampler):
 
 This single experiment supplies Table 1, the S4 three-way comparison as
 *empirical* rather than purely theoretical, and the S3 Jensen-bias claim.
+
+## Status after iteration 1 (draft_v1, 23pp)
+
+Drafted: S1-S4, S6-S9, App. A/B/C/D. S5 has its design and scope written with
+the results table stubbed pending the experiment.
+
+**Known defects to fix in iteration 2:**
+1. **Main body is 16pp against a ~9pp target.** Some of this is the `article`
+   class (a venue style file is far denser), but not 7 pages of it. Cut
+   candidates, ranked: S2's base-family paragraph -> App. C; S7.1's design
+   prose -> App. C, keeping one sentence each; S4's implied-observation-model
+   paragraph -> App. A; S8 compressed to two paragraphs.
+2. S5 results pending.
+3. Every lr chosen in the first tuning wave landed on the grid boundary
+   (1e-4), so the grid was widened to 1e-5..3e-3 and rerun. Re-check for
+   boundary optima before reporting, and say so in the text either way.
+4. Reviewer findings (two fresh-context reviewers running on draft_v1).

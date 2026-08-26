@@ -1,5 +1,53 @@
 % !TEX root = ../main.tex
-\section{Off-policy experiments: the loss in isolation}
+\section{The loss in isolation}
 \label{sec:05_offpolicy_exp}
 
-% TODO
+\S\ref{sec:04_bregman} is an argument about conditioning, and conditioning
+arguments are cheap to make and easy to get wrong. This section measures the
+four losses against each other directly.
+
+\paragraph{Design.}
+Every arm trains the same network on the same problem instances from the same
+off-policy bridge anchors with the same budget; only \texttt{loss\_type}
+differs. Training is off-policy throughout, deliberately: an on-policy sampler
+would let the loss change the data it is subsequently trained on, and we want
+the divergence isolated from the sampler. The arms are the Spence loss,
+exponential-space squared error, Itakura--Saito, and log-space squared error.
+
+Two of these choices deserve comment. The squared-error arm is our
+\emph{stabilised} implementation --- exact gradient, saturated to the float
+range --- and not the naive one. Comparing against the naive version would
+measure arithmetic rather than the divergence, and would flatter us: the naive
+loss simply fails. The log-space arm is included as a bias probe rather than as
+a candidate. It is perfectly conditioned and converges happily; by
+\eqref{eq:jensen-gap} it converges to the wrong function, and the point of
+including it is to show that deficit rather than to propose it.
+
+\paragraph{Tuning, and why it matters here.}
+The shared hyperparameters of the benchmark were originally fitted with the
+Spence loss in place. Evaluating the alternatives at those values would be a
+rigged comparison, and it is the first thing a reader should suspect. We
+therefore re-tune the learning rate per (loss, dimension) over a grid spanning
+$10^{-5}$ to $3\times10^{-3}$ on separate tuning seeds at a shorter budget, and
+run the reported grid on fresh seeds at the chosen value. Each arm is thus
+reported at its own best learning rate rather than at ours. We flag any arm
+whose chosen rate lands on the boundary of the grid, since that would mean the
+grid was too narrow to be fair to it.
+
+\paragraph{Metrics.}
+Two axes, because they can disagree. \emph{Control quality} is the fraction of
+the calibrated $6$-nat headroom closed, the same score used throughout
+\S\ref{sec:07_experiments}. \emph{Value quality} is the RMSE of $\Vf_\theta$
+against the \emph{analytic} value over the base marginal --- available because
+this problem family has $\Vf$ in closed form (App.~\ref{sec:C_experimental_details}) ---
+together with its signed mean, which exposes bias rather than variance. We also
+count non-finite batches, the stability axis of \S\ref{sec:03_expmse}.
+
+\input{sections/05_results_table}
+
+\paragraph{Scope.}
+This experiment isolates the divergence by construction, and therefore says
+nothing about how the losses interact with an on-policy sampler, where the
+loss influences its own future training data. It is also a single problem
+family at one difficulty setting. The dimensional trend within it is
+informative; extrapolating it to other families is not warranted.

@@ -15,6 +15,30 @@
    "v_nonfinite": 0,
    "skips": 0,
    "error": null
+  },
+  {
+   "seed": 1,
+   "plateau": -8.798712907660576,
+   "opt_reward": -3.9357172082669916,
+   "E_base": -9.93571720826699,
+   "frac_closed": 0.1895007167677356,
+   "v_rmse": 2.1144977613784635,
+   "v_bias": 1.1740790119707585,
+   "v_nonfinite": 0,
+   "skips": 0,
+   "error": null
+  },
+  {
+   "seed": 2,
+   "plateau": -8.034775491129786,
+   "opt_reward": -3.226142696710187,
+   "E_base": -9.226142696710188,
+   "frac_closed": 0.19856120093006702,
+   "v_rmse": 2.3065682745543716,
+   "v_bias": 1.4445644538700582,
+   "v_nonfinite": 0,
+   "skips": 0,
+   "error": null
   }
  ]
 }
