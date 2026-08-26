@@ -26,7 +26,7 @@ $r:\mathbb{R}^{d}\to\mathbb{R}$, the object we wish to sample from is the
 \end{equation}
 whose terminal marginal is $p^{\star}(x)\propto p_{\Base}(x)\,e^{r(x)}$. This is
 the common form of reward-guided generation and of diffusion fine-tuning
-\citep{uehara2024finetuning}, and it also covers Boltzmann sampling: to target
+\citep{song2021sde,black2024ddpo,uehara2024finetuning}, and it also covers Boltzmann sampling: to target
 $\pi\propto e^{-E}$ one sets $r = -E - \log p_{\Base}$, which is how we
 instantiate the GMM-40 benchmark in \S\ref{sec:07_experiments}.
 
@@ -39,7 +39,7 @@ the denoising direction of DDPM-style presentations.}
 
 \paragraph{The base family we use.}
 \label{subsec:base-family}
-Our base processes are \emph{pinned interpolants}: $X_0=0$, a prescribed
+Our base processes are \emph{pinned interpolants} \citep{albergo2023interpolants,lipman2023flowmatching}: $X_0=0$, a prescribed
 terminal marginal $\nu$, and a Brownian bridge between the two given
 $X_1=x_1$. The induced drift $f(x,t)=\E[(X_1-X_t)/(1-t)\mid X_t=x]$ vanishes
 exactly when $\nu=\mathcal{N}(0,2aI)$, recovering driftless Brownian motion
@@ -58,13 +58,15 @@ controlled dynamics $\mathrm{d}X_t=(f+u)\,\mathrm{d}t+\sqrt{2a}\,\mathrm{d}W_t$
 with path measure $\mathbb{P}^{u}$, Girsanov's theorem gives
 $\mathrm{KL}(\mathbb{P}^{u}\,\|\,\mathbb{P})=\E_{\mathbb{P}^u}\!\int_0^1
 \tfrac{1}{4a}\|u_t\|^{2}\,\mathrm{d}t$, so \eqref{eq:tilt} is the solution of
-the entropy-regularized control problem
+the entropy-regularized control problem \citep{daipra1991stochastic,leonard2014survey}
 \begin{equation}
   \max_{u}\ \ \E_{\mathbb{P}^{u}}\!\left[\,r(X_1)
     - \int_0^1 \frac{\|u_t\|^{2}}{4a}\,\mathrm{d}t\right],
   \label{eq:control}
 \end{equation}
-whose optimum is $\log Z$. The central object is the \emph{soft value function}
+whose optimum is $\log Z$. The central object is the \emph{soft value function}, the continuous-time
+counterpart of the soft value of maximum-entropy reinforcement learning
+\citep{haarnoja2017softq,levine2018rlasinference},
 \begin{equation}
   \Vf(x,t) \;=\; \log \E_{\Base}\!\big[\,e^{r(X_1)} \,\big|\, X_t=x\,\big],
   \label{eq:value}
@@ -87,7 +89,9 @@ Monte-Carlo targets}.
 \subsection{The H-martingale property}
 \label{subsec:hmartingale}
 
-Exponentiating \eqref{eq:value} linearizes the HJB equation. Writing
+Exponentiating \eqref{eq:value} linearizes the HJB equation --- the Hopf--Cole
+change of variables underlying linearly-solvable and path-integral control
+\citep{kappen2005path,todorov2009efficient}. Writing
 $h = e^{\Vf}$, Feynman--Kac gives $\partial_t h + \mathcal{L}h = 0$: $h$ is
 space-time harmonic for the base process, so $h(X_t,t)$ is a $\mathbb{P}$-martingale,
 and \eqref{eq:optimal-control} is exactly the Doob $h$-transform drift
@@ -115,8 +119,10 @@ conditioning problem of \S\ref{sec:03_expmse}--\S\ref{sec:04_bregman}.
 
 \paragraph{(ii) The identity is twist-independent.}
 Suppose we do not want to draw $X_s$ from the base kernel --- for instance
-because base samples rarely reach high-reward regions
-(\S\ref{sec:06_sparsity_onpolicy}). Propose instead under any adapted twist
+because base samples rarely reach high-reward regions: importance sampling for
+$\E[e^{r}]$ needs on the order of $e^{\mathrm{KL}(\mathbb{P}^{\star}\|\mathbb{P})}$
+samples \citep{chatterjee2018sample}, which is the quantitative form of the
+sparsity argument of \S\ref{sec:06_sparsity_onpolicy}. Propose instead under any adapted twist
 $u$, giving the drift $f+u$ and path measure $\mathbb{P}^{u}$, and correct by
 the Radon--Nikodym derivative of the base law with respect to it. By Girsanov's
 theorem, restricted to the interval $[t,s]$,
@@ -142,8 +148,9 @@ In an Euler--Maruyama discretization \eqref{eq:girsanov-rho} factorizes over
 steps, each contributing
 $-\,u\cdot\Delta B/(2a) - \|u\|^{2}\Delta t/(4a)$ with
 $\Delta B\sim\mathcal{N}(0,2a\Delta t\,I)$; this per-step ratio is the
-incremental weight used in twisted-SMC samplers
-\citep{singhal2025fksteering}. The twist $u$ is therefore \emph{free}: it
+incremental weight of twisted-SMC samplers, a construction that predates its
+diffusion applications
+\citep{whiteley2014twisted,guarniero2017iapf,heng2020csmc,singhal2025fksteering}. The twist $u$ is therefore \emph{free}: it
 changes the variance of the target, never its mean. The proposal is a
 variance-reduction device, not a modeling choice --- which is what licenses the
 importance-sampling and SMC machinery of \S\ref{sec:06_sparsity_onpolicy}
@@ -153,8 +160,7 @@ without changing the object being learned.
 \subsection{How training pairs are formed}
 \label{subsec:targets}
 
-A learner $\Vf_\theta$ is fit to pairs $(x_t, q)$. It is worth separating two
-kinds. \emph{Anchored} targets terminate at the true reward and satisfy
+A learner $\Vf_\theta$ is fit to pairs $(x_t, q)$, of two kinds. \emph{Anchored} targets terminate at the true reward and satisfy
 \eqref{eq:unbiased-target} exactly, so $e^{q}$ is unbiased for $e^{\Vf(x_t,t)}$
 however wrong the current $\Vf_\theta$ is. \emph{Bootstrapped} targets
 substitute the learner's own value at a later time, and satisfy no such
@@ -200,7 +206,8 @@ attached to the parent is the log-mean-exp over its siblings,
   \label{eq:bootstrap-target}
 \end{equation}
 It is worth being exact about what this estimates. Define the one-step backup
-operator $\mathcal{T}_s$ acting on a candidate value function $W$ by
+operator $\mathcal{T}_s$ --- the continuous-time analogue of the soft Bellman
+backup \citep{haarnoja2017softq} --- acting on a candidate value function $W$ by
 \begin{equation}
   (\mathcal{T}_s W)(x,t) \;=\; \log\E_{\Base}\!\big[\,e^{W(X_s,s)}\,\big|\,X_t=x\,\big].
   \label{eq:backup-op}
@@ -237,9 +244,13 @@ does not depend on the terminal law $\nu$ at all:
 because conditioning a Brownian bridge on an interior point leaves a Brownian
 bridge to that point, whatever the endpoint distribution. The expansion is
 therefore available for base models with nontrivial drift, not only for
-Brownian motion. Since $x_s$ came from the base marginal and $x_t$ from the
-base backward kernel, the pair $(x_t, q)$ carries the base joint law and
-\eqref{eq:hmart} applies unchanged. This turns one trajectory into many
+Brownian motion. The hypothesis that does the work here is about the
+\emph{marginal}, not the kernel: \emph{provided} $x_s$ is drawn from the base
+marginal $p_{\Base}^{(\cdot,s)}$ and $x_t$ from the backward kernel, the pair
+$(x_t,q)$ carries the base joint law and \eqref{eq:hmart} applies unchanged.
+That holds for the off-policy anchors above; \S\ref{sec:06_sparsity_onpolicy}
+returns to what happens when the points instead come from a twisted sweep, for
+which it does not. This turns one trajectory into many
 training pairs at earlier, noisier times, and is the mechanism behind our best
 on-policy variant (\S\ref{sec:06_sparsity_onpolicy}).
 

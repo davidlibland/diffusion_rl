@@ -2,5 +2,124 @@
 \section{The Spence loss: derivation and implementation}
 \label{sec:A_spence}
 
-% TODO: Bregman potential F, dilogarithm identities, population-minimizer
-% proof, branch-wise stable gradient, gamma-like uncertainty interpretation.
+\subsection{From the gradient weight to the potential}
+
+By Lemma~\ref{lem:minimizer}, a Bregman loss in log space reaches the
+optimizer only through the weight $w(y)=y\varphi''(y)$ in
+\eqref{eq:weight-grad}. We therefore specify $w$ and recover $\varphi$, rather
+than the other way round.
+
+Requirements \eqref{eq:req-over}--\eqref{eq:req-under} ask that the gradient
+grow linearly in $p=\ln y$ in both directions, giving $w(y)\sim \ln y/y$ as
+$y\to\infty$ and $w(y)\sim-\ln y$ as $y\to0$. The choice
+\begin{equation}
+  w(y)=\frac{\ln y}{y-1},
+  \qquad\text{hence}\qquad
+  \varphi''(y)=\frac{w(y)}{y}=\frac{\ln y}{y\,(y-1)},
+  \label{eq:a-phi2}
+\end{equation}
+meets both. It is positive on all of $(0,\infty)$, since $\ln y$ and $y-1$
+change sign together at $y=1$, and the singularity there is removable with
+$w(1)=1$. Equivalently $w(y)=1/L(1,y)$, the reciprocal of the logarithmic mean
+$L(a,b)=(b-a)/(\ln b-\ln a)$.
+
+Integrating \eqref{eq:a-phi2} twice gives the potential
+\begin{equation}
+  \varphi(y) \;=\; (1-y)\,\Spence(1-y) \;-\; \tfrac12\,y\ln^{2}y .
+  \label{eq:a-phi}
+\end{equation}
+The two constants of integration are immaterial: a Bregman divergence is
+unchanged by adding an affine function of $y$ to its potential, since the
+added terms cancel between $\varphi(T)-\varphi(y)$ and $\varphi'(y)(T-y)$.
+
+\subsection{Closed forms}
+
+Write $S(x)=\Spence(1-e^{x})$. Substituting $y=e^{p}$ for the prediction and
+$T=e^{q}$ for the target into $\Breg(T,y)$ with \eqref{eq:a-phi} gives the
+divergence in closed form,
+\begin{equation}
+  L(p,q) \;=\; \Breg\big(e^{q},e^{p}\big)
+  \;=\; \tfrac12 e^{q}\big(p^{2}-q^{2}\big)
+        \;+\;\big(e^{q}-1\big)\big(S(p)-S(q)\big),
+  \label{eq:a-value}
+\end{equation}
+which is the expression the implementation reports as the monitored loss
+value. Differentiating in $p$ and using the dilogarithm identity
+\begin{equation}
+  S'(x) \;=\; \Spence'(1-e^{x})\cdot(-e^{x})
+        \;=\; -\,\frac{x\,e^{x}}{e^{x}-1}
+        \;=\; \frac{x}{\mathrm{expm1}(-x)},
+  \label{eq:a-Sprime}
+\end{equation}
+which follows from $\Spence'(z)=-\ln(1-z)/z$, the cross terms cancel and leave
+\begin{equation}
+  \frac{\partial L}{\partial p}
+  \;=\; e^{q}p + \big(e^{q}-1\big)S'(p)
+  \;=\; p\,\frac{e^{p}-e^{q}}{e^{p}-1},
+  \label{eq:a-grad}
+\end{equation}
+recovering \eqref{eq:spence-grad}. It is this appearance of the Spence
+function in \eqref{eq:a-value} that names the loss.
+
+All four identities of this subsection --- \eqref{eq:a-phi2} as the second
+derivative of \eqref{eq:a-phi}, \eqref{eq:a-value} as $\Breg(e^{q},e^{p})$,
+\eqref{eq:a-grad} as its $p$-derivative, and \eqref{eq:a-Sprime} --- are
+verified symbolically in the accompanying code.
+
+\subsection{Numerical implementation}
+\label{subsec:a-numerics}
+
+Training never evaluates \eqref{eq:a-value}. The backward pass returns
+\eqref{eq:a-grad} directly, which matters: differentiating \eqref{eq:a-value}
+by automatic differentiation returns $\mathrm{NaN}$ in single precision once
+the \emph{target} reaches $q\gtrsim85$ nats, and again when prediction and
+target are both large (e.g.\ $p=q=100$), because the $e^{q}$ prefactor of
+\eqref{eq:a-value} overflows and multiplies an intermediate that has itself
+lost precision. Large predictions alone are harmless on this path --- $p=300$
+with $q=0$ differentiates correctly --- so the failure is driven by the
+target, which is exactly the quantity the learner does not control. A single
+such batch propagates $\mathrm{NaN}$ through the shared value network and
+poisons every subsequent update.
+
+Even in closed form, \eqref{eq:a-grad} must not be evaluated literally: both
+$e^{p}-e^{q}$ and $e^{p}-1$ overflow. We compute it branch-wise,
+\begin{equation}
+  \frac{\partial L}{\partial p} =
+  \begin{cases}
+    \displaystyle p\,\frac{\mathrm{expm1}(p)-\mathrm{expm1}(q)}{\mathrm{expm1}(p)},
+      & p<0,\\[2.2ex]
+    \displaystyle p\,\frac{\mathrm{expm1}(q-p)}{\mathrm{expm1}(-p)}, & p>0,\\[2.2ex]
+    -\,\mathrm{expm1}(q), & p=0,
+  \end{cases}
+  \label{eq:a-branches}
+\end{equation}
+which is finite for every finite float input once the guard below is
+applied: the $p>0$ branch evaluates $\mathrm{expm1}(q-p)$, which does overflow
+when $q-p\gtrsim88$ in single precision, and the $p<0$ branch has the same
+exposure through $\mathrm{expm1}(q)$. For $p<0$, $\mathrm{expm1}(p)$
+lies in $[-1,0)$ and the difference of \texttt{expm1} values is free of
+cancellation, while an underflowing $e^{q}$ degrades gracefully to $0$. For
+$p>0$, factoring $e^{p}$ out of numerator and denominator leaves both
+\texttt{expm1} arguments bounded above, so nothing overflows, and the
+expression tends to the true asymptote $p$. The $p=0$ case is the removable
+singularity, $\lim_{p\to0}p/\mathrm{expm1}(p)=1$. A final guard maps any
+residual non-finite value to $\pm10^{30}$; it is reachable only when the true
+gradient itself exceeds the float range, e.g.\ $e^{q}=\infty$, where training
+is already pathological and a large finite gradient at least gives Adam a
+correctly-signed step.
+
+\subsection{Where the Spence weight sits}
+
+The three weights of Table~\ref{tab:loss-family} are ordered at both extremes:
+as $y\to\infty$, $1/y < \ln y/(y-1) < 2y$, and as $y\to0^{+}$,
+$2y < \ln y/(y-1) < 1/y$. In this asymptotic sense the Spence loss
+interpolates squared error and Itakura--Saito rather than introducing an
+unrelated third behaviour.
+
+The ordering is asymptotic and not global, and it is worth being precise about
+which half fails. Against Itakura--Saito it never fails: $w(y)<1/y$ for every
+$y<1$ and $w(y)>1/y$ for every $y>1$, the two crossing exactly once, at $y=1$,
+where both equal $1$. Against squared error it does fail: $2y<w(y)$ holds only
+on $(0,y^{\star})$ with $y^{\star}=0.62614\ldots$ the root of
+$2y(y-1)=\ln y$, and on $(y^{\star},1)$ --- that is, for predictions
+$p\in(-0.468,0)$ --- the Spence weight drops below the squared-error weight.

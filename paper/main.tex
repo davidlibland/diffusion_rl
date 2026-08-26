@@ -9,6 +9,9 @@
 \newtheorem{lemma}{Lemma}
 \newtheorem{proposition}{Proposition}
 \newtheorem{definition}{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+\theoremstyle{plain}
 
 % Notation
 \newcommand{\Vf}{V}                                  % value function
@@ -35,19 +38,18 @@ regression has gradients that explode for over-predictions and, worse, vanish
 for under-predictions, where the model is most wrong and gradient clipping
 cannot help. We observe that every Bregman divergence has the value function as
 its population minimizer, and that such a loss reaches the optimizer only
-through a scalar \emph{gradient weight} $w(u)=u\varphi''(u)$ on the exponential-space
+through a scalar \emph{gradient weight} $w(y)=y\varphi''(y)$ on the exponential-space
 residual---so the design space is exactly the choice of $w$, with squared error
-($w=2u$) and the Itakura--Saito divergence ($w=1/u$) as its two extremes. We
-then solve for the weight $w(u)=\ln u/(u-1)$ whose gradient is linear in the
-log-space prediction in \emph{both} tails, yielding the \emph{Spence
-loss}\footnote{Named for the Spence (dilogarithm) function $\Spence$ appearing
-in its value; in our code and experiments it is the \texttt{quad} loss.}: a
-closed-form, numerically stable gradient under which neither over- nor
-under-predictions blow up or die. A secondary contribution analyzes why
-high-dimensional value learning is signal-sparse and studies on-policy
-importance-sampling schemes. We validate on 2-moons, a dimensional-scaling
-benchmark designed for clean statistical reads, and GMM-40, where our
-log-partition estimate is competitive with published diffusion samplers.
+($w=2y$) and the Itakura--Saito divergence ($w=1/y$) as its two extremes. We
+then solve for the weight $w(y)=\ln y/(y-1)$ whose gradient grows only
+linearly in the log-space prediction in \emph{both} tails, yielding the
+\emph{Spence loss}\footnote{Named for the Spence (dilogarithm) function
+$\Spence$ appearing in its value.} and a closed-form, numerically stable
+gradient. A secondary contribution analyzes
+why high-dimensional value learning is signal-sparse and studies on-policy
+importance-sampling schemes. We evaluate on a dimensional-scaling benchmark
+designed for clean statistical reads, spanning $d=2$ to $512$, and on the
+GMM-40 sampler benchmark.
 \end{abstract}
 
 \input{sections/01_intro}

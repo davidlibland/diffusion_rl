@@ -42,7 +42,7 @@
 
 @article{akhoundsadegh2024idem,
   title={Iterated Denoising Energy Matching for Sampling from Boltzmann Densities},
-  author={Akhound-Sadegh, Tara and Rector-Brooks, Jarrid and Bose, Avishek Joey and Mittal, Sarthak and Lemos, Pablo and Liu, Cheng-Hao and Sendera, Marcin and Ravanbakhsh, Siamak and Gauthier, Gauthier and Tong, Alexander},
+  author={Akhound-Sadegh, Tara and Rector-Brooks, Jarrid and Bose, Avishek Joey and Mittal, Sarthak and Lemos, Pablo and Liu, Cheng-Hao and Sendera, Marcin and Ravanbakhsh, Siamak and Gidel, Gauthier and Bengio, Yoshua and Malkin, Nikolay and Tong, Alexander},
   journal={arXiv preprint arXiv:2402.06121}, year={2024}}
 
 @article{sendera2024offpolicy,
@@ -112,3 +112,199 @@
   pages   = {1705--1749},
   year    = {2005},
 }
+
+% ── Bregman / proper scoring rules ───────────────────────────────────────────
+@article{bregman1967relaxation,
+  title={The relaxation method of finding the common point of convex sets and its application to the solution of problems in convex programming},
+  author={Bregman, L. M.},
+  journal={USSR Computational Mathematics and Mathematical Physics},
+  volume={7}, number={3}, pages={200--217}, year={1967}}
+
+@article{gneiting2007proper,
+  title={Strictly Proper Scoring Rules, Prediction, and Estimation},
+  author={Gneiting, Tilmann and Raftery, Adrian E.},
+  journal={Journal of the American Statistical Association},
+  volume={102}, number={477}, pages={359--378}, year={2007}}
+
+@article{savage1971elicitation,
+  title={Elicitation of Personal Probabilities and Expectations},
+  author={Savage, Leonard J.},
+  journal={Journal of the American Statistical Association},
+  volume={66}, number={336}, pages={783--801}, year={1971}}
+
+@article{azoury2001relative,
+  title={Relative Loss Bounds for On-Line Density Estimation with the Exponential Family of Distributions},
+  author={Azoury, Katy S. and Warmuth, Manfred K.},
+  journal={Machine Learning}, volume={43}, number={3}, pages={211--246}, year={2001}}
+
+% ── Itakura-Saito and the beta-divergence family ─────────────────────────────
+@inproceedings{itakura1968analysis,
+  title={Analysis synthesis telephony based on the maximum likelihood method},
+  author={Itakura, Fumitada and Saito, Shuzo},
+  booktitle={Proc. 6th International Congress on Acoustics}, pages={C17--C20},
+  address={Tokyo}, year={1968}}
+
+@article{fevotte2009isnmf,
+  title={Nonnegative Matrix Factorization with the Itakura-Saito Divergence: With Application to Music Analysis},
+  author={F{\'e}votte, C{\'e}dric and Bertin, Nancy and Durrieu, Jean-Louis},
+  journal={Neural Computation}, volume={21}, number={3}, pages={793--830}, year={2009}}
+
+@article{fevotte2011beta,
+  title={Algorithms for nonnegative matrix factorization with the beta-divergence},
+  author={F{\'e}votte, C{\'e}dric and Idier, J{\'e}r{\^o}me},
+  journal={Neural Computation}, volume={23}, number={9}, pages={2421--2456}, year={2011}}
+
+@article{cichocki2010families,
+  title={Families of Alpha- Beta- and Gamma- Divergences: Flexible and Robust Measures of Similarities},
+  author={Cichocki, Andrzej and Amari, Shun-ichi},
+  journal={Entropy}, volume={12}, number={6}, pages={1532--1568}, year={2010}}
+
+@article{carlson1972logmean,
+  title={The Logarithmic Mean}, author={Carlson, B. C.},
+  journal={American Mathematical Monthly}, volume={79}, number={6},
+  pages={615--618}, year={1972}}
+
+% ── value-regression instability (prior fixes that break unbiasedness) ───────
+@article{farebrother2024stopregressing,
+  title={Stop Regressing: Training Value Functions via Classification for Scalable Deep RL},
+  author={Farebrother, Jesse and Orbay, Jordi and Vuong, Quan and Ta{\"i}ga, Adrien Ali and Chebotar, Yevgen and Xiao, Ted and Irpan, Alex and Levine, Sergey and Castro, Pablo Samuel and Faust, Aleksandra and Kumar, Aviral and Agarwal, Rishabh},
+  journal={arXiv preprint arXiv:2403.03950}, year={2024}}
+
+@article{vanhasselt2016popart,
+  title={Learning values across many orders of magnitude},
+  author={van Hasselt, Hado and Guez, Arthur and Hessel, Matteo and Mnih, Volodymyr and Silver, David},
+  journal={arXiv preprint arXiv:1602.07714}, year={2016}}
+
+@article{pohlen2018observe,
+  title={Observe and Look Further: Achieving Consistent Performance on Atari},
+  author={Pohlen, Tobias and Piot, Bilal and Hester, Todd and Azar, Mohammad Gheshlaghi and Horgan, Dan and Budden, David and Barth-Maron, Gabriel and van Hasselt, Hado and Quan, John and Ve{\v c}er{\'i}k, Mel and Hessel, Matteo and Munos, R{\'e}mi and Pietquin, Olivier},
+  journal={arXiv preprint arXiv:1805.11593}, year={2018}}
+
+@inproceedings{pascanu2013difficulty,
+  title={On the difficulty of training Recurrent Neural Networks},
+  author={Pascanu, Razvan and Mikolov, Tomas and Bengio, Yoshua},
+  booktitle={ICML}, year={2013}}
+
+@article{blanchard2021logsumexp,
+  title={Accurately computing the log-sum-exp and softmax functions},
+  author={Blanchard, Pierre and Higham, Desmond J. and Higham, Nicholas J.},
+  journal={IMA Journal of Numerical Analysis}, volume={41}, number={4},
+  pages={2311--2330}, year={2021}}
+
+% ── GFlowNet / trajectory-balance competitors ────────────────────────────────
+@article{malkin2022trajectory,
+  title={Trajectory balance: Improved credit assignment in {GFlowNets}},
+  author={Malkin, Nikolay and Jain, Moksh and Bengio, Emmanuel and Sun, Chen and Bengio, Yoshua},
+  journal={arXiv preprint arXiv:2201.13259}, year={2022}}
+
+@article{madan2023subtb,
+  title={Learning {GFlowNets} from partial episodes for improved convergence and stability},
+  author={Madan, Kanika and Rector-Brooks, Jarrid and Korablyov, Maksym and Bengio, Emmanuel and Jain, Moksh and Nica, Andrei and Bosc, Tom and Bengio, Yoshua and Malkin, Nikolay},
+  journal={arXiv preprint arXiv:2209.12782}, year={2022}}
+
+@article{richter2020vargrad,
+  title={{VarGrad}: A Low-Variance Gradient Estimator for Variational Inference},
+  author={Richter, Lorenz and Boustati, Ayman and N{\"u}sken, Nikolas and Ruiz, Francisco J. R. and Akyildiz, {\"O}mer Deniz},
+  journal={arXiv preprint arXiv:2010.10436}, year={2020}}
+
+@article{venkatraman2024rtb,
+  title={Amortizing intractable inference in diffusion models for vision, language, and control},
+  author={Venkatraman, Siddarth and Jain, Moksh and Scimeca, Luca and Kim, Minsu and Sendera, Marcin and Hasan, Mohsin and Rowe, Luke and Mittal, Sarthak and Lemos, Pablo and Bengio, Emmanuel and Adam, Alexandre and Rector-Brooks, Jarrid and Bengio, Yoshua and Berseth, Glen and Malkin, Nikolay},
+  journal={arXiv preprint arXiv:2405.20971}, year={2024}}
+
+@article{zhang2024dgfs,
+  title={Diffusion Generative Flow Samplers: Improving learning signals through partial trajectory optimization},
+  author={Zhang, Dinghuai and Chen, Ricky T. Q. and Liu, Cheng-Hao and Courville, Aaron and Bengio, Yoshua},
+  journal={arXiv preprint arXiv:2310.02679}, year={2023}}
+
+% ── linearly-solvable control / Hopf-Cole ────────────────────────────────────
+@article{kappen2005path,
+  title={Path integrals and symmetry breaking for optimal control theory},
+  author={Kappen, Hilbert J.},
+  journal={Journal of Statistical Mechanics: Theory and Experiment}, year={2005},
+  note={arXiv:physics/0505066}}
+
+@article{todorov2009efficient,
+  title={Efficient computation of optimal actions}, author={Todorov, Emanuel},
+  journal={Proceedings of the National Academy of Sciences},
+  volume={106}, number={28}, pages={11478--11483}, year={2009}}
+
+@article{daipra1991stochastic,
+  title={A stochastic control approach to reciprocal diffusion processes},
+  author={Dai Pra, Paolo}, journal={Applied Mathematics and Optimization},
+  volume={23}, pages={313--329}, year={1991}}
+
+@article{leonard2014survey,
+  title={A survey of the {S}chr{\"o}dinger problem and some of its connections with optimal transport},
+  author={L{\'e}onard, Christian},
+  journal={Discrete and Continuous Dynamical Systems A}, volume={34},
+  number={4}, pages={1533--1574}, year={2014}}
+
+% ── max-entropy RL / soft values ─────────────────────────────────────────────
+@inproceedings{haarnoja2017softq,
+  title={Reinforcement Learning with Deep Energy-Based Policies},
+  author={Haarnoja, Tuomas and Tang, Haoran and Abbeel, Pieter and Levine, Sergey},
+  booktitle={ICML}, year={2017}}
+
+@article{levine2018rlasinference,
+  title={Reinforcement Learning and Control as Probabilistic Inference: Tutorial and Review},
+  author={Levine, Sergey}, journal={arXiv preprint arXiv:1805.00909}, year={2018}}
+
+% ── twisted SMC lineage ──────────────────────────────────────────────────────
+@article{whiteley2014twisted,
+  title={Twisted particle filters}, author={Whiteley, Nick and Lee, Anthony},
+  journal={The Annals of Statistics}, volume={42}, number={1},
+  pages={115--141}, year={2014}}
+
+@article{guarniero2017iapf,
+  title={The iterated auxiliary particle filter},
+  author={Guarniero, Pieralberto and Johansen, Adam M. and Lee, Anthony},
+  journal={Journal of the American Statistical Association}, year={2017},
+  note={arXiv:1511.06286}}
+
+@article{heng2020csmc,
+  title={Controlled Sequential Monte Carlo},
+  author={Heng, Jeremy and Bishop, Adrian N. and Deligiannidis, George and Doucet, Arnaud},
+  journal={The Annals of Statistics}, year={2020}, note={arXiv:1708.08396}}
+
+% ── importance sampling cost / signal sparsity ───────────────────────────────
+@article{chatterjee2018sample,
+  title={The sample size required in importance sampling},
+  author={Chatterjee, Sourav and Diaconis, Persi},
+  journal={The Annals of Applied Probability}, year={2018}, note={arXiv:1511.01437}}
+
+@inproceedings{rainforth2018tighter,
+  title={Tighter Variational Bounds are Not Necessarily Better},
+  author={Rainforth, Tom and Kosiorek, Adam R. and Le, Tuan Anh and Maddison, Chris J. and Igl, Maximilian and Wood, Frank},
+  booktitle={ICML}, year={2018}}
+
+% ── interpolants / reward-guided diffusion ───────────────────────────────────
+@article{albergo2023interpolants,
+  title={Stochastic Interpolants: A Unifying Framework for Flows and Diffusions},
+  author={Albergo, Michael S. and Boffi, Nicholas M. and Vanden-Eijnden, Eric},
+  journal={arXiv preprint arXiv:2303.08797}, year={2023}}
+
+@inproceedings{lipman2023flowmatching,
+  title={Flow Matching for Generative Modeling},
+  author={Lipman, Yaron and Chen, Ricky T. Q. and Ben-Hamu, Heli and Nickel, Maximilian and Le, Matt},
+  booktitle={ICLR}, year={2023}}
+
+@article{black2024ddpo,
+  title={Training Diffusion Models with Reinforcement Learning},
+  author={Black, Kevin and Janner, Michael and Du, Yilun and Kostrikov, Ilya and Levine, Sergey},
+  journal={arXiv preprint arXiv:2305.13301}, year={2023}}
+
+@article{song2021sde,
+  title={Score-Based Generative Modeling through Stochastic Differential Equations},
+  author={Song, Yang and Sohl-Dickstein, Jascha and Kingma, Diederik P. and Kumar, Abhishek and Ermon, Stefano and Poole, Ben},
+  journal={arXiv preprint arXiv:2011.13456}, year={2020}}
+
+@article{chen2024scld,
+  title={Sequential Controlled {L}angevin Diffusions},
+  author={Chen, Junhua and Richter, Lorenz and Berner, Julius and Blessing, Denis and Neumann, Gerhard and Anandkumar, Anima},
+  journal={arXiv preprint arXiv:2412.07081}, year={2024}}
+
+@article{blessing2024beyondelbos,
+  title={Beyond {ELBO}s: A Large-Scale Evaluation of Variational Methods for Sampling},
+  author={Blessing, Denis and Jia, Xiaogang and Esslinger, Johannes and Vargas, Francisco and Neumann, Gerhard},
+  journal={arXiv preprint arXiv:2406.07423}, year={2024}}

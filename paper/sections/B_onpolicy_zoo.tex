@@ -1,5 +1,168 @@
 % !TEX root = ../main.tex
-\section{On-policy method zoo}
+\section{On-policy sampling: the method zoo, the levers, and what failed}
 \label{sec:B_onpolicy_zoo}
 
-% TODO
+\S\ref{sec:06_sparsity_onpolicy} reports the single on-policy configuration we
+recommend. This appendix records how we arrived at it, including the arms that did not
+work --- several of which are mechanisms the literature would predict should
+help.
+
+Unless stated otherwise, numbers are \emph{frac.\ closed} --- the fraction of
+the calibrated $6$-nat headroom closed at the plateau (\S\ref{sec:07_experiments})
+--- at $d=512$, on paired nested seeds, with $\pm$ one standard error.
+
+\subsection{The zoo}
+
+All on-policy arms run a twisted SMC sweep and differ in how targets are
+formed from it.
+
+\begin{itemize}\itemsep2pt
+\item \textbf{ssmc} (single-seed MC): the log-mean-exp over siblings of
+  \eqref{eq:bootstrap-target}, with Monte-Carlo terminal targets.
+\item \textbf{ssmc-td}: the same sweep with TD($\lambda$) targets, so the
+  regression target bootstraps through a $\lambda$-weighted mixture.
+\item \textbf{amctl} (ancestral MC + TD($\lambda$)): resampling ancestrally
+  rather than per-step.
+\item \textbf{fbrrt} / \textbf{fbrrt\_cv}: forward-backward
+  reverse-ratio-tracking variants that add their own drift modification, with
+  \texttt{\_cv} using an EMA shadow network as the policy.
+\end{itemize}
+
+\subsection{Two levers that worked, and they stack}
+
+\paragraph{Backward-noising expansion.}
+Reuse a sampled trajectory by noising each of its points backwards through
+\eqref{eq:backward-kernel} and attaching the same target. This adds training
+pairs at earlier, noisier times, precisely where an on-policy corridor is
+thinnest. At $d=512$ it gains $+3.0$ over the ssmc control and reaches a
+statistical tie with off-policy ($-1.8\pm1.2$, $p=0.18$).
+
+\paragraph{Finer integration.}
+Raising the Euler--Maruyama step count from the law-fitted $\approx19$ to $60$
+gains $+3.2$. The fitted law was wrong at high dimension for a mundane reason:
+the anchor sweeps ran at $d\le128$, where the integrator bias is invisible.
+
+\paragraph{They stack.}
+Together (\texttt{expand\_ns60}) they gain $+7.0\pm2.5$ over the ssmc control,
+close to the sum of the parts, confirming independent mechanisms --- one acts
+on where data sits, the other on sampling bias. This was the first on-policy
+configuration to land above off-policy at $d=512$, and at the full $30$-seed
+grid it holds: $37.1\pm2.7$ against off-policy's $34.3\pm2.6$, a paired
+$+2.8\pm1.4$.
+
+\subsection{The control that mattered: staleness}
+
+Both levers multiply the number of rows produced per trajectory, so the
+dataset regenerates up to $6\times$ less often ($\approx1{,}920$ gradient steps
+between regenerations versus $\approx304$ for the control). Slow-moving data is
+an implicit target network, and could by itself explain the gain. The
+\texttt{\_sub} arms subsample each epoch uniformly back to the control's row
+count \emph{after} generation, restoring the original cadence exactly.
+
+\begin{center}\small
+\begin{tabular}{lccc}
+\toprule
+arm & mean & vs.\ ssmc control & vs.\ its full arm \\
+\midrule
+\texttt{expand\_ns60\_sub} & $34.7\pm3.5$ & $+8.9\pm1.4$ ($p<.001$, 10/10) & $+1.9\pm2.6$ ($p=.48$) \\
+\texttt{expand\_sub}       & $28.7\pm1.6$ & $+2.8\pm2.3$ & $-0.2\pm1.5$ ($p=.91$) \\
+\texttt{ns60\_sub}         & $27.9\pm1.9$ & $+2.0\pm1.5$ & $-1.2\pm1.4$ ($p=.39$) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Staleness explains none of the gains: every \texttt{\_sub} arm matches its
+full-epoch counterpart within noise. The controls also separate the
+mechanisms. \texttt{ns60\_sub} keeps the integrator gain while discarding two
+thirds of its rows, so that lever lives in the sampling and not the row count;
+\texttt{expand\_sub} shows the expanded off-path rows are worth at least as
+much as the on-path rows they displace. These arms consume the same training
+rows as everything else while \emph{discarding} most of what they generate, and
+still win.
+
+\subsection{Generalisation across methods, and one clean split}
+
+Applying the recipe to the other on-policy methods at $d=512$ (paired seeds
+0--9, off-policy control $30.7$):
+
+\begin{center}\small
+\begin{tabular}{llcc}
+\toprule
+method & arm & mean & vs.\ own control \\
+\midrule
+ssmc-td & \texttt{expand\_ns60}     & $32.1\pm2.0$ & $+6.5\pm2.0$ ($p=.011$) \\
+ssmc-td & \texttt{expand\_ns60\_sub} & $27.4\pm1.9$ & $+1.8\pm1.3$ ($p=.19$) \\
+amctl   & \texttt{expand\_ns60}     & $27.8\pm2.5$ & $+8.0\pm1.6$ ($p=.001$, 10/10) \\
+amctl   & \texttt{expand\_ns60\_sub} & $28.5\pm1.8$ & $+8.6\pm1.3$ ($p<.001$, 10/10) \\
+fbrrt   & \texttt{expand\_ns60}     & $13.6\pm3.8$ & $+3.1\pm6.2$ ($p=.63$) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The recipe transfers to both SMC-TD methods, and the staleness control exposes
+a mechanistic split worth recording: ssmc and amctl, whose targets are pure
+Monte-Carlo, keep their full gain under \texttt{\_sub}, while ssmc-td --- the
+one method whose targets bootstrap --- loses most of its gain when the cadence
+is restored ($+6.5\to+1.8$). Bootstrapped targets genuinely benefit from a
+slower-moving dataset, on top of the placement effect. fbrrt does not benefit
+reliably, and its high-dimensional deficit is not recipe-shaped.
+
+\subsection{Folding the levers into the hyperparameter laws}
+
+Treating expansion fraction, step count and epoch size as tunable and refitting
+the per-dimension laws (with an added $d=512$ anchor) yields one configuration
+family that is significantly above off-policy at $d=8$--$32$ (up to $+13.4$
+paired) and never significantly below it anywhere in $2\le d\le512$. As in
+\S\ref{sec:07_experiments} we do not claim equivalence at the remaining
+dimensions: those rest on failure to reject, and we ran no equivalence test. The fitted laws chose \emph{nonzero
+expansion at every dimension} and a moderate constant step count ($29$--$33$,
+not the hand-set $60$).
+
+The fixed recipe, by contrast, cost up to $-15$ points at low dimension. The
+reason is instructive: it grafted \texttt{frac}$=1.0$ and \texttt{n\_steps}$=60$
+onto hyperparameters fitted under the old configuration. Moderate expansion
+with co-adapted learning rate and twist is harmless at $d=2$--$8$; the damage
+came from un-co-adapted knobs, not from expansion itself.
+
+\subsection{What failed}
+\label{subsec:b-failures}
+
+\paragraph{Concentrating on the reward corridor (oracle twist).}
+Twisting the sampler toward high reward using the \emph{analytic} value ---
+the strongest possible twist --- makes things worse at $d=512$, and splicing
+off-policy coverage back in does not rescue it: the blended arm sits $3.7$
+below the plain ssmc control and $8.5$ below off-policy. Unweighting the
+corridor sources recovers only about half the damage. On this benchmark family at $d=512$, broad coverage of the marginal beat
+concentration on the corridor in every arm we ran, which is why the
+recommended method expands coverage rather than sharpening the twist.
+
+\paragraph{Trust-region control of the twist.}
+Implementing the KL-budgeted twist update of \citet{wang2026tritsmc} left the
+twist untouched: the mixing coefficient hit $\beta=1.0$ at all $\approx50$
+updates even at the tightest budget, so every budget produced bit-identical
+runs. The learned twist already moves far slower than any reasonable KL
+budget. This null retroactively explains why EMA and staleness knobs barely
+move ssmc --- its twist is not the fast-moving object; for ssmc-td the
+bootstrapped targets are.
+
+\paragraph{Ramped concentration.}
+Introducing the oracle twist gradually rather than at once does not help. Ramp
+speed was varied over two orders of magnitude and had no effect
+($20.1/19.2/20.9$ across the scan; a slow ramp spanning most of training gives
+$20.2\pm1.4$, statistically identical to the instant ramp at $p=.75$).
+Concentration harm is ramp-speed invariant in every reachable regime.
+
+\paragraph{Both extremes of importance correction.}
+Within the expansion family the weighting scheme traces a clean bias--variance
+U: uniform weights (no correction, biased targets) give $18.0\pm1.7$; raw
+weights clamped at $100\times$ (unbiased, high variance) give $21.9\pm2.7$; the
+dual-tempered weights of \citet{wang2026tritsmc} give $25.2\pm3.4$. The
+tempered form is the one mechanism from the trust-region literature we adopt.
+
+\paragraph{Known-open.}
+\texttt{fbrrt\_cv} returns negative frac.\ closed at $d\ge128$, i.e.\ it ends
+below the base process; we have not audited this and make no claim about the
+variant. The hidden width is capped at $256$ for all $d\ge8$, so
+capacity--dimension interaction is unexplored, and the $6$-nat headroom is a
+single difficulty point --- the crossover dimension between on- and off-policy
+very likely moves with it.

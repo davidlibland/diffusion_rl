@@ -45,10 +45,14 @@ def log_quadratic_bregman_grad(input: torch.Tensor, target: torch.Tensor):
                p -> inf this tends to the true asymptote  dL/dp -> p)
       p = 0 :  -expm1(q)        (the removable singularity's limit)
 
-    The naive autograd of the loss NaNs for p >~ 88 in float32
-    (Spence1mExp.backward evaluates e^p/expm1(p) = inf/inf) and returns
-    -inf for q >~ 88 -- one prediction spike then poisons the weights and
-    every subsequent loss is non-finite.
+    The naive autograd path (differentiating _log_quadratic_bregman_value)
+    returns NaN in float32 once the TARGET reaches q >~ 85, and again when
+    input and target are both large (e.g. p = q = 100): the e^q prefactor of
+    the value overflows and multiplies an intermediate that has already lost
+    precision.  Large inputs alone are fine on that path (p = 300, q = 0
+    differentiates correctly), so the failure is driven by the target -- the
+    one quantity the learner does not control.  One such batch then poisons
+    the weights and every subsequent loss is non-finite.
     """
     p, q = input, target
     # NaN-init: lanes not selected by any branch below (p = NaN) stay NaN and

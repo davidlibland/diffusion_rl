@@ -1,5 +1,119 @@
 % !TEX root = ../main.tex
-\section{Signal sparsity and on-policy learning}
+\section{Signal sparsity and on-policy sampling}
 \label{sec:06_sparsity_onpolicy}
 
-% TODO
+A better-conditioned loss fixes what happens once a high-value target is in
+the batch. It does nothing about how rarely one arrives. This section is about
+the second problem, which is what limits value learning in high dimension.
+
+\subsection{Why off-policy anchors run out}
+
+The value is a log-sum-exp, so it is a soft maximum: the expectation
+$\E_{\Base}[e^{r(X_1)}]$ is dominated by whatever region of the base marginal
+carries the largest reward, and the size of that region shrinks as the tilt
+grows. The cost is quantitative rather than heuristic. Estimating $\E[e^{r}]$
+by importance sampling from $\mathbb{P}$ requires on the order of
+$\exp\mathrm{KL}(\mathbb{P}^{\star}\,\|\,\mathbb{P})$ samples
+\citep{chatterjee2018sample}, and that KL is exactly the reward tilt the task
+asks for. Off-policy anchors draw $x_1$ from the base marginal $\nu$ with no
+reference to $r$ (\S\ref{subsec:targets}), so their useful-target rate decays
+on that schedule. Every anchor still carries a valid target; almost all of them
+carry an uninformative one.
+
+\begin{remark}[Our benchmark holds this cost fixed, by construction]
+\label{rem:kl-fixed}
+The constant-headroom calibration of \S\ref{subsec:design} bounds the very
+quantity this argument turns on. Writing the headroom as
+$\E_{\mathbb{P}^{\star}}[r]-\E_{\Base}[r]=6$ nats and using
+$\log Z=\max_u\{\E[r]-\mathrm{KL}\}$, one gets
+$\mathrm{KL}(\mathbb{P}^{\star}\|\mathbb{P})=\E_{\mathbb{P}^{\star}}[r]-\log Z$,
+and since $\log Z=\log\E_{\Base}[e^{r}]\ge\E_{\Base}[r]$ by Jensen this is at
+most the headroom, $\mathrm{KL}\le 6$. Measured on our instances it
+is $1.4$--$2.6$ nats and \emph{flat} in $d$ ($1.36$, $2.10$, $2.55$, $2.60$,
+$1.83$ at $d=2,8,32,128,512$). The importance-sampling cost is therefore
+bounded and roughly dimension-independent here. That is the design working as
+intended --- dimension is the only factor varying --- but it means the study
+tests on-policy sampling \emph{at} fixed sparsity rather than testing how the
+benefit scales \emph{with} sparsity. We return to this in
+\S\ref{sec:07_experiments} and \S\ref{sec:09_conclusion}.
+\end{remark}
+
+The way out is already available. By \S\ref{sec:02_setting}(ii) the
+H-martingale identity survives \emph{any} adapted twist once the Girsanov ratio
+\eqref{eq:girsanov-rho} is applied, so the sampler may be chosen freely to put
+mass where the integrand is large without changing the object being learned.
+Since the optimal twist is $2a\nabla \Vf$ and $\Vf$ is what we are fitting, the
+learner supplies its own proposal --- a self-consistent loop of the same shape
+as controlled SMC \citep{heng2020csmc}.
+
+\subsection{Coverage beats concentration}
+
+The obvious move is to sharpen the twist and concentrate on the reward
+corridor. In our dimensional-scaling study that is consistently the wrong move.
+Twisting with the \emph{analytic} value --- the strongest twist available, and
+an oracle no method could actually learn --- makes matters worse at $d=512$,
+and splicing off-policy coverage back alongside it does not rescue the arm
+(App.~\ref{subsec:b-failures}). The failure is not one of tuning: introducing
+the concentration gradually rather than at once leaves the outcome unchanged
+across two orders of magnitude of ramp speed.
+
+The reading we take is that in high dimension a concentrated sampler buys
+target quality at a ruinous price in coverage. The corridor is a thin set; a
+value network trained only along it is unconstrained everywhere else, and the
+guided rollouts that follow immediately leave the region where it was fitted.
+
+\subsection{The method we recommend}
+
+Accordingly the useful lever is not a sharper twist but a \emph{wider} one. We
+keep the mild twist the learner produces on its own and add coverage in the
+place the corridor is thinnest, using two modifications.
+
+\begin{itemize}\itemsep2pt
+\item \textbf{Backward-noising expansion.} Each sampled point $(x_s,s)$ is
+  noised backwards through the base backward kernel
+  \eqref{eq:backward-kernel} and the target is attached to the noised point as
+  well, converting one trajectory into many training pairs at earlier, noisier
+  times. The kernel is independent of the terminal law
+  (App.~\ref{sec:D_proofs}), so the construction is available for any
+  pinned-interpolant base model, not only for Brownian motion.
+
+  One caveat needs stating precisely, because it is easy to overstate this
+  step. The identity \eqref{eq:hmart} transfers the target exactly when the
+  point being noised is \emph{base}-distributed, as it is for the off-policy
+  anchors of \S\ref{subsec:targets}. Under a twisted sweep it is not:
+  $x_s\sim\mu\neq p_{\Base}^{(s)}$, so the conditional law of $x_s$ given the
+  noised $x_t$ is $\mu(x_s)p_{\Base}(x_t\mid x_s)$ renormalised, which is not
+  the base conditional, and the Girsanov weight of \eqref{eq:girsanov-rho}
+  does not repair it --- that weight corrects the forward sweep, not the
+  reversal. Carrying the sweep's accumulated ratio $\rho_{0\to s}$ as a row
+  weight restores exactness; the arms reported here do not, so the expanded
+  rows are biased under the twist. We report this as an empirically useful
+  approximation rather than an exact identity, which is what the ablations in
+  App.~\ref{sec:B_onpolicy_zoo} actually establish.
+\item \textbf{Finer integration.} A larger Euler--Maruyama step count for the
+  sweep. The two are independent --- one changes where data sits, the other
+  changes sampling bias --- and their gains are close to additive.
+\end{itemize}
+
+Neither is a target-network effect in disguise. Both modifications multiply the
+rows produced per trajectory and so slow the dataset's regeneration by up to
+$6\times$, which would be an obvious confound. Subsampling each epoch back to
+the original cadence \emph{after} generation leaves every gain intact
+(App.~\ref{sec:B_onpolicy_zoo}); the effect is where the data sits, not how
+slowly it moves.
+
+\subsection{Result}
+
+Fitting the expansion fraction and step count as part of the per-dimension
+hyperparameter laws, rather than hand-setting them, yields a single
+configuration family that is significantly above off-policy training at
+$d=8$--$32$ and never significantly below it anywhere in $2\le d\le512$
+(\S\ref{sec:07_experiments}, Fig.~\ref{fig:dimscaling}). The fitted laws select
+nonzero expansion at every dimension.
+
+Two scope conditions. The recipe was tuned on this benchmark family, and it
+does not transfer unchanged to the Boltzmann targets of
+\S\ref{sec:07_experiments}; and all of our rewards are cheap to evaluate, so we
+count samples rather than reward calls (\S\ref{sec:09_conclusion}). The zoo of
+alternative on-policy methods, the mechanisms that failed, and the per-method
+ablations are in App.~\ref{sec:B_onpolicy_zoo}.

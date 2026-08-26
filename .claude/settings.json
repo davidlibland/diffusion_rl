@@ -46,7 +46,18 @@
       "Bash(nohup python notebooks/ssmc_mc_bias_sweep.py)",
       "Bash(ps -p 10655 -o pid,etime,comm)",
       "Bash(nohup python notebooks/optuna_offpolicy_pipeline.py)",
-      "Bash(ps -p 46007 -o etime=)"
+      "Bash(ps -p 46007 -o etime=)",
+      "Bash(python -c ' *)",
+      "Bash(python -m pytest tests/models/test_on_policy.py -x -q)",
+      "Bash(git -C /home/dlibland/dev/diffusion_rl stash -q)",
+      "Bash(python -m pytest tests/models/test_discrete_diffusion.py -q)",
+      "Bash(git -C /home/dlibland/dev/diffusion_rl stash pop -q)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('experiments/bs4_moons/2026-06-10/optuna_fbrrt_bs4_sweep.py'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "Bash(bash /tmp/stage3_rerun.sh)",
+      "Bash(python experiments/bs4_moons/2026-06-10/make_report_assets.py)",
+      "Bash(python -m pytest tests/losses/test_log_quadratic_bregman.py -q)",
+      "Bash(python -m pytest tests/losses/test_log_quadratic_bregman.py::test_gradient_zero_at_minimum_and_limit_at_p_zero -q)",
+      "Bash(python -m pytest tests/losses/ -q)"
     ],
     "additionalDirectories": [
       "/tmp"

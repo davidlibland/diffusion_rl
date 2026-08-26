@@ -2,4 +2,64 @@
 \section{Related work}
 \label{sec:08_related}
 
-% TODO
+\paragraph{Reward-guided diffusion as stochastic control.}
+Casting diffusion fine-tuning as entropy-regularized control, with the tilted
+path measure \eqref{eq:tilt} as the optimum, follows
+\citet{uehara2024finetuning}; the underlying variational identity is classical
+\citep{daipra1991stochastic,leonard2014survey}. That the exponentiated value is
+space-time harmonic, so that the optimal drift is a Doob $h$-transform, is the
+Hopf--Cole structure of linearly-solvable and path-integral control
+\citep{kappen2005path,todorov2009efficient}, and $\Vf$ is the continuous-time
+soft value of maximum-entropy reinforcement learning
+\citep{haarnoja2017softq,levine2018rlasinference}. Our contribution is not the
+setting but what to do with the regression problem it hands you.
+
+\paragraph{Losses for diffusion samplers.}
+The closest competing work changes the \emph{objective} rather than the
+divergence: log-variance and adjoint losses
+\citep{nusken2021logvariance,richter2020vargrad,domingoenrich2024adjoint,domingoenrich2023socm}
+replace pointwise regression with a path-space functional, and the
+trajectory-balance family
+\citep{malkin2022trajectory,madan2023subtb,venkatraman2024rtb} imposes a
+flow-consistency constraint instead. \citet{zhang2024dgfs} is nearest of all,
+learning intermediate log-partition functions for a diffusion sampler by
+partial-trajectory optimization. These methods are well motivated and several
+beat ours on sample quality. As \S\ref{subsec:spence} notes, the distinction is
+that they buy conditioning by giving up the unbiased exponential-space target
+while we keep it; which trade is better is an empirical question we do not
+settle.
+
+\paragraph{Badly-scaled value regression.}
+The reinforcement-learning literature fixes this by transforming the target
+\citep{vanhasselt2016popart,pohlen2018observe,farebrother2024stopregressing};
+\S\ref{sec:03_expmse} explains why that route is closed to us.
+
+\paragraph{Bregman divergences.}
+The divergence is \citet{bregman1967relaxation}; that its expectation is
+minimized by the mean, and that Bregman divergences are exactly the losses
+with this property, is the Savage representation of proper scoring rules
+\citep{savage1971elicitation,gneiting2007proper,banerjee2005clustering}. The
+correspondence with exponential families is
+\citet{banerjee2005clustering,azoury2001relative}. Itakura--Saito
+\citep{itakura1968analysis} \citep{fevotte2009isnmf} and the $\beta$-divergence family
+\citep{fevotte2011beta,cichocki2010families} are the standard
+alternatives; \S\ref{sec:04_bregman} shows why no member of that family has the
+tail behaviour we need. We are not aware of prior use of the potential
+\eqref{eq:a-phi} as a loss.
+
+\paragraph{Twisted SMC.}
+Using a learned twist to steer a particle system, and correcting with the
+per-step kernel ratio, is the twisted particle filter
+\citep{whiteley2014twisted,guarniero2017iapf} and controlled SMC
+\citep{heng2020csmc}; the diffusion-model instantiations are
+\citet{wu2023tds,zhao2024twisted,singhal2025fksteering,skreta2025fkcorrectors},
+and \citet{wang2026tritsmc} adds the trust-region machinery we evaluate in
+App.~\ref{sec:B_onpolicy_zoo}. Our use is standard; the contribution there is
+the coverage-versus-concentration finding, which runs against the natural
+intuition that a sharper twist should help.
+
+\paragraph{Diffusion samplers.}
+The benchmark targets and baselines come from the neural-sampler literature
+\citep{zhang2021pis,vargas2023dds,richter2023dis,midgley2021fab,akhoundsadegh2024idem,sendera2024offpolicy,chen2024scld},
+evaluated following the protocol concerns raised by
+\citet{blessing2024beyondelbos}.
