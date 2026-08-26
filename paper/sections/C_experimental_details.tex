@@ -2,4 +2,66 @@
 \section{Experimental details}
 \label{sec:C_experimental_details}
 
-% TODO
+\paragraph{Problem family.}
+The base process is the pinned interpolant of \S\ref{sec:02_setting} with
+terminal law $\nu$ a $K=20$ component Gaussian mixture, means drawn
+$\mathcal{U}[-2,2]$, variances $\mathcal{U}[0.01,0.5]$, Dirichlet weights, and
+diffusion coefficient $a=1$. The reward is
+$r(x)=-s\,\|x-c\|^{2}$ with $c\sim\mathcal{U}[-1,1]^{d}$. All parameters are
+drawn once at $d_{\max}=512$ under a fixed seed and truncated, so the
+$d$-dimensional instance is the exact marginal of the largest one.
+
+\paragraph{Constant-headroom calibration.}
+The reward scale $s$ is set per instance by $200$ steps of geometric bisection
+so that $\E_{\pi^\star}[r]-\E_{\Base}[r]=6$ nats exactly. Both expectations are
+available in closed form for this family (Gaussian algebra), so the calibration
+is exact rather than estimated. The score \emph{frac.\ closed} is
+$(\text{plateau}-\E_{\Base}[r])/6$.
+
+\paragraph{Network and optimization.}
+A residual MLP value network $\Vf_\theta(x,t)$ with hidden width
+$\min(256,\max(64,32d))$, Adam, gradient batch size $4$. The output head is
+biased by the analytic $\Vf(0,0)$, and the loss is evaluated on inputs shifted
+by the same constant: with a log-partition gap of tens of nats the raw
+exponential-space gradients carry a factor $e^{\Vf(0,0)}$ and fall below Adam's
+$\varepsilon$. Shifting by a constant leaves the minimizer at $p=q$ and is
+again a Bregman divergence, in the tilted variables. This shift is applied
+identically to every loss arm; note that Itakura--Saito and log-space squared
+error are invariant to it, which is one of Itakura--Saito's advantages.
+
+\paragraph{Scoring.}
+Validation every $500$ steps by rolling out the controlled SDE and averaging
+terminal reward; the plateau is the mean of the last $8$ points of an
+$8$-point rolling mean. Runs are $15$k steps for the dimensional-scaling grid.
+
+\paragraph{Hyperparameter laws.}
+Rather than tuning per dimension, we run Optuna TPE+Hyperband anchor sweeps at
+$d\in\{2,16,128,512\}$ and fit each hyperparameter against $\log d$ by
+Theil--Sen regression, choosing between a constant and a sloped model by
+leave-one-out error with a $10\%$ bias toward constants. A method is then one
+configuration \emph{family}, evaluated at every dimension without further
+tuning --- which is what makes Fig.~\ref{fig:dimscaling} a statement about
+methods rather than about tuning effort.
+
+\paragraph{Loss ablation.}
+The ablation of \S\ref{sec:05_offpolicy_exp} trains off-policy only, so that
+the divergence is the sole difference between arms. Because the shared
+hyperparameters were originally fitted under the Spence loss, comparing at
+those values would be unfair to the alternatives; we therefore re-tune the
+learning rate per (loss, dimension) over a grid before running the seed grid,
+and report tuned-against-tuned.
+
+\paragraph{Compute.}
+All runs are small MLPs on a single machine. The dimensional-scaling grid is
+the dominant cost. We note one practical detail because it cost us a factor of
+four: these models are tiny and run at gradient batch size $4$, so they are
+latency-bound rather than throughput-bound; running many single-threaded CPU
+processes in parallel beats the GPU, and leaving PyTorch's intra-op thread
+count at its default oversubscribes the machine badly.
+
+\paragraph{Reproducibility.}
+Every dimensional-scaling number in the paper is recomputed from per-seed
+records by \texttt{figures/collect\_results.py}, which writes the
+\texttt{results.json} consumed by the figure scripts, so text and figures
+cannot disagree. The loss figure imports the shipped loss implementation
+directly rather than reimplementing it.

@@ -2,4 +2,148 @@
 \section{Experiments}
 \label{sec:07_experiments}
 
-% TODO
+\subsection{A benchmark designed for clean reads}
+\label{subsec:design}
+
+Comparing value-learning methods across dimension is harder than it looks,
+because the difficulty of the task moves with $d$ at the same time as the
+method's capacity to handle it. Three choices isolate the dimension.
+
+\paragraph{Constant headroom.}
+For each $d$ we calibrate the reward scale by bisection so that the gap between
+the optimally-controlled and the base terminal reward is exactly $6$ nats. The
+tilt therefore asks for the same amount of work at every dimension, and the
+natural score --- the fraction of that headroom a method closes --- is
+comparable across $d$. Without this the reward scale silently confounds every
+dimensional comparison.
+
+\paragraph{Coordinate-nested instances.}
+All mixture parameters are drawn once at $d_{\max}=512$ and \emph{truncated} to
+the target dimension. Because the components are spherical, the $d$-dimensional
+instance is the exact marginal of the $512$-dimensional one, so a curve across
+$d$ walks through nested versions of a single problem rather than a fresh
+random problem at each point.
+
+\paragraph{Paired seeds.}
+Seed $s$ denotes the same problem instance for every method, so all comparisons
+are paired and we report paired differences with paired tests. This matters:
+the across-seed spread of these tasks is large relative to the effects, and
+unpaired error bars would hide most of what we report.
+
+Every number below is $n=30$ seeds at $15$k gradient steps, scored by the
+smoothed-tail plateau of validation reward. Full protocol in
+App.~\ref{sec:C_experimental_details}; all dimensional-scaling numbers are
+recomputed from per-seed records by a single script
+(\texttt{figures/collect\_results.py}) rather than transcribed.
+
+\subsection{On-policy sampling across dimension}
+\label{subsec:dimscaling}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/dimscaling}
+  \caption{Headroom closed against dimension, $n=30$ paired seeds per point,
+    error bars $\pm1$ s.e. \textbf{Left:} absolute performance. \textbf{Right:}
+    paired difference against the off-policy control on the same instances;
+    stars mark $p<0.05$. Fitting the recipe knobs (expansion fraction and
+    integration steps) as part of the per-dimension hyperparameter laws removes
+    the high-dimensional collapse: the dotted family loses $7.8$ points to
+    off-policy at $d=512$, the solid one is at or above the control
+    everywhere.}
+  \label{fig:dimscaling}
+\end{figure}
+
+Figure~\ref{fig:dimscaling} shows the result that motivates
+\S\ref{sec:06_sparsity_onpolicy}. On-policy sampling is a large win at moderate
+dimension --- $+11.2$ points at $d=8$, $+4.5$ at $d=16$, $+2.4$ at $d=32$, all
+$p<0.05$ --- and the advantage decays as $d$ grows.
+
+The interesting part is the failure mode of the naive version. Hyperparameter
+laws fitted without the expansion and step-count knobs (dotted) track
+off-policy until $d=64$ and then fall away, reaching $-4.5$ at $d=256$ and
+$-7.8$ at $d=512$: on-policy sampling becomes actively harmful in exactly the
+regime where its motivation --- signal sparsity --- is strongest. Admitting the
+two coverage knobs into the laws (solid) removes the collapse without
+hand-switching between configurations by dimension. The refitted family is
+significantly above the control at $d=8$--$32$, statistically tied elsewhere,
+and never significantly below.
+
+We report the trade honestly: the refitted family gives up about $3$ points to
+the un-refitted one at $d\le16$, where both are far above off-policy anyway,
+and recovers $6$ to $9$ points at $d\ge256$, where the un-refitted one is below
+it. Per-dimension retuning would likely recover both, at the cost of the
+single-family property this study was built to test.
+
+\subsection{GMM-40: an external Boltzmann target}
+\label{subsec:gmm40}
+
+To check that the setting is not self-serving we take a benchmark from the
+sampler literature. GMM-40 is a $40$-mode Gaussian mixture in two dimensions
+with means spread over $[-40,40]^2$; the target is $\pi\propto e^{-E}$ with $E$
+the mixture energy, mapped into our setting by the tilt correction
+$r=-E-\log p_{\Base}$ of \S\ref{sec:02_setting}. We use the configuration of
+\citet{akhoundsadegh2024idem}, so the comparison is on identical targets, and
+report $|\Delta\log Z|$, which is coordinate-free: our estimate is the learned
+$\Vf(0,0)$.
+
+\begin{table}[t]
+\centering\small
+\caption{GMM-40, log-partition bias against published samplers on the same
+target ($\log Z=0$). Baseline numbers are from \citet{akhoundsadegh2024idem}.
+Our sample metric is a sliced Wasserstein rescaled to native coordinates and is
+a lower bound, so it is \emph{not} directly comparable to the baselines'
+$W_2$; we report it for completeness rather than as a claim.}
+\label{tab:gmm40}
+\begin{tabular}{lcc}
+\toprule
+method & $|\Delta \log Z|$ & sample $W_2$ (native) \\
+\midrule
+PIS \citep{zhang2021pis}   & 2.24 & 7.64 \\
+FAB \citep{midgley2021fab} & 1.17 & 12.0 \\
+DDS \citep{vargas2023dds}  & 0.36 & 9.31 \\
+iDEM \citep{akhoundsadegh2024idem} & 0.34 & 7.42 \\
+\midrule
+ours, off-policy           & 0.19 & --- \\
+\textbf{ours, on-policy}   & \textbf{0.08} & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:gmm40} reports the comparison. The learned value recovers
+$\log Z$ to $0.08$ nats, ahead of the best published number we found on this
+target, and mode coverage is complete ($40/40$). The on-policy sampler more
+than halves the off-policy error, so the dimensional-scaling conclusion
+reproduces on an external target.
+
+Three scope conditions, since the headline is a favourable number.
+First, we compare on $\log Z$ and mode coverage; our sample-distance metric is
+not comparable to the published $W_2$ and we do not claim it. Second, the
+hyperparameters were fitted on the Gaussian-mixture family of
+\S\ref{subsec:design}, not tuned on this target. Third, the tuned on-policy
+recipe of \S\ref{sec:06_sparsity_onpolicy} does \emph{not} transfer to this
+family unchanged --- applying it directly degrades the result --- so the
+on-policy arm here is the plain twisted sweep. What transfers is the loss and
+the twisted-sampling idea, not the fitted constants.
+
+We also report a value-quality axis the sampler literature cannot: because the
+GMM-40 value is available analytically, we measure the RMSE of $\Vf_\theta$
+against the exact $\Vf$ over the base marginal, obtaining $\approx0.5$ nats.
+This separates value quality from sampler quality, and is the axis on which our
+negative result below is legible.
+
+\paragraph{A held-out negative result.}
+We also ran Many-Well-32 \citep{midgley2021fab} and do not report it as a
+result, because we do not reach a competitive number: our $\log Z$ error is
+$16.3$ nats against published raw errors of $3.9$--$15.0$ and reweighted errors
+below $1$ \citep{sendera2024offpolicy}. The diagnosis is specific rather than a
+tuning shortfall. The controlled process produces sign-balanced samples,
+$P(x_{\mathrm{odd}}>0)=0.50$, where the target concentrates at $0.85$: it is not
+finding the deep wells, so $\Vf(0,0)$ integrates over mass that misses them.
+Increasing the guidance scale eightfold leaves the output bit-identical, which
+rules out a sampling-strength explanation and points at the value
+representation --- a symmetric network cannot express the per-well tilt, worth
+about $1.7$ nats in each of $16$ wells, which is the size of the shortfall. We
+also apply no importance reweighting, though we have exact SMC weights; the
+published raw-to-reweighted improvements on this target are large. We regard
+this as unfinished rather than negative evidence about the loss, and record it
+so the GMM-40 number is not read as a general claim.

@@ -1,5 +1,53 @@
 % !TEX root = ../main.tex
-\section{Conclusion and limitations}
+\section{Limitations and conclusion}
 \label{sec:09_conclusion}
 
-% TODO
+The value function of a reward-guided diffusion is a conditional log-partition
+function, and the only unbiased Monte-Carlo targets for it live in exponential
+space. That fact is what forces the awkward regression, and squared error
+handles it badly in a specific and asymmetric way: over-predictions explode,
+which clipping survives, and under-predictions vanish, which nothing survives.
+Since every Bregman divergence has the value as its minimizer, the potential is
+free, and in log space the entire family reduces to one positive weight on the
+residual. Choosing that weight to be $\ln u/(u-1)$ gives gradients linear in the
+prediction on both sides, in closed form, with a numerically stable
+implementation. It is a drop-in replacement for a loss function.
+
+\paragraph{Limitations.}
+The empirical claims are narrower than the analysis.
+
+\emph{Reward-call budget.} All our targets have cheap analytic rewards, so we
+measure cost in samples seen. Under an expensive reward --- a quantum-chemistry
+calculation, a docking score, a simulator rollout --- the binding budget is
+total evaluations of $r$, and the ranking between off-policy anchors and
+on-policy sampling could differ from what we report
+(\S\ref{subsec:targets}).
+
+\emph{Transfer.} The on-policy recipe was fitted on one benchmark family, and
+does not transfer unchanged to the Boltzmann targets of
+\S\ref{subsec:gmm40}. We report the fitted constants as an existence proof that
+a single family can cover the dimension range, not as values anyone should
+reuse.
+
+\emph{Many-Well-32.} We do not reach a competitive number on this target and
+have diagnosed but not fixed the cause (\S\ref{subsec:gmm40}). Until that is
+closed, the GMM-40 result should be read as one favourable external
+target rather than as a general claim about Boltzmann sampling.
+
+\emph{Scope of the benchmark.} The dimensional-scaling study fixes headroom at
+$6$ nats and caps network width at $256$ for $d\ge8$. Both the crossover
+dimension between on- and off-policy training and the size of the loss effect
+plausibly move with these, and we have not varied them.
+
+\emph{What the loss does not do.} The Spence loss improves conditioning. It
+does not make rare high-value targets easier to find, which is the separate
+problem of \S\ref{sec:06_sparsity_onpolicy} and the reason the two halves of
+this paper are both necessary.
+
+\paragraph{Outlook.}
+The gradient-weight view suggests its own next question. Once the design space
+is a single positive function $w$ on $(0,\infty)$, the weight can be chosen for
+things other than tail behaviour --- robustness to target noise, or a
+prescribed influence function --- and \eqref{eq:req-over}--\eqref{eq:req-under}
+pin down only the asymptotics, leaving a family of admissible weights that we
+have not explored.

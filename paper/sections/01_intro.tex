@@ -2,4 +2,100 @@
 \section{Introduction}
 \label{sec:01_intro}
 
-% TODO
+Steering a diffusion model with a reward --- fine-tuning it toward a preference
+model, conditioning it on a constraint, or using it to sample a Boltzmann
+density --- has a single mathematical formulation, given by
+\citet{uehara2024finetuning} following the entropy-regularized control
+tradition of \citet{daipra1991stochastic} and \citet{kappen2005path}. One asks
+for the path measure $\mathbb{P}^{\star}$ that reweights a base diffusion
+$\mathbb{P}$ by $e^{r(X_1)}$, and the object that produces it is the soft value
+function
+\begin{equation}
+  \Vf(x,t) \;=\; \log\E_{\Base}\!\big[\,e^{r(X_1)}\mid X_t=x\,\big],
+  \label{eq:intro-value}
+\end{equation}
+whose gradient is the optimal control, $u^{\star}=2a\nabla \Vf$. Learning $\Vf$
+is therefore the whole problem, and $\Vf$ is a conditional log-partition
+function: at $t=0$ it is $\log Z$ itself.
+
+Log-partition functions are awkward to regress. The H-martingale property
+$e^{\Vf(x,t)}=\E_{\Base}[e^{\Vf(X_s,s)}\mid X_t=x]$ supplies targets that are
+conditionally unbiased --- but for $e^{\Vf}$, not for $\Vf$, and no plug-in in
+log space repairs the difference, since the Jensen gap that separates
+$\E[q]$ from $\log\E[e^{q}]$ is precisely the quantity a soft maximum is made
+of. The target is therefore stuck in exponential space, and the obvious loss,
+squared error between $e^{p}$ and $e^{q}$, behaves badly there. Its gradient is
+$2e^{p}(e^{p}-e^{q})$, which explodes as $e^{2p}$ when the model over-predicts
+and, more seriously, decays to zero when it under-predicts. The second case is
+the one that matters: it is exactly the state whose true value is large and
+whose predicted value is small --- a rare, high-reward target the model has
+failed to find --- and gradient clipping, which tames the first pathology,
+cannot manufacture a gradient that has already vanished.
+
+Our starting observation is that this loss was never forced on us. For any
+strictly convex $\varphi$, the Bregman divergence $\Breg(e^{q},e^{p})$ has the
+same population minimizer, $\Vf$ --- the Savage representation of proper
+scoring rules \citep{savage1971elicitation,gneiting2007proper,banerjee2005clustering}
+--- so $\varphi$ is free to be chosen for conditioning. What makes that freedom
+usable is that in log space the whole family collapses:
+\begin{equation}
+  \frac{\partial}{\partial p}\,\Breg\big(e^{q},e^{p}\big)
+  \;=\; w(e^{p})\,\big(e^{p}-e^{q}\big),
+  \qquad w(u)=u\,\varphi''(u)>0 .
+  \label{eq:intro-weight}
+\end{equation}
+A Bregman loss reaches the optimizer only through the scalar weight $w$, so
+designing one means choosing a positive function on $(0,\infty)$ and nothing
+else. Squared error is $w(u)=2u$, growing with the prediction, which is why it
+explodes above and dies below; Itakura--Saito is $w(u)=1/u$, which inverts the
+asymmetry rather than removing it. Both are power laws, and no power law will
+do: with $w(u)\propto u^{\beta-1}$ the gradient grows like $e^{\beta p}$, so it
+is exponential for every $\beta>0$ and flat at $\beta=0$.
+
+Solving \eqref{eq:intro-weight} for a weight whose gradient grows linearly in
+$p$ in both directions gives $w(u)=\ln u/(u-1)$, the reciprocal logarithmic
+mean, and with it a loss we call the \emph{Spence loss}: its gradient is
+$p\,(e^{p}-e^{q})/(e^{p}-1)$ in closed form, and its value is expressible
+through the Spence function $\Spence(1-e^{x})$, which names it.
+
+A better-conditioned loss does not, however, make rare targets easier to find.
+That is a sampling problem, and in high dimension it dominates: importance
+sampling for $\E[e^{r}]$ from the base process needs on the order of
+$e^{\mathrm{KL}(\mathbb{P}^{\star}\|\mathbb{P})}$ samples
+\citep{chatterjee2018sample}. Because the H-martingale identity survives any
+adapted twist once the Girsanov ratio is applied, the sampler is free, and the
+learned value is itself the optimal twist. The second half of this paper
+studies that loop, where the useful finding is a negative one: at high
+dimension, concentrating the sampler on the reward corridor --- even with an
+oracle twist --- is worse than not doing so, and what helps instead is widening
+coverage at small $t$.
+
+\paragraph{Contributions.}
+\begin{itemize}\itemsep2pt
+\item We show that a Bregman loss applied to the unbiased exponential-space
+  target acts on the optimizer only through the gradient weight
+  $w(u)=u\varphi''(u)$ of \eqref{eq:intro-weight}, which reduces loss design
+  for value functions to the choice of one positive function, and places
+  squared error and Itakura--Saito as the $\beta=2$ and $\beta=0$ members of a
+  power-law family none of whose members has controlled tails
+  (\S\ref{sec:04_bregman}).
+\item We derive the Spence loss by solving for the weight
+  $w(u)=\ln u/(u-1)$ whose gradient is linear in the log-space prediction in
+  both tails, give its closed-form gradient and dilogarithm value, and give a
+  branch-wise evaluation that is finite for every float input, unlike
+  automatic differentiation of the divergence
+  (\S\ref{subsec:spence}, App.~\ref{sec:A_spence}).
+\item We measure the four losses --- Spence, exponential-space squared error,
+  Itakura--Saito, and the biased log-space baseline --- against each other with
+  per-loss learning-rate tuning on a benchmark with an analytic value function,
+  scoring both control quality and the RMSE of the learned value against the
+  exact one (\S\ref{sec:05_offpolicy_exp}).
+\item We show that on-policy twisted sampling, with coverage widened by
+  backward noising, matches or beats off-policy training at every dimension
+  from $2$ to $512$, and that the naive version instead collapses to $7.8$
+  points below off-policy at $d=512$
+  (\S\ref{sec:06_sparsity_onpolicy}, \S\ref{sec:07_experiments}).
+\item On GMM-40 the learned value recovers $\log Z$ to $0.08$ nats with
+  complete mode coverage, ahead of the published samplers we compare against
+  on that target (\S\ref{subsec:gmm40}).
+\end{itemize}
