@@ -9,7 +9,7 @@ handles it badly in a specific and asymmetric way: over-predictions explode,
 which clipping survives, and under-predictions vanish, which nothing survives.
 Since every Bregman divergence has the value as its minimizer, the potential is
 free, and in log space the entire family reduces to one positive weight on the
-residual. Choosing that weight to be $\ln u/(u-1)$ gives gradients linear in the
+residual. Choosing that weight to be $\ln y/(y-1)$ gives gradients linear in the
 prediction on both sides, in closed form, with a numerically stable
 implementation. It is a drop-in replacement for a loss function.
 

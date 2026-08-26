@@ -111,9 +111,10 @@ reliably, and its high-dimensional deficit is not recipe-shaped.
 
 Treating expansion fraction, step count and epoch size as tunable and refitting
 the per-dimension laws (with an added $d=512$ anchor) yields one configuration
-family that matches or beats off-policy at every dimension from $2$ to $512$:
-significantly above at $d=8$--$32$ (up to $+13.4$ paired), statistical ties
-elsewhere, never significantly below. The fitted laws chose \emph{nonzero
+family that is significantly above off-policy at $d=8$--$32$ (up to $+13.4$
+paired) and never significantly below it anywhere in $2\le d\le512$. As in
+\S\ref{sec:07_experiments} we do not claim equivalence at the remaining
+dimensions: those rest on failure to reject, and we ran no equivalence test. The fitted laws chose \emph{nonzero
 expansion at every dimension} and a moderate constant step count ($29$--$33$,
 not the hand-set $60$).
 

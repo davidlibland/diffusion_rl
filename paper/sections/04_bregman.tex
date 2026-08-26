@@ -101,7 +101,7 @@ squared error's asymmetry so much as \emph{invert} it, and that is precisely
 why it helps: it converts the unrecoverable failure (a gradient that has
 decayed to zero) into the recoverable one (a gradient that is too large, which
 clipping fixes). It is moreover \emph{scale-invariant}
-($D_{\mathrm{IS}}(cT,cu)=D_{\mathrm{IS}}(T,u)$, equivalently \eqref{eq:is-grad}
+($D_{\mathrm{IS}}(cT,cy)=D_{\mathrm{IS}}(T,y)$, equivalently \eqref{eq:is-grad}
 depends on $q-p$ alone) and is the negative log-likelihood of a
 gamma/exponential observation model \citep{fevotte2009isnmf}, giving a natural
 uncertainty interpretation for $\Vf$. A useful midpoint, but still one-sided
@@ -138,8 +138,8 @@ Rather than pick a potential and inspect its tails, we ask directly what weight
 $w$ we want. Writing $y=e^{p}$ and reading off \eqref{eq:weight-grad}, the two
 requirements are:
 \begin{align}
-  p\to+\infty\ (y\to\infty):\quad & w(y)\,u \sim \ln y
-    &&\Longrightarrow\quad w(y)\sim \ln y\,/\,u, \label{eq:req-over}\\
+  p\to+\infty\ (y\to\infty):\quad & w(y)\,y \sim \ln y
+    &&\Longrightarrow\quad w(y)\sim \ln y\,/\,y, \label{eq:req-over}\\
   p\to-\infty\ (y\to 0):\quad & -\,w(y)\,e^{q} \sim e^{q}\ln y
     &&\Longrightarrow\quad w(y)\sim -\ln y, \label{eq:req-under}
 \end{align}
@@ -165,7 +165,7 @@ Substituting it into \eqref{eq:weight-grad} gives
   \label{eq:spence-grad}
 \end{equation}
 zero iff $p=q$ (the apparent zero at $p=0$ is cancelled by the pole of
-$p/(e^{p}-1)\to1$), with population minimizer $\Vf$ by
+$1/(e^{p}-1)$, the product tending to $1$), with population minimizer $\Vf$ by
 Lemma~\ref{lem:minimizer}.
 
 \paragraph{Both tails linear in the prediction.}
@@ -217,7 +217,7 @@ increases to $\pi^{2}/6$ as $y\to\infty$ and to $-\infty$ as $y\to0^{+}$, the
 natural parameter of the implied family is \emph{bounded above} by
 $\pi^{2}/6$. The loss therefore behaves like the log-likelihood of a family
 whose natural parameter saturates, which is a second way of seeing why
-over-predictions cannot produce unbounded gradients.
+over-predictions cannot produce \emph{exponentially} large gradients.
 
 % ---------------------------------------------------------------------------
 \begin{table}[t]

@@ -26,8 +26,9 @@ The constant-headroom calibration of \S\ref{subsec:design} bounds the very
 quantity this argument turns on. Writing the headroom as
 $\E_{\mathbb{P}^{\star}}[r]-\E_{\Base}[r]=6$ nats and using
 $\log Z=\max_u\{\E[r]-\mathrm{KL}\}$, one gets
-$\mathrm{KL}(\mathbb{P}^{\star}\|\mathbb{P})
- =\E_{\mathbb{P}^{\star}}[r]-\log Z\le 6$, and measured on our instances it
+$\mathrm{KL}(\mathbb{P}^{\star}\|\mathbb{P})=\E_{\mathbb{P}^{\star}}[r]-\log Z$,
+and since $\log Z=\log\E_{\Base}[e^{r}]\ge\E_{\Base}[r]$ by Jensen this is at
+most the headroom, $\mathrm{KL}\le 6$. Measured on our instances it
 is $1.4$--$2.6$ nats and \emph{flat} in $d$ ($1.36$, $2.10$, $2.55$, $2.60$,
 $1.83$ at $d=2,8,32,128,512$). The importance-sampling cost is therefore
 bounded and roughly dimension-independent here. That is the design working as

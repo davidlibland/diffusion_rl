@@ -61,11 +61,11 @@ def spence_grad(p, t):
 
 LOSSES = [
     ("Squared error", mse_value, mse_grad,
-     "$w(u)=2u$\n" + r"$\partial_p L = 2e^{p}(e^{p}-e^{t})$"),
+     "$w(y)=2y$\n" + r"$\partial_p L = 2e^{p}(e^{p}-e^{q})$"),
     ("Itakura--Saito", is_value, is_grad,
-     "$w(u)=1/u$\n" + r"$\partial_p L = 1-e^{t-p}$"),
+     "$w(y)=1/y$\n" + r"$\partial_p L = 1-e^{q-p}$"),
     ("Spence (ours)", spence_value, spence_grad,
-     r"$w(u)=\ln u/(u-1)$" + "\n" + r"$\partial_p L = p\,(e^{p}-e^{t})/(e^{p}-1)$"),
+     r"$w(y)=\ln y/(y-1)$" + "\n" + r"$\partial_p L = p\,(e^{p}-e^{q})/(e^{p}-1)$"),
 ]
 
 
@@ -74,7 +74,7 @@ def main():
     for j, (name, vfn, gfn, sub) in enumerate(LOSSES):
         for t, c in zip(V_TRUE, COLORS):
             ax[0, j].plot(VP, vfn(VP, t), color=c, lw=1.8,
-                          label=fr"$v_{{\rm true}}={t:+.0f}$")
+                          label=fr"$q={t:+.0f}$")
             ax[1, j].plot(VP, gfn(VP, t), color=c, lw=1.8)
             ax[0, j].plot([t], [0], "o", color=c, ms=4)
             ax[1, j].plot([t], [0], "o", color=c, ms=4)
@@ -82,13 +82,13 @@ def main():
         ax[0, j].set_yscale("symlog", linthresh=1.0)
         ax[1, j].set_yscale("symlog", linthresh=1.0)
         ax[1, j].axhline(0, color="k", lw=0.5, alpha=0.4)
-        ax[1, j].set_xlabel(r"prediction $v_{\rm pred}$")
+        ax[1, j].set_xlabel(r"prediction $p$")
         ax[0, j].text(0.03, 0.95, sub, transform=ax[0, j].transAxes,
                       va="top", ha="left", fontsize=8.5)
         for a in (ax[0, j], ax[1, j]):
             a.grid(alpha=0.25); a.set_xlim(VP[0], VP[-1])
     ax[0, 0].set_ylabel("loss value")
-    ax[1, 0].set_ylabel(r"gradient $\partial L/\partial v_{\rm pred}$")
+    ax[1, 0].set_ylabel(r"gradient $\partial L/\partial p$")
     ax[0, 0].legend(fontsize=8, loc="upper center")
     # annotate the pathologies
     ax[1, 0].annotate("vanishes", xy=(-5, -1e-1), xytext=(-5.5, -30),

@@ -77,7 +77,7 @@ coverage at small $t$.
   $w(y)=y\varphi''(y)$ of \eqref{eq:intro-weight}, which reduces loss design
   for value functions to the choice of one positive function, and places
   squared error and Itakura--Saito as the $\beta=2$ and $\beta=0$ members of a
-  power-law family none of whose members has controlled tails
+  power-law family no member of which has \emph{both} tails controlled
   (\S\ref{sec:04_bregman}).
 \item We derive the Spence loss by solving for the weight
   $w(y)=\ln y/(y-1)$ whose gradient is linear in the log-space prediction in
@@ -85,11 +85,11 @@ coverage at small $t$.
   branch-wise evaluation that is finite for every finite float input, unlike
   automatic differentiation of the divergence
   (\S\ref{subsec:spence}, App.~\ref{sec:A_spence}).
-\item We measure five losses --- Spence, exponential-space squared error,
-  Itakura--Saito with and without gradient clipping, and the biased log-space
-  baseline --- against each other with per-loss learning-rate tuning on a
-  benchmark whose value function is available analytically, scoring control
-  quality, the RMSE of the learned value against the exact one, and stability
+\item We compare five losses --- Spence, exponential-space squared error,
+  Itakura--Saito, generalised KL, and the biased log-space baseline --- with
+  per-loss learning-rate tuning on a benchmark whose value function is
+  available analytically, scoring control quality, the RMSE of the learned
+  value against the exact one, and stability
   (\S\ref{sec:05_offpolicy_exp}).
 \item We show that on-policy twisted sampling, with coverage widened by
   backward noising, is significantly better than off-policy training at

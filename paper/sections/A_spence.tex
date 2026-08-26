@@ -5,7 +5,7 @@
 \subsection{From the gradient weight to the potential}
 
 By Lemma~\ref{lem:minimizer}, a Bregman loss in log space reaches the
-optimizer only through the weight $w(y)=u\varphi''(y)$ in
+optimizer only through the weight $w(y)=y\varphi''(y)$ in
 \eqref{eq:weight-grad}. We therefore specify $w$ and recover $\varphi$, rather
 than the other way round.
 
@@ -30,7 +30,7 @@ Integrating \eqref{eq:a-phi2} twice gives the potential
 \end{equation}
 The two constants of integration are immaterial: a Bregman divergence is
 unchanged by adding an affine function of $y$ to its potential, since the
-added terms cancel between $\varphi(T)-\varphi(U)$ and $\varphi'(U)(T-U)$.
+added terms cancel between $\varphi(T)-\varphi(y)$ and $\varphi'(y)(T-y)$.
 
 \subsection{Closed forms}
 
@@ -93,7 +93,10 @@ $e^{p}-e^{q}$ and $e^{p}-1$ overflow. We compute it branch-wise,
   \end{cases}
   \label{eq:a-branches}
 \end{equation}
-which is finite for every finite float input. For $p<0$, $\mathrm{expm1}(p)$
+which is finite for every finite float input once the guard below is
+applied: the $p>0$ branch evaluates $\mathrm{expm1}(q-p)$, which does overflow
+when $q-p\gtrsim88$ in single precision, and the $p<0$ branch has the same
+exposure through $\mathrm{expm1}(q)$. For $p<0$, $\mathrm{expm1}(p)$
 lies in $[-1,0)$ and the difference of \texttt{expm1} values is free of
 cancellation, while an underflowing $e^{q}$ degrades gracefully to $0$. For
 $p>0$, factoring $e^{p}$ out of numerator and denominator leaves both

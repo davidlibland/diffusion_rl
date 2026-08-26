@@ -81,16 +81,16 @@ value. That constraint is what forces the fix into the divergence.
 \begin{figure}[t]
   \centering
   \includegraphics[width=\linewidth]{figures/loss_curves}
-  \caption{Loss value (top) and gradient $\partial L/\partial v_{\rm pred}$
-    (bottom) of $D_F(e^{v_{\rm true}}, e^{v_{\rm pred}})$ as functions of the
-    prediction $v_{\rm pred}$, for three targets $v_{\rm true}\in\{-2,0,2\}$
-    (dots mark the minimizer $v_{\rm pred}=v_{\rm true}$; symmetric-log axes).
+  \caption{Loss value (top) and gradient $\partial L/\partial p$
+    (bottom) of $\Breg(e^{q}, e^{p})$ as functions of the prediction $p$, for
+    three targets $q\in\{-2,0,2\}$ (dots mark the minimizer $p=q$;
+    symmetric-log axes).
     \textbf{Squared error} vanishes for under-predictions
-    ($v_{\rm pred}\!<\!v_{\rm true}$, gradient $\to 0$) and explodes for
+    ($p<q$, gradient $\to 0$) and explodes for
     over-predictions. \textbf{Itakura--Saito} inverts this: the
     over-prediction gradient saturates at $+1$, while under-predictions now
     explode --- trading the unrecoverable pathology for a clippable one.
-    \textbf{Spence} (ours) is linear in $v_{\rm pred}$ in both tails, so
+    \textbf{Spence} (ours) is linear in $p$ in both tails, so
     neither side vanishes nor explodes exponentially.}
   \label{fig:loss_curves}
 \end{figure}
