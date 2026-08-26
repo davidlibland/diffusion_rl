@@ -3,9 +3,9 @@
 \label{sec:B_onpolicy_zoo}
 
 \S\ref{sec:06_sparsity_onpolicy} reports the single on-policy configuration we
-recommend. This appendix records how we arrived at it, including the arms that
-did not work; the negative results are the more useful half, since several of
-them are mechanisms that the literature would predict should help.
+recommend. This appendix records how we arrived at it, including the arms that did not
+work --- several of which are mechanisms the literature would predict should
+help.
 
 Unless stated otherwise, numbers are \emph{frac.\ closed} --- the fraction of
 the calibrated $6$-nat headroom closed at the plateau (\S\ref{sec:07_experiments})
@@ -131,9 +131,8 @@ Twisting the sampler toward high reward using the \emph{analytic} value ---
 the strongest possible twist --- makes things worse at $d=512$, and splicing
 off-policy coverage back in does not rescue it: the blended arm sits $3.7$
 below the plain ssmc control and $8.5$ below off-policy. Unweighting the
-corridor sources recovers only about half the damage. At high dimension broad
-coverage of the marginal beats concentration on the corridor, full stop. This
-is the single most consistent negative result in the study, and it is why the
+corridor sources recovers only about half the damage. On this benchmark family at $d=512$, broad coverage of the marginal beat
+concentration on the corridor in every arm we ran, which is why the
 recommended method expands coverage rather than sharpening the twist.
 
 \paragraph{Trust-region control of the twist.}

@@ -92,9 +92,10 @@ coverage at small $t$.
   quality, the RMSE of the learned value against the exact one, and stability
   (\S\ref{sec:05_offpolicy_exp}).
 \item We show that on-policy twisted sampling, with coverage widened by
-  backward noising, matches or beats off-policy training at every dimension
-  from $2$ to $512$, and that the naive version instead collapses to $7.8$
-  points below off-policy at $d=512$
+  backward noising, is significantly better than off-policy training at
+  $d=8$--$32$ and never significantly worse anywhere in $2\le d\le512$, while
+  the naive version instead collapses to $7.8$ points below off-policy at
+  $d=512$
   (\S\ref{sec:06_sparsity_onpolicy}, \S\ref{sec:07_experiments}).
 \item On GMM-40 the learned value recovers $\log Z$ to $0.30\pm0.07$ nats
   over $15$ runs with complete mode coverage, comparable to the best published

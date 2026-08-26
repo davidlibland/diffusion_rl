@@ -160,8 +160,7 @@ without changing the object being learned.
 \subsection{How training pairs are formed}
 \label{subsec:targets}
 
-A learner $\Vf_\theta$ is fit to pairs $(x_t, q)$. It is worth separating two
-kinds. \emph{Anchored} targets terminate at the true reward and satisfy
+A learner $\Vf_\theta$ is fit to pairs $(x_t, q)$, of two kinds. \emph{Anchored} targets terminate at the true reward and satisfy
 \eqref{eq:unbiased-target} exactly, so $e^{q}$ is unbiased for $e^{\Vf(x_t,t)}$
 however wrong the current $\Vf_\theta$ is. \emph{Bootstrapped} targets
 substitute the learner's own value at a later time, and satisfy no such

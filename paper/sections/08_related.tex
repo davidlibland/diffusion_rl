@@ -15,32 +15,24 @@ soft value of maximum-entropy reinforcement learning
 setting but what to do with the regression problem it hands you.
 
 \paragraph{Losses for diffusion samplers.}
-The closest competing work attacks the conditioning of value learning by
-changing the \emph{objective} rather than the divergence. Log-variance and
-adjoint losses \citep{nusken2021logvariance,richter2020vargrad,domingoenrich2024adjoint,domingoenrich2023socm}
-replace the pointwise regression with a path-space functional; the
+The closest competing work changes the \emph{objective} rather than the
+divergence: log-variance and adjoint losses
+\citep{nusken2021logvariance,richter2020vargrad,domingoenrich2024adjoint,domingoenrich2023socm}
+replace pointwise regression with a path-space functional, and the
 trajectory-balance family
-\citep{malkin2022trajectory,madan2023subtb,venkatraman2024rtb} does the same
-through a flow-consistency constraint. \citet{zhang2024dgfs} is nearest of all:
-it learns intermediate log-partition functions for a diffusion sampler, which
-is our object, via partial-trajectory optimization. These are well-motivated
-and in several cases better than what we do on sample quality. The distinction
-is narrow and worth stating plainly: they buy conditioning by giving up the
-conditionally-unbiased exponential-space target, whereas we keep that target
-and change only the divergence applied to it. Which trade is better is an
-empirical question we do not settle here; what we show is that the second
-option exists and is cheap, since it is a drop-in replacement for a loss
-function.
+\citep{malkin2022trajectory,madan2023subtb,venkatraman2024rtb} imposes a
+flow-consistency constraint instead. \citet{zhang2024dgfs} is nearest of all,
+learning intermediate log-partition functions for a diffusion sampler by
+partial-trajectory optimization. These methods are well motivated and several
+beat ours on sample quality. As \S\ref{subsec:spence} notes, the distinction is
+that they buy conditioning by giving up the unbiased exponential-space target
+while we keep it; which trade is better is an empirical question we do not
+settle.
 
 \paragraph{Badly-scaled value regression.}
-That regressing value targets spanning many orders of magnitude is unstable is
-known in reinforcement learning, and the standard remedies transform the
-target: adaptive normalization \citep{vanhasselt2016popart}, invertible
-rescaling \citep{pohlen2018observe}, or replacing regression with
-classification over bins \citep{farebrother2024stopregressing}. All three work
-well and none is available here, for the reason given in
-\S\ref{sec:03_expmse}: each destroys unbiasedness of the exponential-space
-target, which is the only thing making the minimizer the value.
+The reinforcement-learning literature fixes this by transforming the target
+\citep{vanhasselt2016popart,pohlen2018observe,farebrother2024stopregressing};
+\S\ref{sec:03_expmse} explains why that route is closed to us.
 
 \paragraph{Bregman divergences.}
 The divergence is \citet{bregman1967relaxation}; that its expectation is

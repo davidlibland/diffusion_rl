@@ -86,8 +86,13 @@ $-7.8$ at $d=512$: on-policy sampling becomes actively harmful in exactly the
 regime where its motivation --- signal sparsity --- is strongest. Admitting the
 two coverage knobs into the laws (solid) removes the collapse without
 hand-switching between configurations by dimension. The refitted family is
-significantly above the control at $d=8$--$32$, statistically tied elsewhere,
-and never significantly below.
+significantly above the control at $d=8$--$32$ and never significantly below
+it anywhere. We avoid the word ``matches'' for the remaining dimensions: those
+rest on failure to reject at $n=30$, and with paired standard errors near
+$1.4$ points the data cannot exclude a deficit of a few points. Establishing
+equivalence would require a test against a pre-specified margin, which we did
+not run, and the stars in Fig.~\ref{fig:dimscaling} are uncorrected for
+testing across ten dimensions and two arms.
 
 We report the trade honestly: the refitted family gives up about $3$ points to
 the un-refitted one at $d\le16$, where both are far above off-policy anyway,
@@ -151,7 +156,7 @@ offset arms are in fact \emph{more} accurate than the unshifted one
 initialisation artifact would produce. Table~\ref{tab:gmm40} pools all three
 initialisations for this reason.
 
-Three scope conditions, since the headline is a favourable number.
+Three scope conditions.
 First, we compare on $\log Z$ and mode coverage; our sample-distance metric is
 not comparable to the published $W_2$ and we do not claim it. Second, the
 hyperparameters were fitted on the Gaussian-mixture family of

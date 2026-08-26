@@ -105,9 +105,8 @@ slowly it moves.
 
 Fitting the expansion fraction and step count as part of the per-dimension
 hyperparameter laws, rather than hand-setting them, yields a single
-configuration family that matches or beats off-policy training at every
-dimension from $2$ to $512$: significantly above at $d=8$--$32$, statistically
-tied elsewhere, and never significantly below
+configuration family that is significantly above off-policy training at
+$d=8$--$32$ and never significantly below it anywhere in $2\le d\le512$
 (\S\ref{sec:07_experiments}, Fig.~\ref{fig:dimscaling}). The fitted laws select
 nonzero expansion at every dimension.
 

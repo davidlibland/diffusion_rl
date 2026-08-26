@@ -40,8 +40,7 @@ $d\in\{2,16,128,512\}$ and fit each hyperparameter against $\log d$ by
 Theil--Sen regression, choosing between a constant and a sloped model by
 leave-one-out error with a $10\%$ bias toward constants. A method is then one
 configuration \emph{family}, evaluated at every dimension without further
-tuning --- which is what makes Fig.~\ref{fig:dimscaling} a statement about
-methods rather than about tuning effort.
+tuning.
 
 \paragraph{Loss ablation.}
 The ablation of \S\ref{sec:05_offpolicy_exp} trains off-policy only, so that
@@ -53,11 +52,9 @@ and report tuned-against-tuned.
 
 \paragraph{Compute.}
 All runs are small MLPs on a single machine. The dimensional-scaling grid is
-the dominant cost. We note one practical detail because it cost us a factor of
-four: these models are tiny and run at gradient batch size $4$, so they are
-latency-bound rather than throughput-bound; running many single-threaded CPU
-processes in parallel beats the GPU, and leaving PyTorch's intra-op thread
-count at its default oversubscribes the machine badly.
+the dominant cost. These models are tiny and run at gradient batch size $4$, so they are
+latency-bound rather than throughput-bound: many single-threaded CPU processes
+in parallel outperform the GPU by roughly a factor of five.
 
 \paragraph{Reproducibility.}
 Every dimensional-scaling number in the paper is recomputed from per-seed

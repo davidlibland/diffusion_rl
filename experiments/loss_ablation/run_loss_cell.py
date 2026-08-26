@@ -49,7 +49,7 @@ from diffusion_rl.modules.resnet_mlp import ValueNetwork      # noqa: E402
 
 RESULTS = os.path.join(HERE, "results")
 A = 1.0
-LOSSES = ["quad", "mse", "is", "logmse"]
+LOSSES = ["quad", "mse", "is", "logmse", "gkl"]
 LR_GRID = [1e-5, 3e-5, 1e-4, 3e-4, 1e-3, 3e-3]
 
 

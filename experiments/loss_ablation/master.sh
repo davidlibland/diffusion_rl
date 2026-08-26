@@ -11,6 +11,8 @@ echo "=== stage 1: lr scan (wave 1) ==="
 xargs -a joblist_lrscan.txt  -P $W -L 1 ./job.sh
 echo "=== stage 1: lr scan (wave 2, low lrs) ==="
 xargs -a joblist_lrscan2.txt -P $W -L 1 ./job.sh
+echo "=== stage 1: lr scan (wave 3, generalised KL) ==="
+xargs -a joblist_lrscan3.txt -P $W -L 1 ./job.sh
 
 echo "=== stage 2: choose lr ==="
 python pick_lr.py | tee logs/chosen_lr.txt
