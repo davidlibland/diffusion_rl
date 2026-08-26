@@ -31,7 +31,7 @@ As $p\to-\infty$ the gradient behaves like $-2e^{p+q}\to 0$. This is exactly
 the regime where the model is \emph{most wrong}: it assigns near-zero value
 $e^{p}\approx 0$ to a state whose true value $e^{q}$ is large --- a rare,
 high-reward target it has failed to find. The learning signal there is not
-merely ill-scaled, it is \emph{absent}, and no amount of gradient clipping can
+merely ill-scaled, it is \emph{absent}, and no amount of gradient clipping \citep{pascanu2013difficulty} can
 manufacture a gradient that has decayed to zero. In the high-dimensional,
 signal-sparse regime of \S\ref{sec:06_sparsity_onpolicy}, where the useful
 targets are precisely the rare large ones, this is the dominant failure mode.
@@ -53,7 +53,9 @@ exponential-space target; only the divergence applied to it is negotiable. That
 is the opening the Bregman family exploits (\S\ref{sec:04_bregman}).
 
 \paragraph{Empirical pathology.}
-Beyond the asymptotics, the finite-precision behavior is severe. In our
+Beyond the asymptotics, the finite-precision behavior is severe; the
+overflow-avoidance patterns we rely on are standard
+\citep{blanchard2021logsumexp}. In our
 convergence runs the naive loss skipped or aborted a large fraction of batches
 on overflow --- in one FBRRT run, $18\%$ of batches once predictions reached
 moderate magnitude --- and a \emph{single} non-finite prediction propagated
@@ -64,6 +66,17 @@ float range (our \texttt{exp\_mse}) removes the overflow and the poisoning, and
 it is the baseline we compare against throughout, so that the comparison
 isolates the divergence rather than the arithmetic. What it cannot remove is
 the vanishing gradient, which is a property of the divergence itself.
+
+\paragraph{Prior fixes rescale the target; we cannot.}
+Badly-scaled value regression is a known problem in reinforcement learning, and
+the standard remedies transform the target: adaptive normalisation
+\citep{vanhasselt2016popart}, an invertible square-root rescaling
+\citep{pohlen2018observe}, or replacing regression by classification over
+bins \citep{farebrother2024stopregressing}. Each conditions the problem by
+changing what is regressed. None is available here, because each destroys the
+one property \eqref{eq:unbiased-target} gives us --- that the target is
+unbiased for $e^{\Vf}$ --- and with it the guarantee that the minimiser is the
+value. That constraint is what forces the fix into the divergence.
 
 \begin{figure}[t]
   \centering

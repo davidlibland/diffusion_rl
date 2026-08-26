@@ -12,6 +12,8 @@ from torch.utils.data import IterableDataset
 from diffusion_rl.algorithms.integration import integrate_sde
 from diffusion_rl.losses.exp_mse import exp_mse
 from diffusion_rl.losses.log_quadratic_bregman import log_quadratic_bregman_divergence
+from diffusion_rl.losses.itakura_saito import itakura_saito
+from diffusion_rl.losses.log_mse import log_mse
 
 
 class EMA:
@@ -564,6 +566,12 @@ class OnPolicyValue(L.LightningModule):
         elif self.loss_type == "quad":
             loss = _reduce(log_quadratic_bregman_divergence(
                 pred_value - c0, true_value - c0))
+        elif self.loss_type == "is":
+            loss = _reduce(itakura_saito(pred_value - c0, true_value - c0))
+        elif self.loss_type == "logmse":
+            loss = _reduce(log_mse(pred_value - c0, true_value - c0))
+        else:
+            raise ValueError(f"unknown loss_type {self.loss_type!r}")
         self.log("train_loss", loss)
         if not torch.isfinite(loss).all():
             raise RuntimeError("Loss is not finite")

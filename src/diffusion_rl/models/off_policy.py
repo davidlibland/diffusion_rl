@@ -7,6 +7,8 @@ from torch.utils.data import IterableDataset
 from diffusion_rl.algorithms.integration import integrate_sde
 from diffusion_rl.losses.exp_mse import exp_mse
 from diffusion_rl.losses.log_quadratic_bregman import log_quadratic_bregman_divergence
+from diffusion_rl.losses.itakura_saito import itakura_saito
+from diffusion_rl.losses.log_mse import log_mse
 from typing import Callable
 
 
@@ -111,6 +113,12 @@ class OffPolicyValue(L.LightningModule):
         elif self.loss_type == "quad":
             loss = log_quadratic_bregman_divergence(
                 pred_value - c0, true_value - c0).mean()
+        elif self.loss_type == "is":
+            loss = itakura_saito(pred_value - c0, true_value - c0).mean()
+        elif self.loss_type == "logmse":
+            loss = log_mse(pred_value - c0, true_value - c0).mean()
+        else:
+            raise ValueError(f"unknown loss_type {self.loss_type!r}")
         self.log("train_loss", loss)
         # Per-bin variance of (r(x1) - V_analytical(x,t)), measuring off-policy target noise
         if self.analytical_value_fn is not None:

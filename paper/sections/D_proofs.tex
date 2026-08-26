@@ -1,5 +1,121 @@
 % !TEX root = ../main.tex
-\section{Additional proofs}
+\section{Proofs}
 \label{sec:D_proofs}
 
-% TODO
+Throughout we assume $Z=\E_{\Base}[e^{r(X_1)}]<\infty$, which makes
+$\Vf$ finite and every conditional expectation below well defined.
+
+\subsection{The H-martingale property}
+
+\begin{proposition}[Eq.~\eqref{eq:hmart}]
+Let $h=e^{\Vf}$. Then $h(X_t,t)$ is a $\mathbb{P}$-martingale, and for all
+$0\le t<s\le 1$,
+$e^{\Vf(x,t)}=\E_{\Base}[\,e^{\Vf(X_s,s)}\mid X_t=x\,]$.
+\end{proposition}
+
+\begin{proof}
+Because $X$ is Markov under $\mathbb{P}$,
+$h(X_t,t)=\E_{\Base}[\,e^{r(X_1)}\mid X_t\,]
+        =\E_{\Base}[\,e^{r(X_1)}\mid\mathcal{F}_t\,]$,
+so $h(X_t,t)$ is the Doob martingale of the fixed integrable random variable
+$e^{r(X_1)}$ and is a martingale on $[0,1]$. Applying the tower property
+between $t$ and $s$ and using the Markov property again gives the displayed
+identity. Equivalently, in PDE form, Feynman--Kac gives
+$\partial_t h+\mathcal{L}h=0$ with $\mathcal{L}=f\cdot\nabla+a\Delta$;
+substituting $h=e^{\Vf}$ and dividing by $h>0$ recovers the HJB equation of
+\S\ref{sec:02_setting}, since
+$\Delta h = h\,(\|\nabla \Vf\|^{2}+\Delta \Vf)$.
+\end{proof}
+
+\noindent The terminal case $s=1$, with $\Vf(\cdot,1)=r$, is the one that
+anchors every target in \S\ref{subsec:targets}.
+
+\subsection{Bregman divergences are proper losses for the value}
+
+\begin{proof}[Proof of Lemma~\ref{lem:minimizer}]
+Fix $x_t$ and write $T=e^{q}$ for the (random) target and $u=e^{p}$ for the
+prediction. Differentiating the definition \eqref{eq:bregman-def} in $u$, the
+first-order terms cancel,
+\begin{equation}
+  \frac{\partial}{\partial u}\Big[\varphi(T)-\varphi(u)-\varphi'(u)(T-u)\Big]
+  = -\varphi'(u)-\varphi''(u)(T-u)+\varphi'(u)
+  = \varphi''(u)\,(u-T),
+\end{equation}
+and the chain rule with $\mathrm{d}u/\mathrm{d}p=u$ gives
+\eqref{eq:weight-grad}:
+$\partial L/\partial p = w(u)(u-T)$ with $w(u)=u\varphi''(u)>0$ by strict
+convexity.
+
+The key structural point is that this is \emph{affine} in the target, so the
+expectation passes through it:
+\begin{equation}
+  \E_{q\mid x_t}\!\left[\frac{\partial L}{\partial p}\right]
+  = w(e^{p})\,\Big(e^{p}-\E[e^{q}\mid x_t]\Big)
+  = w(e^{p})\,\Big(e^{p}-e^{\Vf(x_t,t)}\Big),
+\end{equation}
+using \eqref{eq:unbiased-target}. Since $w>0$, the right-hand side is
+negative for $p<\Vf(x_t,t)$ and positive for $p>\Vf(x_t,t)$; hence
+$p\mapsto\E[L]$ is strictly decreasing then strictly increasing, with the
+unique stationary point and global minimum at $p^{\star}=\Vf(x_t,t)$.
+\end{proof}
+
+\noindent The argument uses nothing about $\varphi$ beyond strict convexity,
+which is the point: the potential is free, and only $w$ --- the conditioning
+--- distinguishes the members of the family.
+
+\begin{remark}[The argument order is not cosmetic]
+Had the prediction occupied the \emph{first} slot, the derivative would be
+$\varphi'(u)-\E[\varphi'(T)]$ and the minimiser the quasi-arithmetic mean
+$(\varphi')^{-1}(\E[\varphi'(T)])$ --- for $\varphi=-\ln u$, the harmonic mean
+of $T$, not $\E[T]$. Squared error is symmetric and so hides the distinction;
+Itakura--Saito does not.
+\end{remark}
+
+\subsection{Twist-independence}
+
+\begin{proposition}[Eq.~\eqref{eq:girsanov}]
+Let $u$ be adapted with $\E_{\mathbb{P}^{u}}\exp(\tfrac{1}{4a}\int_t^s\|u\|^2)<\infty$
+(Novikov). Then $\rho_{t\to s}$ of \eqref{eq:girsanov-rho} satisfies
+$\E_{\mathbb{P}^{u}}[\rho_{t\to s}\,Z\mid\mathcal{F}_t]=\E_{\Base}[Z\mid\mathcal{F}_t]$
+for every $\mathcal{F}_s$-measurable $Z\ge0$; taking $Z=e^{\Vf(X_s,s)}$ gives
+\eqref{eq:girsanov}.
+\end{proposition}
+
+\begin{proof}
+Girsanov's theorem states that $\rho_{t\to s}$ is a version of the
+Radon--Nikodym derivative $\mathrm{d}\mathbb{P}/\mathrm{d}\mathbb{P}^{u}$ on
+$\mathcal{F}_s$ given $\mathcal{F}_t$, and Novikov's condition makes it a
+true martingale with $\E_{\mathbb{P}^{u}}[\rho_{t\to s}\mid\mathcal{F}_t]=1$.
+The change-of-measure identity is then the definition of a
+Radon--Nikodym derivative. The claim follows with $Z=e^{\Vf(X_s,s)}$ and the
+previous proposition.
+\end{proof}
+
+\noindent Note what is \emph{not} claimed: the variance of
+$\rho_{t\to s}e^{\Vf(X_s,s)}$ depends strongly on $u$, and is what the
+sampler design of \S\ref{sec:06_sparsity_onpolicy} manipulates. Only the mean
+is invariant.
+
+\subsection{The backward kernel does not depend on the terminal law}
+
+\begin{proposition}[Eq.~\eqref{eq:backward-kernel}]
+Let $\mathbb{P}$ be a pinned interpolant: $X_0=0$, $X_1\sim\nu$, and
+conditionally on $X_1=x_1$ the path is a Brownian bridge with diffusion
+coefficient $2a$. Then for $t<s$,
+$X_t\mid X_s=x_s \sim \mathcal{N}\big(\tfrac{t}{s}x_s,\;2a\tfrac{t(s-t)}{s}I\big)$,
+independently of $\nu$.
+\end{proposition}
+
+\begin{proof}
+Condition on $X_1=x_1$. The path on $[0,1]$ is then a Brownian bridge from
+$(0,0)$ to $(1,x_1)$, and conditioning such a bridge further on $X_s=x_s$
+leaves, on the subinterval $[0,s]$, a Brownian bridge from $(0,0)$ to
+$(s,x_s)$ --- whose law does not involve $x_1$. Hence the conditional law of
+$X_t$ given $(X_s,X_1)$ equals its conditional law given $X_s$ alone, and is
+the stated Gaussian. Averaging over $X_1\sim\nu$ changes nothing.
+\end{proof}
+
+\noindent This is why the backward-noising expansion of
+\S\ref{subsec:targets} applies to base models with nontrivial drift, and not
+only to Brownian motion: the induced drift $f$ depends on
+$\nu$, but the bridge used to generate extra training points does not.

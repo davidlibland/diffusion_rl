@@ -6,7 +6,8 @@
 \subsection{Any Bregman divergence learns the value function}
 
 For a strictly convex, differentiable potential $\varphi$ on $(0,\infty)$, the
-Bregman divergence of a prediction $u$ from a target $T$ is
+Bregman divergence \citep{bregman1967relaxation} of a prediction $u$ from a
+target $T$ is
 \begin{equation}
   \Breg(T, u) = \varphi(T) - \varphi(u) - \varphi'(u)\,(T - u).
   \label{eq:bregman-def}
@@ -18,7 +19,15 @@ mean.\footnote{With the arguments swapped, $\arg\min_u\E[\Breg(u,T)]$ solves
 $\varphi'(u)=\E[\varphi'(T)]$, a quasi-arithmetic mean --- the harmonic mean of
 $T$ for $\varphi=-\ln u$, not $\E[T]$.}
 
-\begin{lemma}[Bregman divergences are proper losses for the value]
+The fact that a Bregman divergence is minimised in expectation by the mean is
+classical --- it is the Savage representation of proper scoring rules
+\citep{savage1971elicitation,gneiting2007proper}, and Bregman divergences are
+exactly the losses with that property \citep{banerjee2005clustering}. What we
+add is the reparameterisation: because the value is a \emph{log}-partition
+function, the network predicts $p=\log u$, and in that variable the whole
+family collapses onto a single scalar weight.
+
+\begin{lemma}[Gradient weight; the minimiser is classical]
 \label{lem:minimizer}
 Let the regression target be $e^{q}$, with $q$ such that
 $\E[e^{q}\mid x_t]=e^{\Vf(x_t)}$ (the H-martingale target,
@@ -63,7 +72,8 @@ over-predictions and, because $w(u)\to0$ as $u\to0$, is driven to zero for
 under-predictions --- the unrecoverable pathology of \S\ref{sec:03_expmse}.
 
 \paragraph{Itakura--Saito: $w(u)=1/u$.}
-Taking $\varphi(u)=-\ln u$ gives
+Taking $\varphi(u)=-\ln u$ gives the Itakura--Saito divergence
+\citep{itakura1968analysis}, for which
 $D_{\mathrm{IS}}(e^{q},e^{p}) = e^{q-p}-(q-p)-1$ and
 \begin{equation}
   \frac{\partial L_{\mathrm{IS}}}{\partial p}=1-e^{q-p}.
@@ -79,9 +89,21 @@ decayed to zero) into the recoverable one (a gradient that is too large, which
 clipping fixes). It is moreover \emph{scale-invariant}
 ($D_{\mathrm{IS}}(cT,cu)=D_{\mathrm{IS}}(T,u)$, equivalently \eqref{eq:is-grad}
 depends on $q-p$ alone) and is the negative log-likelihood of a
-gamma/exponential observation model, giving a natural uncertainty
-interpretation for $\Vf$. A useful midpoint, but still one-sided
+gamma/exponential observation model \citep{fevotte2009isnmf}, giving a natural
+uncertainty interpretation for $\Vf$. A useful midpoint, but still one-sided
 (Fig.~\ref{fig:loss_curves}, middle).
+
+\paragraph{Why not simply retune $\beta$?}
+Squared error and Itakura--Saito are the $\beta=2$ and $\beta=0$ members of the
+$\beta$-divergence family \citep{fevotte2011beta,cichocki2010families}, whose
+weight is the power law $w(u)\propto u^{\beta-1}$. It is natural to ask whether
+some intermediate $\beta$ already does what we want. It does not, and the
+reason is structural: with $w(u)=u^{\beta-1}$ the gradient is
+$e^{\beta p}-e^{(\beta-1)p+q}$, so as $p\to+\infty$ it grows like $e^{\beta p}$
+--- exponentially for every $\beta>0$, and flat for $\beta=0$. Linear growth in
+$p$ is attainable at no value of $\beta$. A power-law weight cannot produce
+log-linear tails; the weight has to be logarithmic, which is what
+\S\ref{subsec:spence} constructs.
 
 % ---------------------------------------------------------------------------
 \subsection{The Spence loss}
@@ -106,7 +128,7 @@ prediction} $p=\ln u$. The simplest smooth positive function meeting both is
 \end{equation}
 which is positive on all of $(0,\infty)$ (both factors change sign at $u=1$)
 and extends smoothly through the removable singularity with $w(1)=1$. It is the
-reciprocal of the logarithmic mean of $1$ and $u$, and at both extremes it lies
+reciprocal of the logarithmic mean of $1$ and $u$ \citep{carlson1972logmean}, and at both extremes it lies
 between the squared-error and Itakura--Saito weights: the Spence loss
 interpolates the two reference points rather than adding a third unrelated
 one. The choice is not unique --- \eqref{eq:req-over}--\eqref{eq:req-under} fix
@@ -139,14 +161,21 @@ up-weights exactly the rare high-value targets that dominate the log-sum-exp
 and are hardest to find (\S\ref{sec:06_sparsity_onpolicy}), while still growing
 only polynomially in $p$. To our knowledge this is the first Bregman divergence
 proposed for exp-space value regression with both tails controlled in this
-sense; the alternative strand of work attacks the same conditioning problem by
-changing the \emph{objective} rather than the divergence (log-variance and
-adjoint losses, \S\ref{sec:08_related}).
+sense. The alternative strand of work attacks the same conditioning problem by
+changing the \emph{objective} rather than the divergence: log-variance and
+adjoint losses \citep{nusken2021logvariance,richter2020vargrad,domingoenrich2024adjoint},
+and the trajectory-balance family
+\citep{malkin2022trajectory,madan2023subtb,venkatraman2024rtb}, of which
+\citet{zhang2024dgfs} is closest --- it also learns intermediate
+log-partition functions for a diffusion sampler, but through a partial-trajectory
+objective rather than by regressing an unbiased exponential-space target. Those
+objectives buy conditioning by giving up the unbiased target; we keep the
+target and change only the divergence applied to it.
 
 \paragraph{Value via the Spence function.}
 The divergence value (used only for monitoring; training uses
 \eqref{eq:spence-grad}) is expressible through the Spence function
-$S(x)=\Spence(1-e^{x})$, using the dilogarithm identity
+$S(x)=\Spence(1-e^{x})$ \citep{lewin1981dilogarithm}, using the dilogarithm identity
 $S'(x)=-\,x e^{x}/(e^{x}-1)=x/\mathrm{expm1}(-x)$; hence the name. The full
 derivation and the numerically stable branch-wise gradient --- finite for all
 float inputs, unlike naive autograd, which returns NaN for $p\gtrsim 88$ in
@@ -154,7 +183,7 @@ single precision --- are in App.~\ref{sec:A_spence}.
 
 \paragraph{Implied observation model.}
 By the duality between regular Bregman divergences and regular exponential
-families \citep{banerjee2005clustering}, minimizing any $\Breg$ is maximum
+families \citep{banerjee2005clustering,azoury2001relative}, minimizing any $\Breg$ is maximum
 likelihood under the exponential family whose cumulant is the convex conjugate
 $\varphi^{*}$; squared error recovers a Gaussian and Itakura--Saito a gamma.
 For \eqref{eq:spence-weight} the conjugate is not a standard named family, so

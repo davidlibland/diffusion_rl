@@ -1,0 +1,642 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1.1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!60!black,citecolor=blue!60!black,urlcolor=blue!60!black]{hyperref}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\Pmeas}{\mathbb{P}}
+\newcommand{\F}{\mathcal{F}}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\grad}{\nabla}
+\newcommand{\uhat}{\hat{u}}
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert}
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+
+\title{Tangent-Process Regression Targets for Martingale Extensions\\
+and Logarithmic Transforms of Diffusions}
+\author{Notes prepared with Claude}
+\date{June 10, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Given a diffusion $dX_s = f(X_s,s)\,ds + \sigma(X_s,s)\,dW_s$ on $[0,1]$ and a terminal
+function $h$, we derive simulation-based regression targets for the martingale extension
+$h(x,t) = \E[h(X_1)\mid X_t=x]$ \emph{and its spatial gradient}, using the first-variation
+(tangent) process of the flow. A single trajectory, together with one reverse-mode sweep
+through the unrolled simulator, produces unbiased targets for both the value and the full
+$n$-dimensional gradient at every time step, in contrast to standard Euler schemes for the
+associated BSDE which use only scalar value information. We then extend the construction to
+the logarithmic transform $v(x,t) = \log \E[e^{r(X_1)}\mid X_t = x]$, whose BSDE has a
+quadratic driver. The key structural facts are: (i) under the Doob $h$-transform the driver
+vanishes and the gradient admits a driver-free tangent-process representation along tilted
+paths; (ii) the tilted dynamics can be realized by a shifted-noise rollout with a
+\emph{detached} control, so that reverse-mode differentiation again yields the exact discrete
+targets; (iii) the importance weights correcting for an approximate control are
+\emph{pathwise} (not merely in expectation) equal to one at the fixed point; and (iv) the
+value targets are biased from below by exactly half the squared $L^2$ control error, which is
+the Bou\'e--Dupuis variational principle. Proofs and references are given.
+\end{abstract}
+
+\tableofcontents
+
+\section{Setting and assumptions}
+
+Let $(\Omega,\F,(\F_s)_{s\in[0,1]},\Pmeas)$ carry an $m$-dimensional Brownian motion $W$, and
+consider the It\^o SDE in $\R^n$
+\begin{equation}\label{eq:sde}
+dX_s = f(X_s,s)\,ds + \sigma(X_s,s)\,dW_s, \qquad s\in[t,1],\qquad X_t = x,
+\end{equation}
+with solution denoted $X^{t,x}_s$. We write $\sigma_k(\cdot,s)\in\R^n$ for the $k$-th column
+of $\sigma\in\R^{n\times m}$, $a = \sigma\sigma^\top$, and $\grad f \in \R^{n\times n}$ for
+the spatial Jacobian, $(\grad f)_{jk} = \partial_{x_k} f_j$.
+
+\begin{assumption}\label{ass:reg}
+$f$ and $\sigma$ are continuous in $(x,s)$, continuously differentiable in $x$ with bounded
+spatial derivatives, and of linear growth. The terminal datum ($h$ in
+Section~\ref{sec:zero}, $r$ in Section~\ref{sec:log}) is $C^1$ with $h,\grad h$ (resp.\
+$r,\grad r$) of polynomial growth; in Section~\ref{sec:log} we additionally assume $r$
+bounded above (so that $\E[e^{r(X_1)}]<\infty$; boundedness of $r$ suffices for the quadratic
+BSDE theory we cite, and \cite{BriandHu} relaxes this to exponential moments).
+\end{assumption}
+
+Under Assumption~\ref{ass:reg} the map $x\mapsto X^{t,x}_s$ is, for a.e.\ $\omega$, a $C^1$
+diffeomorphism onto its image (Kunita \cite[Thm.~4.6.5]{Kunita}), and the Jacobian
+\emph{tangent process} $J_{t\to s} \coloneqq \partial X^{t,x}_s/\partial x \in \R^{n\times n}$
+satisfies the variational SDE
+\begin{equation}\label{eq:tangent}
+dJ_{t\to s} = \grad f(X_s,s)\,J_{t\to s}\,ds
++ \sum_{k=1}^m \grad\sigma_k(X_s,s)\,J_{t\to s}\,dW^k_s,
+\qquad J_{t\to t} = I_n .
+\end{equation}
+By Gronwall's lemma together with the Burkholder--Davis--Gundy inequality, boundedness of
+$\grad f,\grad\sigma_k$ yields
+\begin{equation}\label{eq:Jmoments}
+\sup_{x}\;\E\Big[\sup_{s\in[t,1]}\norm{J_{t\to s}}^p\Big] < \infty
+\qquad\text{for every } p\ge 1,
+\end{equation}
+with a constant depending only on $p$ and the Lipschitz bounds (see
+\cite[Sec.~4.6]{Kunita}).
+
+\section{The zero-driver case: martingale extension of $h$}\label{sec:zero}
+
+Define
+\begin{equation}
+h(x,t) \coloneqq \E\big[h(X^{t,x}_1)\big],
+\end{equation}
+so that $h(X_s,s)$ is a martingale and $h(\cdot,t)$ solves the backward Kolmogorov equation
+$\partial_t h + f\cdot\grad h + \tfrac12\tr(a\grad^2 h) = 0$ with $h(\cdot,1)=h$.
+
+\subsection{Pathwise gradient representation}
+
+\begin{theorem}[Pathwise differentiation of the martingale extension]\label{thm:pathwise}
+Under Assumption~\ref{ass:reg}, $h(\cdot,t)\in C^1(\R^n)$ and
+\begin{equation}\label{eq:gradrep}
+\grad_x h(x,t) \;=\; \E\big[\, J_{t\to 1}^\top \,\grad h(X^{t,x}_1)\,\big].
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Fix $t,x$ and a direction $e\in\R^n$, $\norm{e}=1$. For $\varepsilon>0$, the mean value
+theorem applied $\omega$-wise along the $C^1$ flow gives
+\[
+\frac{h(X^{t,x+\varepsilon e}_1) - h(X^{t,x}_1)}{\varepsilon}
+= \int_0^1 \grad h\big(X^{t,x+\theta\varepsilon e}_1\big)^\top
+\,\partial_x X^{t,x+\theta\varepsilon e}_1\, e \; d\theta .
+\]
+As $\varepsilon\downarrow 0$ the integrand converges a.s.\ to
+$\grad h(X^{t,x}_1)^\top J_{t\to1}\,e$ by continuity of the flow and of its derivative in the
+initial condition \cite[Thm.~4.6.5]{Kunita}. Domination: by polynomial growth of $\grad h$,
+the standard moment bound $\sup_{|y-x|\le 1}\E[\sup_s |X^{t,y}_s|^p]<\infty$, and
+\eqref{eq:Jmoments}, the family of integrands is bounded in $L^q(\Pmeas\otimes d\theta)$ for
+some $q>1$ (Cauchy--Schwarz), hence uniformly integrable. Vitali's convergence theorem lets
+us pass to the limit inside the expectation, giving the directional derivative
+$\partial_e h(x,t) = \E[\grad h(X_1)^\top J_{t\to1} e]$. Continuity of the right-hand side in
+$x$ (same uniform integrability plus a.s.\ continuity of $x\mapsto (X^{t,x}_1, J_{t\to1})$)
+upgrades directional differentiability to $C^1$, and \eqref{eq:gradrep} follows by
+transposition. For the BSDE phrasing of this representation theorem, including
+non-Markovian terminal data, see Ma and Zhang \cite{MaZhang}.
+\end{proof}
+
+\subsection{BSDE and Malliavin interpretation}
+
+Setting $Y_s = h(X_s,s)$ and $Z_s = \sigma(X_s,s)^\top \grad h(X_s,s)$, It\^o's formula and
+the Kolmogorov equation give the (zero-driver) BSDE
+\begin{equation}\label{eq:bsde0}
+dY_s = Z_s^\top dW_s,\qquad Y_1 = h(X_1),
+\end{equation}
+the linear special case of Pardoux--Peng \cite{PardouxPeng}; see also
+\cite{ElKarouiPengQuenez}. The classical representation $Z_t = \E[D_t Y_1 \mid \F_t]$
+(Clark--Ocone / \cite{ElKarouiPengQuenez,MaZhang}), combined with the chain rule
+$D_t h(X_1) = \grad h(X_1)^\top D_t X_1$ and the flow identity
+$D_t X_1 = J_{t\to 1}\,\sigma(X_t,t)$, recovers \eqref{eq:gradrep} in the form
+$Z_t = \sigma^\top \grad h(X_t,t)$. The point of view that the pair $(Y,Z)$ jointly satisfies
+a vector BSDE with terminal condition $(h(X_1), \sigma^\top\grad h(X_1))$ --- so that the
+\emph{known} terminal gradient is data, not a by-product --- is developed as the One-Step
+Malliavin (OSM) scheme by Negyesi, Andersson and Oosterlee \cite{OSM}.
+
+\subsection{Discrete targets by reverse-mode differentiation}\label{sec:discrete0}
+
+Fix a grid $t = t_0 < t_1 < \dots < t_N = 1$ and the Euler--Maruyama recursion
+\begin{equation}\label{eq:euler}
+\widehat X_{i+1} = \widehat X_i + f(\widehat X_i,t_i)\,\Delta t_i
++ \sigma(\widehat X_i,t_i)\,\Delta W_i,
+\qquad \Delta W_i \sim \mathcal N(0,\Delta t_i I_m)\ \text{i.i.d.}
+\end{equation}
+Freezing the increments $(\Delta W_i)_i$, the map $\widehat X_i \mapsto \widehat X_N$ is a
+composition of smooth maps with step Jacobians
+\begin{equation}\label{eq:discreteJ}
+\widehat J_{i+1\leftarrow i}
+= I + \grad f(\widehat X_i,t_i)\,\Delta t_i
++ \sum_k \grad\sigma_k(\widehat X_i,t_i)\,\Delta W^k_i ,
+\end{equation}
+which is exactly the Euler discretization of \eqref{eq:tangent}.
+
+\begin{proposition}[Backprop computes the discrete tangent targets]\label{prop:vjp}
+Let $g_i \in \R^n$ denote the gradient delivered to the intermediate node $\widehat X_i$ by
+reverse-mode automatic differentiation of the scalar $h(\widehat X_N)$ through the unrolled
+recursion \eqref{eq:euler} with $(\Delta W_i)$ held fixed. Then
+\[
+g_i = \widehat J_{N\leftarrow i}^{\,\top}\,\grad h(\widehat X_N),
+\qquad
+\widehat J_{N\leftarrow i} \coloneqq \widehat J_{N\leftarrow N-1}\cdots
+\widehat J_{i+1\leftarrow i},
+\]
+i.e.\ the exact gradient of the \emph{discrete} value function
+$\widehat h_i(x) \coloneqq \E[h(\widehat X_N)\mid \widehat X_i = x]$ is
+$\grad \widehat h_i(x) = \E[g_i \mid \widehat X_i = x]$. Moreover one reverse sweep computes
+$(g_0,\dots,g_{N-1})$ simultaneously, at a cost of $O(1)$ rollouts.
+\end{proposition}
+
+\begin{proof}
+The first identity is the chain rule: reverse-mode AD computes vector--Jacobian products, and
+the Jacobian of the frozen-noise composition $\widehat X_i \mapsto \widehat X_N$ is
+$\widehat J_{N\leftarrow i}$ by \eqref{eq:discreteJ} and the product rule. The second
+identity is Theorem~\ref{thm:pathwise} applied verbatim to the discrete-time Markov chain:
+differentiation under the expectation is justified by the same uniform-integrability
+argument, the moment bound \eqref{eq:Jmoments} holding for products of the matrices
+\eqref{eq:discreteJ} with constants uniform in $N$ (discrete Gronwall). The cost claim is the
+cheap-gradient principle of reverse-mode AD \cite{GriewankWalther}: the backward sweep visits
+each node once and deposits its adjoint there.
+\end{proof}
+
+\begin{remark}[Consistency]
+The targets $g_i$ are the \emph{exact} gradients of the discrete flow that the scheme itself
+simulates, not $O(\Delta t)$ approximations of the continuous tangent. The regression
+therefore learns the gradient of the same discrete value function whose values it learns;
+discretization error enters only through $\widehat h \approx h$, with the usual weak-order-1
+rate.
+\end{remark}
+
+\subsection{Sobolev regression}\label{sec:sobolev}
+
+Since, conditionally on $\widehat X_i$, the pair $\big(h(\widehat X_N),\,g_i\big)$ is
+unbiased for $\big(\widehat h(\widehat X_i,t_i),\,\grad \widehat h(\widehat X_i,t_i)\big)$,
+the population loss
+\begin{equation}\label{eq:sobolevloss}
+\mathcal L(\theta) = \E\sum_{i=0}^{N-1}
+\Big[\big(h_\theta(\widehat X_i,t_i) - h(\widehat X_N)\big)^2
++ \lambda\,\norm{\grad_x h_\theta(\widehat X_i,t_i) - g_i}^2\Big]
+\end{equation}
+is minimized, for every $\lambda>0$, by $h_\theta = \widehat h$ (each term is a conditional
+$L^2$ projection with the same minimizer; $\lambda$ trades off variance and conditioning of
+the optimization, not bias). Each trajectory supplies $(n+1)N$ scalar targets at the cost of
+one rollout and one reverse sweep. This is Sobolev training; in the financial setting with
+regression at $t_0$ only it is the ``differential machine learning'' of Huge and Savine
+\cite{HugeSavine}, and the all-times version coincides with the driver-free specialization of
+\cite{OSM}.
+
+\begin{remark}[Variance; nonsmooth $h$]\label{rem:variance0}
+The targets $J^\top\grad h(X_1)$ may be heavy-tailed when the flow is expansive
+($\norm{\grad f}$ large, multiplicative noise); antithetic increments and the iterated
+control variate of \cite{Vidales} (subtract
+$\sum_i \grad h_\theta(\widehat X_i)^\top \sigma\,\Delta W_i$ from the value target, which by
+\eqref{eq:bsde0} is exact at convergence) mitigate this. If $\grad h$ is unavailable, the
+Bismut--Elworthy--Li formula \cite{ElworthyLi}
+$\grad h(x,t) = \E\big[h(X_1)\,\tfrac1{1-t}\int_t^1 (\sigma^{-1}(X_s,s)J_{t\to s})^\top
+dW_s\big]$ (for elliptic $\sigma$) trades the terminal gradient for an integration-by-parts
+weight, at the cost of variance of order $(1-t)^{-1}$.
+\end{remark}
+
+\section{The logarithmic transform: quadratic driver}\label{sec:log}
+
+Now let
+\begin{equation}
+v(x,t) \coloneqq \log \E\big[e^{r(X^{t,x}_1)}\big],
+\qquad u \coloneqq e^{v},
+\end{equation}
+so $u(X_s,s)$ is a positive martingale, $u$ solves the Kolmogorov equation, and the
+logarithmic (Hopf--Cole / Fleming) transform \cite[Ch.~VI]{FlemingSoner} yields the
+Hamilton--Jacobi--Bellman equation
+\begin{equation}\label{eq:hjb}
+\partial_t v + f\cdot\grad v + \tfrac12 \tr\big(a\,\grad^2 v\big)
++ \tfrac12\,\norm{\sigma^\top \grad v}^2 = 0,
+\qquad v(\cdot,1) = r .
+\end{equation}
+With $Y_s = v(X_s,s)$, $Z_s = \sigma(X_s,s)^\top\grad v(X_s,s)$, It\^o's formula gives the
+quadratic BSDE
+\begin{equation}\label{eq:qbsde}
+dY_s = -\tfrac12\norm{Z_s}^2\,ds + Z_s^\top dW_s,\qquad Y_1 = r(X_1),
+\end{equation}
+well-posed for bounded $r$ with $Z\in\mathrm{BMO}$ by Kobylanski \cite{Kobylanski} (unbounded
+$r$ with exponential moments: \cite{BriandHu}).
+
+Applying Section~\ref{sec:zero} directly to $u=e^v$ is correct
+($\grad u(x,t) = \E[e^{r(X_1)} J_{t\to1}^\top \grad r(X_1)]$) but suffers exponential-in-$r$
+relative variance, the log-partition-function pathology. The remedy is to absorb the
+exponential weight into the dynamics.
+
+\subsection{The Doob $h$-transform removes the driver}
+
+Since $u(X_s,s)$ is a positive martingale, It\^o on $\log u$ gives the Dol\'eans exponential
+representation
+\begin{equation}\label{eq:doleans}
+\frac{u(X_s,s)}{u(x,t)}
+= \exp\Big(\int_t^s Z_\rho^\top dW_\rho - \tfrac12\int_t^s \norm{Z_\rho}^2 d\rho\Big),
+\qquad s\in[t,1].
+\end{equation}
+Define, conditionally on $X_t = x$, the tilted measure
+\begin{equation}\label{eq:Q}
+\frac{d\Q}{d\Pmeas}\Big|_{\F_1} = e^{\,r(X_1) - v(x,t)} = \frac{u(X_1,1)}{u(x,t)} .
+\end{equation}
+By \eqref{eq:doleans} and Girsanov's theorem ($Z\in$ BMO guarantees the Dol\'eans exponential
+is a true martingale \cite{Kazamaki}), $W^\Q_s \coloneqq W_s - \int_t^s Z_\rho\,d\rho$ is a
+$\Q$-Brownian motion and the $h$-transformed dynamics are
+\begin{equation}\label{eq:tilted}
+dX_s = \big(f + a\,\grad v\big)(X_s,s)\,ds + \sigma(X_s,s)\,dW^\Q_s .
+\end{equation}
+This is the classical equivalence between the logarithmic transform and entropy-regularized
+stochastic control \cite{FlemingSoner,DaiPra}.
+
+\begin{theorem}[Driver-free gradient representation under the tilt]\label{thm:tiltgrad}
+Under Assumption~\ref{ass:reg},
+\begin{equation}\label{eq:tiltgradrep}
+\grad v(x,t) \;=\; \E_{\Q}\big[\, J_{t\to1}^\top\, \grad r(X_1)\,\big|\, X_t = x\big],
+\end{equation}
+where $J_{t\to s}$ is the tangent process \eqref{eq:tangent} of the \emph{uncontrolled} flow,
+i.e.\ the solution of
+$dJ = \grad f\,J\,ds + \sum_k \grad\sigma_k\,J\,dW^k_s$
+driven by the original increments $dW_s = dW^\Q_s + Z_s\,ds$, evaluated along the tilted path
+\eqref{eq:tilted}.
+\end{theorem}
+
+\begin{proof}[Proof 1 (change of measure)]
+Apply Theorem~\ref{thm:pathwise} to the terminal function $e^{r}$ (polynomial growth of
+$e^r\,\grad r$ holds since $r$ is bounded above and $\grad r$ has polynomial growth):
+$\grad u(x,t) = \E_\Pmeas\big[e^{r(X_1)}\,J_{t\to1}^\top \grad r(X_1)\big]$. Divide by
+$u(x,t)$ and use $\grad v = \grad u / u$ together with \eqref{eq:Q}:
+\[
+\grad v(x,t)
+= \E_\Pmeas\Big[e^{\,r(X_1)-v(x,t)}\,J_{t\to1}^\top\grad r(X_1)\Big]
+= \E_\Q\big[J_{t\to1}^\top \grad r(X_1)\big].
+\]
+The pair $(X,J)$ is a path functional of $(x, W)$; rewriting its driving noise as
+$dW = dW^\Q + Z\,dt$ expresses the same functional in terms of the $\Q$-Brownian motion,
+which is the stated form.
+\end{proof}
+
+\begin{proof}[Proof 2 (PDE / martingale argument; $\sigma$ constant for clarity)]
+Let $p \coloneqq \grad v$. Differentiating \eqref{eq:hjb} in $x_k$ and using symmetry of the
+Hessian, $\partial_k p_j = \partial_j p_k$, so that
+$p^\top a\,\partial_k p = (a p)\cdot \grad p_k$:
+\begin{equation}\label{eq:gradpde}
+\partial_t p_k + \big(f + a p\big)\cdot \grad p_k + \tfrac12\tr\big(a\grad^2 p_k\big)
+= -\big((\grad f)^\top p\big)_k .
+\end{equation}
+The quadratic term has recombined with $f$ into the \emph{controlled} drift of
+\eqref{eq:tilted}: in BSDE language, a driver whose $z$-gradient is
+$\grad_z(\tfrac12\norm{z}^2) = z$ is absorbed exactly by the Girsanov shift with kernel $Z$,
+which is the $h$-transform. Now set $M_s \coloneqq J_{t\to s}^\top\, p(X_s,s)$ along the
+tilted dynamics. With $\sigma$ constant, $dJ = \grad f(X_s,s)\,J\,ds$ under either measure,
+and It\^o's formula under $\Q$ together with \eqref{eq:gradpde} gives
+\[
+dM_s = J^\top (\grad f)^\top p \, ds
++ J^\top\Big(\underbrace{\partial_t p + (f+ap)\cdot\grad p
++ \tfrac12\tr(a\grad^2 p)}_{=-(\grad f)^\top p}\Big)\,ds
++ J^\top (\grad p)^\top \sigma\, dW^\Q_s
+= J^\top (\grad p)^\top\sigma\,dW^\Q_s,
+\]
+a local martingale; the moment bounds \eqref{eq:Jmoments} (valid under $\Q$ since
+$f + a\grad v$ inherits local Lipschitz bounds on compacts, with a standard localization)
+make it a true martingale on $[t,1]$, whence
+$p(x,t) = M_t = \E_\Q[M_1] = \E_\Q[J_{t\to1}^\top \grad r(X_1)]$. For state-dependent
+$\sigma$, Proof~1 applies unchanged.
+\end{proof}
+
+\begin{remark}
+Equation \eqref{eq:tiltgradrep} says: \emph{under the tilted measure, the gradient process
+obeys the same driver-free tangent representation as in Section~\ref{sec:zero}}. All the
+machinery of Sections~\ref{sec:discrete0}--\ref{sec:sobolev} therefore transfers, provided we
+can sample (approximately) from $\Q$ and correct for the approximation. This is the
+BSDE-side derivation of \emph{Adjoint Matching} \cite{AdjointMatching}; the
+importance-weighted version with general gauge freedom is \emph{Stochastic Optimal Control
+Matching} \cite{SOCM}, of which the present problem is the terminal-cost-only special case.
+\end{remark}
+
+\subsection{Discrete realization: shifted noise, detached control}
+
+Let $v_\theta$ be the current model and $\uhat_\theta \coloneqq \sigma^\top \grad v_\theta$
+the induced control. Simulate the controlled chain by \emph{shifting the noise}:
+\begin{equation}\label{eq:shifted}
+\widehat X_{i+1} = \widehat X_i + f(\widehat X_i,t_i)\,\Delta t_i
++ \sigma(\widehat X_i,t_i)\,\Delta\widetilde W_i,
+\qquad
+\Delta\widetilde W_i \coloneqq \Delta W_i + \uhat_\theta(\widehat X_i,t_i)\,\Delta t_i,
+\end{equation}
+with $\Delta W_i \sim \mathcal N(0,\Delta t_i I)$ the increments of the sampling
+(controlled-measure) Brownian motion and $\uhat_\theta$ treated as an \emph{exogenous
+constant} in the computation graph (``detached'').
+
+\begin{proposition}[Detached backprop computes the uncontrolled tangent along tilted paths]
+\label{prop:detached}
+Reverse-mode differentiation of $r(\widehat X_N)$ through \eqref{eq:shifted}, with
+$(\Delta W_i)$ and the values $\uhat_\theta(\widehat X_i,t_i)$ held fixed, delivers to node
+$\widehat X_i$ the vector
+\[
+g_i = \widehat J_{N\leftarrow i}^{\,\top}\,\grad r(\widehat X_N),
+\qquad
+\widehat J_{i+1\leftarrow i} = I + \grad f\,\Delta t_i
++ \sum_k \grad\sigma_k\,\Delta\widetilde W^k_i ,
+\]
+i.e.\ the Euler discretization of the \emph{uncontrolled} variational SDE \eqref{eq:tangent}
+driven by the shifted increments $\Delta\widetilde W_i$ --- precisely the discretization of
+the process appearing in Theorem~\ref{thm:tiltgrad}, since
+$dW = dW^\Q + Z\,dt \approx dW^{\uhat} + \uhat\,dt$. In particular, when
+$\uhat_\theta = \sigma^\top\grad v$, the $g_i$ are conditionally unbiased (in the discrete
+model) for $\grad v(\widehat X_i, t_i)$; no second derivatives of $v_\theta$ are ever formed.
+\end{proposition}
+
+\begin{proof}
+Immediate from the chain rule applied to \eqref{eq:shifted} with $\uhat_\theta$ exogenous:
+the step Jacobian is as displayed, including the cross terms
+$\grad\sigma_k\,\uhat^k\Delta t$ generated by state-dependent $\sigma$ multiplying the
+shifted increment. Detaching is not an approximation but the content of
+Theorem~\ref{thm:tiltgrad}: the correct integrand is the tangent of the \emph{original} flow
+along the tilted path. Differentiating through the control would add terms proportional to
+$\grad \uhat_\theta = \grad(\sigma^\top\grad v_\theta)$, i.e.\ spurious Hessians, and the
+resulting expectation would no longer equal \eqref{eq:tiltgradrep}. Equivalently, the
+backward sweep solves the \emph{lean adjoint} equation
+$d\tilde a_s = -\grad f(X_s,s)^\top \tilde a_s\,ds - \sum_k \grad\sigma_k(X_s,s)^\top
+\tilde a_s\, d\widetilde W^k_s$ (backward, $\tilde a_1 = \grad r(X_1)$) of
+\cite{AdjointMatching}.
+\end{proof}
+
+\subsection{Importance weights and their pathwise collapse}
+
+Since we sample under $\uhat = \uhat_\theta$ rather than the exact kernel $Z$, expectations
+under $\Q$ must be importance-corrected. Let $\Pmeas^{\uhat}$ denote the law of
+\eqref{eq:tilted} with $a\grad v$ replaced by $\sigma\uhat$, and $W^{\uhat}$ its Brownian
+motion (the sampled increments). Conditionally on $X_t = x$, combining \eqref{eq:Q} with the
+Girsanov factor between $\Pmeas$ and $\Pmeas^{\uhat}$ gives
+\begin{equation}\label{eq:logw}
+\log w_t \;=\; r(X_1) - v(x,t)
+- \int_t^1 \uhat_s^\top dW^{\uhat}_s - \tfrac12\int_t^1 \norm{\uhat_s}^2 ds ,
+\qquad
+\frac{d\Q}{d\Pmeas^{\uhat}}\Big|_{\F_1} = w_t .
+\end{equation}
+
+\begin{lemma}[Pathwise form of the weights]\label{lem:weights}
+Along $\Pmeas^{\uhat}$-paths, with $Z_s = \sigma^\top\grad v(X_s,s)$ the exact kernel,
+\begin{equation}\label{eq:residualweight}
+\log w_t \;=\; \int_t^1 (Z_s - \uhat_s)^\top dW^{\uhat}_s
+\;-\; \tfrac12 \int_t^1 \norm{Z_s - \uhat_s}^2\, ds .
+\end{equation}
+In particular $\log w_t \equiv 0$ \emph{pathwise} (not merely in expectation) iff
+$\uhat_s = Z_s$ for a.e.\ $s$ along the path.
+\end{lemma}
+
+\begin{proof}
+Under $\Pmeas^{\uhat}$, $dW_s = dW^{\uhat}_s + \uhat_s\,ds$, so the BSDE \eqref{eq:qbsde}
+reads $dY_s = \big(Z_s^\top \uhat_s - \tfrac12\norm{Z_s}^2\big)ds + Z_s^\top dW^{\uhat}_s$.
+Integrating from $t$ to $1$ with $Y_t = v(x,t)$, $Y_1 = r(X_1)$, and substituting
+$r(X_1) - v(x,t)$ into \eqref{eq:logw}:
+\[
+\log w_t = \int_t^1\Big(Z^\top\uhat - \tfrac12\norm{Z}^2 - \tfrac12\norm{\uhat}^2\Big)ds
++ \int_t^1 (Z-\uhat)^\top dW^{\uhat}
+= -\tfrac12\int_t^1\norm{Z-\uhat}^2 ds + \int_t^1 (Z-\uhat)^\top dW^{\uhat}. \qedhere
+\]
+\end{proof}
+
+The weights are thus the Dol\'eans exponential of the \emph{residual} control error: as
+$v_\theta \to v$ they flatten to $1$ pathwise and the effective sample size of
+self-normalized importance sampling tends to $N_{\text{paths}}$. In practice one replaces the
+unknown $v(x,t)$ in \eqref{eq:logw} by $v_\theta(x,t)$ --- a function of the conditioning
+point only, which changes neither the conditional weighted-regression minimizer nor the
+$O(1)$ scale of the weights --- self-normalizes within each time slice, and, if the effective
+sample size degrades early in training, resamples: this is twisted sequential Monte Carlo
+with twist $e^{v_\theta}$.
+
+\subsection{Value targets and the Bou\'e--Dupuis bound}
+
+\begin{proposition}[Exact bias of the controlled value target]\label{prop:elbo}
+Define, along $\Pmeas^{\uhat}$-paths,
+\[
+V_t \coloneqq r(X_1) - \tfrac12\int_t^1 \norm{\uhat_s}^2\,ds .
+\]
+Then
+\begin{equation}\label{eq:bias}
+\E^{\uhat}\big[V_t \,\big|\, X_t\big] - v(X_t,t)
+= -\tfrac12\, \E^{\uhat}\Big[\int_t^1 \norm{Z_s - \uhat_s}^2\, ds \,\Big|\, X_t\Big]
+\;\le\; 0,
+\end{equation}
+with equality iff $\uhat = Z$: the bias is second order in the control error and one-sided.
+Moreover the control-variate-corrected target
+$V_t - \int_t^1 \uhat_s^\top dW^{\uhat}_s = v_\theta(X_t,t) + \log w_t^{\theta}$ (with
+$v_\theta$ used in \eqref{eq:logw}) has \emph{zero variance} at the fixed point, by
+Lemma~\ref{lem:weights}.
+\end{proposition}
+
+\begin{proof}
+As in the proof of Lemma~\ref{lem:weights},
+$r(X_1) - v(X_t,t) = \int_t^1 (Z^\top\uhat - \tfrac12\norm{Z}^2)ds + \int_t^1 Z^\top
+dW^{\uhat}$. Take conditional expectations (the stochastic integral is a true martingale for
+$Z\in$ BMO and admissible $\uhat$) and subtract $\tfrac12\E\int\norm{\uhat}^2$:
+\[
+\E^{\uhat}[V_t\mid X_t] - v(X_t,t)
+= \E^{\uhat}\!\int_t^1\!\Big(Z^\top\uhat - \tfrac12\norm{Z}^2
+- \tfrac12\norm{\uhat}^2\Big)ds
+= -\tfrac12\,\E^{\uhat}\!\int_t^1 \norm{Z-\uhat}^2 ds .
+\]
+The displayed pathwise identity for the corrected target is \eqref{eq:logw} rearranged.
+\end{proof}
+
+Proposition~\ref{prop:elbo} is the conditional form of the Bou\'e--Dupuis variational formula
+\cite{BoueDupuis}
+\[
+v(x,t) = \sup_{u\,\in\,\mathcal A}\;
+\E^{u}\Big[r(X_1) - \tfrac12\int_t^1 \norm{u_s}^2\,ds \,\Big|\, X_t = x\Big],
+\]
+with the gradient head of the model playing the role of the (near-optimal) control; the value
+bias is the Jensen gap of this evidence lower bound, and the optimizer is the $h$-transform
+drift \cite{DaiPra,FlemingSoner}.
+
+\begin{corollary}[Fixed point]\label{cor:fixed}
+Consider the joint weighted Sobolev regression with targets
+$\big(V_i^{\mathrm{cv}},\,g_i\big)$ from Propositions~\ref{prop:detached}
+and~\ref{prop:elbo}, weights \eqref{eq:logw} (self-normalized per slice), and rollouts driven
+by $\uhat_\theta = \sigma^\top\grad v_\theta$. Then $(v,\grad v)$ is a fixed point: at
+$v_\theta = v$ the weights equal $1$ pathwise, the gradient targets are conditionally
+unbiased for $\grad v$ by Theorem~\ref{thm:tiltgrad}, and the value targets are pathwise
+exact by Proposition~\ref{prop:elbo}. (Uniqueness/convergence of the iteration is the
+content of the analyses in \cite{AdjointMatching,SOCM}; the present conditioning on $X_t$,
+rather than on a control-dependent initial law, removes the initial-distribution
+obstruction discussed there.)
+\end{corollary}
+
+\subsection{Algorithm}
+
+\begin{algorithm}[h]
+\caption{Tangent-target regression for $v(x,t)=\log\E[e^{r(X_1)}\mid X_t=x]$}
+\begin{algorithmic}[1]
+\State \textbf{given} model $v_\theta$; define
+$\uhat_\theta = \sigma^\top \grad_x v_\theta$ by automatic differentiation
+\Loop
+\State sample initial points $(x_0)$ and increments $\Delta W_i \sim \mathcal N(0,\Delta t_i I)$
+\State roll out \eqref{eq:shifted} with $\uhat_\theta$ \textbf{detached};
+retain the computation graph
+\State $g_i \gets$ reverse-mode gradients of $r(\widehat X_N)$ at each node $\widehat X_i$
+\Comment{one VJP sweep}
+\State $\log w_i \gets r(\widehat X_N) - v_\theta(\widehat X_i,t_i)
+- \sum_{j\ge i}\big[\uhat_j^\top \Delta W_j + \tfrac12\norm{\uhat_j}^2\Delta t_j\big]$
+\State $V_i \gets r(\widehat X_N) - \sum_{j\ge i}\tfrac12\norm{\uhat_j}^2\Delta t_j
+\;\big[\, -\sum_{j\ge i}\uhat_j^\top\Delta W_j \text{ as control variate}\,\big]$
+\State $\bar w_i \gets \mathrm{softmax}_{\text{paths}}(\log w_i)$ per time slice
+(resample if ESS low)
+\State $\theta \gets \theta - \eta\,\grad_\theta \sum_i \bar w_i\Big[
+\big(v_\theta(\widehat X_i,t_i)-V_i\big)^2
++ \lambda\,\norm{\grad_x v_\theta(\widehat X_i,t_i)-g_i}^2\Big]$,
+targets detached
+\EndLoop
+\end{algorithmic}
+\end{algorithm}
+
+\begin{remark}[Practical notes]
+(i) Use a single network $v_\theta$ and obtain $\grad v_\theta$ by autodiff
+(\texttt{create\_graph=True}), so value and gradient heads are consistent by construction and
+the learned gradient is conservative. (ii) The controlled drift $f + a\grad v$ is more
+expansive than $f$ near maxima of $r$, so the tangent targets can have heavier tails than in
+Section~\ref{sec:zero}; antithetic increments and the gauge (reparameterization) matrices
+$M_t$ of \cite{SOCM} are the standard variance reductions. (iii) Early in training
+$\uhat_\theta$ is uninformative and the weights carry the burden; a warm start with the
+unweighted scheme of Section~\ref{sec:zero} applied to $u = e^{v}$ (or annealing $r$)
+stabilizes the loop.
+\end{remark}
+
+\begin{thebibliography}{99}
+
+\bibitem{Kunita}
+H.~Kunita.
+\newblock \emph{Stochastic Flows and Stochastic Differential Equations}.
+\newblock Cambridge Studies in Advanced Mathematics 24, Cambridge University Press, 1990.
+
+\bibitem{PardouxPeng}
+E.~Pardoux and S.~Peng.
+\newblock Backward stochastic differential equations and quasilinear parabolic partial
+differential equations.
+\newblock In \emph{Stochastic Partial Differential Equations and Their Applications},
+Lecture Notes in Control and Information Sciences 176, Springer, 1992.
+
+\bibitem{ElKarouiPengQuenez}
+N.~El~Karoui, S.~Peng, and M.-C.~Quenez.
+\newblock Backward stochastic differential equations in finance.
+\newblock \emph{Mathematical Finance}, 7(1):1--71, 1997.
+
+\bibitem{MaZhang}
+J.~Ma and J.~Zhang.
+\newblock Representation theorems for backward stochastic differential equations.
+\newblock \emph{Annals of Applied Probability}, 12(4):1390--1418, 2002.
+
+\bibitem{Kobylanski}
+M.~Kobylanski.
+\newblock Backward stochastic differential equations and partial differential equations with
+quadratic growth.
+\newblock \emph{Annals of Probability}, 28(2):558--602, 2000.
+
+\bibitem{BriandHu}
+P.~Briand and Y.~Hu.
+\newblock BSDE with quadratic growth and unbounded terminal value.
+\newblock \emph{Probability Theory and Related Fields}, 136:604--618, 2006.
+
+\bibitem{Kazamaki}
+N.~Kazamaki.
+\newblock \emph{Continuous Exponential Martingales and BMO}.
+\newblock Lecture Notes in Mathematics 1579, Springer, 1994.
+
+\bibitem{BoueDupuis}
+M.~Bou\'e and P.~Dupuis.
+\newblock A variational representation for certain functionals of Brownian motion.
+\newblock \emph{Annals of Probability}, 26(4):1641--1659, 1998.
+
+\bibitem{FlemingSoner}
+W.~H.~Fleming and H.~M.~Soner.
+\newblock \emph{Controlled Markov Processes and Viscosity Solutions}, 2nd ed.
+\newblock Springer, 2006. (Logarithmic transformations: Ch.~VI.)
+
+\bibitem{DaiPra}
+P.~Dai~Pra.
+\newblock A stochastic control approach to reciprocal diffusion processes.
+\newblock \emph{Applied Mathematics and Optimization}, 23:313--329, 1991.
+
+\bibitem{ElworthyLi}
+K.~D.~Elworthy and X.-M.~Li.
+\newblock Formulae for the derivatives of heat semigroups.
+\newblock \emph{Journal of Functional Analysis}, 125(1):252--286, 1994.
+
+\bibitem{GriewankWalther}
+A.~Griewank and A.~Walther.
+\newblock \emph{Evaluating Derivatives: Principles and Techniques of Algorithmic
+Differentiation}, 2nd ed.
+\newblock SIAM, 2008.
+
+\bibitem{HugeSavine}
+B.~Huge and A.~Savine.
+\newblock Differential machine learning.
+\newblock arXiv:2005.02347, 2020.
+
+\bibitem{OSM}
+B.~Negyesi, K.~Andersson, and C.~W.~Oosterlee.
+\newblock The One Step Malliavin scheme: new discretization of BSDEs implemented with deep
+learning regressions.
+\newblock arXiv:2110.05421; \emph{IMA Journal of Numerical Analysis}, 2024.
+
+\bibitem{Vidales}
+M.~Sabate-Vidales, D.~\v{S}i\v{s}ka, and L.~Szpruch.
+\newblock Unbiased deep solvers for linear parametric PDEs.
+\newblock arXiv:1810.05094; \emph{Applied Mathematical Finance}, 2021.
+
+\bibitem{HanJentzenE}
+J.~Han, A.~Jentzen, and W.~E.
+\newblock Solving high-dimensional partial differential equations using deep learning.
+\newblock \emph{Proceedings of the National Academy of Sciences}, 115(34):8505--8510, 2018.
+
+\bibitem{SOCM}
+C.~Domingo-Enrich, J.~Han, B.~Amos, J.~Bruna, and R.~T.~Q.~Chen.
+\newblock Stochastic Optimal Control Matching.
+\newblock arXiv:2312.02027, 2023.
+
+\bibitem{AdjointMatching}
+C.~Domingo-Enrich, M.~Drozdzal, B.~Karrer, and R.~T.~Q.~Chen.
+\newblock Adjoint Matching: fine-tuning flow and diffusion generative models with
+memoryless stochastic optimal control.
+\newblock arXiv:2409.08861, 2024.
+
+\end{thebibliography}
+
+\end{document}
