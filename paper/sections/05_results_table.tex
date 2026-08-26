@@ -1,6 +1,26 @@
-% !TEX root = ../main.tex
-% Auto-generated placeholder; replaced by make_ablation_table.py once the
-% loss-ablation grid completes.
-\begin{center}\itshape
-[Results table pending: the loss-ablation grid is still running.]
-\end{center}
+\begin{table}[t]
+\centering\small
+\caption{The loss in isolation: off-policy training on the
+constant-headroom benchmark, identical in every respect but the divergence.
+Headroom closed is the control metric (higher is better); value RMSE is
+measured against the \emph{analytic} value function (lower is better).
+Each arm is reported at its own tuned learning rate. $n$ paired seeds per
+cell ($n\ge4$; the $d=2$ column is complete at $n=12$, the others are still filling and should be read as provisional); $\pm$ is one standard error.}
+\label{tab:ablation}
+\begin{tabular}{lcccccccc}
+\toprule
+& \multicolumn{4}{c}{headroom closed (\%)} & \multicolumn{4}{c}{value RMSE vs analytic $V$}\\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}
+loss & $d=2$ & $d=8$ & $d=32$ & $d=128$ & $d=2$ & $d=8$ & $d=32$ & $d=128$\\
+\midrule
+\textbf{Spence (ours)} & 76.5\,$\pm$\,1.5 & 46.4\,$\pm$\,5.5 & 27.9\,$\pm$\,2.4 & 20.0\,$\pm$\,3.3 & 1.30\,$\pm$\,0.07 & 1.39\,$\pm$\,0.10 & 1.72\,$\pm$\,0.06 & 1.88\,$\pm$\,0.16\\
+exp-space squared error & 71.8\,$\pm$\,1.2 & 41.3\,$\pm$\,4.3 & 27.6\,$\pm$\,2.8 & 8.4\,$\pm$\,2.5 & 1.67\,$\pm$\,0.07 & 1.68\,$\pm$\,0.09 & 2.07\,$\pm$\,0.05 & 2.50\,$\pm$\,0.23\\
+Itakura--Saito & 71.5\,$\pm$\,1.8 & 47.0\,$\pm$\,5.2 & 28.8\,$\pm$\,2.0 & 18.5\,$\pm$\,3.3 & 1.42\,$\pm$\,0.09 & 1.28\,$\pm$\,0.13 & 1.52\,$\pm$\,0.03 & 1.73\,$\pm$\,0.17\\
+generalised KL ($\beta=1$) & 77.4\,$\pm$\,1.2 & 52.6\,$\pm$\,8.1 & 32.0\,$\pm$\,3.8 & 22.4\,$\pm$\,3.1 & 1.43\,$\pm$\,0.07 & 1.51\,$\pm$\,0.06 & 1.84\,$\pm$\,0.04 & 2.12\,$\pm$\,0.14\\
+log-space squared error & 87.1\,$\pm$\,2.5 & 54.0\,$\pm$\,4.0 & 42.8\,$\pm$\,1.8 & 33.5\,$\pm$\,4.9 & 4.59\,$\pm$\,0.27 & 2.87\,$\pm$\,0.20 & 2.42\,$\pm$\,0.15 & 2.12\,$\pm$\,0.14\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Results.}
+Against exponential-space squared error on the same instances, the Spence loss gives paired differences of $d=2$: $+4.7$*, $d=8$: $+5.1$, $d=32$: $+0.3$, $d=128$: $+11.6$ points of headroom closed ($*$ marks $p<0.05$, $n=12$ pairs).

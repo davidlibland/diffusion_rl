@@ -44,7 +44,9 @@ lines = [r"\begin{table}[t]", r"\centering\small",
          r"Headroom closed is the control metric (higher is better); value RMSE is",
          r"measured against the \emph{analytic} value function (lower is better).",
          r"Each arm is reported at its own tuned learning rate. $n$ paired seeds per",
-         r"cell ($n\ge%d$); $\pm$ is one standard error.}" % nmin(),
+         r"cell ($n\ge%d$; the $d=2$ column is complete at $n=12$, the others are "
+         r"still filling and should be read as provisional); $\pm$ is one "
+         r"standard error.}" % nmin(),
          r"\label{tab:ablation}",
          r"\begin{tabular}{l" + "c"*len(dims)*2 + "}", r"\toprule",
          r"& \multicolumn{%d}{c}{headroom closed (\%%)} & \multicolumn{%d}{c}{value RMSE vs analytic $V$}\\"
