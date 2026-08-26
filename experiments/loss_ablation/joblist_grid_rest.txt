@@ -1,0 +1,8 @@
+gkl 128 1e-05 12 8000 grid
+gkl 2 0.0001 12 8000 grid
+gkl 32 1e-05 12 8000 grid
+gkl 8 1e-05 12 8000 grid
+logmse 128 1e-05 12 8000 grid
+logmse 2 0.001 12 8000 grid
+logmse 32 3e-05 12 8000 grid
+logmse 8 1e-05 12 8000 grid

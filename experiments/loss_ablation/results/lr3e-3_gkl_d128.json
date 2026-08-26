@@ -1,0 +1,20 @@
+{
+ "loss": "gkl",
+ "dim": 128,
+ "lr": 0.003,
+ "steps": 4000,
+ "seeds": [
+  {
+   "seed": 0,
+   "plateau": NaN,
+   "opt_reward": -21.493367197104014,
+   "E_base": -27.493367197104025,
+   "frac_closed": NaN,
+   "v_rmse": NaN,
+   "v_bias": NaN,
+   "v_nonfinite": 20000,
+   "skips": 201,
+   "error": "RuntimeError: Predictions are not finite"
+  }
+ ]
+}
