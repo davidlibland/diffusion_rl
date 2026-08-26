@@ -45,11 +45,14 @@ then solve for the weight $w(y)=\ln y/(y-1)$ whose gradient grows only
 linearly in the log-space prediction in \emph{both} tails, yielding the
 \emph{Spence loss}\footnote{Named for the Spence (dilogarithm) function
 $\Spence$ appearing in its value.} and a closed-form, numerically stable
-gradient. A secondary contribution analyzes
-why high-dimensional value learning is signal-sparse and studies on-policy
-importance-sampling schemes. We evaluate on a dimensional-scaling benchmark
-designed for clean statistical reads, spanning $d=2$ to $512$, and on the
-GMM-40 sampler benchmark.
+gradient. Measured against four alternatives with per-loss tuning on a benchmark whose
+value function is known analytically, it repairs squared error on both control
+and value fidelity at every dimension, though it does not dominate the family:
+unclipped Itakura--Saito estimates the value at least as well above $d=2$. A
+secondary contribution analyzes why high-dimensional value learning is
+signal-sparse and studies on-policy importance-sampling schemes. We evaluate on
+a dimensional-scaling benchmark designed for clean statistical reads, spanning
+$d=2$ to $512$, and on the GMM-40 sampler benchmark.
 \end{abstract}
 
 \input{sections/01_intro}

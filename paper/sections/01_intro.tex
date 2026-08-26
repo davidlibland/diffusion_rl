@@ -88,8 +88,10 @@ small $t$.
 \item We compare five losses --- Spence, exponential-space squared error,
   Itakura--Saito, generalised KL, and the biased log-space baseline --- with
   per-loss learning-rate tuning on a benchmark whose value function is
-  available analytically, scoring control quality, the RMSE of the learned
-  value against the exact one, and stability
+  available analytically. The Spence weight repairs squared error on both
+  metrics at every dimension and beats generalised KL on value fidelity, but it
+  does \emph{not} dominate the family: unclipped Itakura--Saito is the better
+  value estimator above $d=2$. We report that rather than the clean sweep
   (\S\ref{sec:05_offpolicy_exp}).
 \item We show that on-policy twisted sampling, with coverage widened by
   backward noising, is significantly better than off-policy training at

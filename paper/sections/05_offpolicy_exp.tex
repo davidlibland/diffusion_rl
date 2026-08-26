@@ -67,42 +67,51 @@ count non-finite batches, the stability axis of \S\ref{sec:03_expmse}.
 \input{sections/05_results_table}
 
 \paragraph{What the comparison shows.}
-Three readings, all paired on the same instances.
+Four readings, all paired on the same instances. The first is the one we set
+out to test; the third is not the one we expected.
 
-\emph{The loss does what it was designed to do, and the margin is on the value
-axis.} Against exponential-space squared error the Spence loss is better on
-both metrics, and its value RMSE is the best of any arm --- significantly
-better than every competitor, including generalised KL. This is the claim the
-construction of \S\ref{subsec:spence} predicts: controlling both tails buys
-fidelity in the regions where the other losses' gradients misbehave, and those
-regions are exactly where the learned value is wrong by the most.
+\emph{The Spence loss reliably repairs exponential-space squared error.} On
+value RMSE it is better at every dimension we ran ($-0.37$ to $-0.75$ nats,
+significant at $d=2$ and $d=32$), and on control it is ahead at every
+dimension. This is the claim of \S\ref{subsec:spence} and it holds: a weight
+with both tails controlled learns a more faithful value than one whose
+under-prediction gradient vanishes.
 
-\emph{On control alone, generalised KL is not distinguishable from ours.} It is
-the $\beta=1$ member of the power-law family, its weight is constant, and
-\S\ref{sec:04_bregman} explains why it does well: its under-prediction
-gradient is bounded and non-zero, so it never suffers squared error's fatal
-tail. It explodes for over-predictions, which nothing here clips, and it is
-worse on value RMSE --- but on the control metric the two are tied. We report
-this rather than a clean sweep because it is what the experiment says, and
-because it locates our contribution precisely: the Spence weight is the one
-that needs no clipping and estimates the value best, not the one that steers
-best.
+\emph{It also beats generalised KL on value, everywhere.} The $\beta=1$ member
+is tied with ours on control at every dimension, but its value RMSE is worse at
+all four ($-0.10$ to $-0.23$ in our favour). Fixing one tail is not the same as
+fixing both, and the difference shows up where the theory says it should.
+
+\emph{But it does not dominate the family: Itakura--Saito is the better value
+estimator above $d=2$.} We win that comparison at $d=2$ ($-0.12$,
+significant) and lose it at $d=8$, $32$ and $128$ ($+0.11$, $+0.20$, $+0.16$;
+significant at $d=128$), with control statistically tied throughout. The
+direction is consistent across three dimensions, so we do not read it as
+noise. A reader is entitled to conclude that on this benchmark, above two
+dimensions, a divergence from 1968 estimates the value at least as well as
+ours. What remains true and is worth separating out: Itakura--Saito achieves
+this with a gradient that explodes for under-predictions, so it depends on the
+clipping or saturation that our weight makes unnecessary; we did not clip any
+arm (App.~\ref{subsec:a-numerics} saturates only where the true gradient
+leaves the float range). Whether the tail control buys anything once a
+competitor is properly clipped is the experiment we did not run, and it is the
+one we would run next.
 
 \emph{Conditioning and unbiasedness are different goods.} The log-space arm is
-the strongest controller in the table and by a wide margin, while carrying a
-value bias of several nats in the direction \eqref{eq:jensen-gap} predicts. A
-loss can be well conditioned and wrong. If the value is wanted only as a
-gradient, that trade is available and cheap; if $\Vf$ itself is the object ---
-and $\Vf(0,0)=\log Z$ --- it is not a trade at all, which is the argument of
-\S\ref{sec:03_expmse} made empirical.
+the strongest controller in the table at every dimension --- by $12$ to $26$
+points --- while carrying a value bias of $1.6$ to $4.1$ nats in the direction
+\eqref{eq:jensen-gap} predicts. A loss can be well conditioned and wrong. If
+the value is wanted only as a gradient that trade is available and cheap; if
+$\Vf$ itself is the object --- and $\Vf(0,0)=\log Z$ --- it is not a trade at
+all, which is the argument of \S\ref{sec:03_expmse} made empirical.
 
 \paragraph{One axis separates nothing.}
-We also counted non-finite batches per arm and found none, in any arm, at any
+We counted non-finite batches per arm and found none, in any arm, at any
 dimension. Once the stabilised implementations of \S\ref{sec:03_expmse} and
 App.~\ref{subsec:a-numerics} are used, the overflow failures that motivated
-this work do not recur, and the differences reported above are differences in
-what the losses \emph{learn}, not in whether they run. We record that plainly:
-the stability axis motivates the numerics, and the numerics remove it.
+this work do not recur, and the differences above are differences in what the
+losses \emph{learn}, not in whether they run. The stability axis motivates the
+numerics and is then removed by them.
 
 \paragraph{Scope.}
 This experiment isolates the divergence by construction, and therefore says
