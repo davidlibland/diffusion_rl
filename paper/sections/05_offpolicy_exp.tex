@@ -38,26 +38,80 @@ rigged comparison, and it is the first thing a reader should suspect. We
 therefore re-tune the learning rate per (loss, dimension) over a grid spanning
 $10^{-5}$ to $3\times10^{-3}$ on separate tuning seeds at a shorter budget, and
 run the reported grid on fresh seeds at the chosen value. Each arm is thus
-reported at its own best learning rate rather than at ours. We flag any arm
-whose chosen rate lands on the boundary of the grid, since that would mean the
-grid was too narrow to be fair to it.
+reported at its own best learning rate rather than at ours.
+
+One caveat about that grid. At the larger dimensions several arms --- including
+ours --- select the smallest rate offered, $10^{-5}$, so their optima may lie
+outside the range and the tuning is truncated. It is truncated identically for
+every arm, so the comparison remains matched, and it is a comparison of best
+rates \emph{within} $[10^{-5},3\times10^{-3}]$ rather than of global optima. We
+mention it because a boundary optimum is exactly the kind of detail that makes
+a tuned-versus-tuned claim less clean than it looks.
 
 \paragraph{Metrics.}
 Two axes, because they can disagree, and the reason they can matters. The
 control only ever sees $\nabla \Vf_\theta$, so a value function that is wrong
 by a slowly-varying offset still steers correctly; conversely a loss can score
-well on control while learning a badly biased value. Since the pathology of
-\S\ref{sec:03_expmse} is about the \emph{magnitude} of the learned value in
-under-predicted regions, the value axis is where we expect it to show, and a
-control-only comparison could miss it entirely. \emph{Control quality} is the fraction of
-the calibrated $6$-nat headroom closed, the same score used throughout
-\S\ref{sec:07_experiments}. \emph{Value quality} is the RMSE of $\Vf_\theta$
+well on control while learning a badly biased value. The pathology of
+\S\ref{sec:03_expmse} concerns the \emph{magnitude} of the learned value in
+under-predicted regions, so the value axis is where it should show, and a
+control-only comparison could miss it entirely.
+
+\emph{Control quality} is the fraction of the calibrated $6$-nat headroom
+closed, the same score used throughout \S\ref{sec:07_experiments}. \emph{Value quality} is the RMSE of $\Vf_\theta$
 against the \emph{analytic} value over the base marginal --- available because
 this problem family has $\Vf$ in closed form (App.~\ref{sec:C_experimental_details}) ---
 together with its signed mean, which exposes bias rather than variance. We also
 count non-finite batches, the stability axis of \S\ref{sec:03_expmse}.
 
 \input{sections/05_results_table}
+
+\paragraph{What the comparison shows.}
+Four readings, all paired on the same instances. The first is the one we set
+out to test; the third is not the one we expected.
+
+\emph{The Spence loss reliably repairs exponential-space squared error.} On
+value RMSE it is better at every dimension we ran ($-0.37$ to $-0.75$ nats,
+significant at $d=2$ and $d=32$), and on control it is ahead at every
+dimension. This is the claim of \S\ref{subsec:spence} and it holds: a weight
+with both tails controlled learns a more faithful value than one whose
+under-prediction gradient vanishes.
+
+\emph{It also beats generalised KL on value, everywhere.} The $\beta=1$ member
+is tied with ours on control at every dimension, but its value RMSE is worse at
+all four ($-0.10$ to $-0.23$ in our favour). Fixing one tail is not the same as
+fixing both, and the difference shows up where the theory says it should.
+
+\emph{But it does not dominate the family: Itakura--Saito is the better value
+estimator above $d=2$.} We win that comparison at $d=2$ ($-0.12$,
+significant) and lose it at $d=8$, $32$ and $128$ ($+0.11$, $+0.20$, $+0.16$;
+significant at $d=128$), with control statistically tied throughout. The
+direction is consistent across three dimensions, so we do not read it as
+noise. A reader is entitled to conclude that on this benchmark, above two
+dimensions, a divergence from 1968 estimates the value at least as well as
+ours. What remains true and is worth separating out: Itakura--Saito achieves
+this with a gradient that explodes for under-predictions, so it depends on the
+clipping or saturation that our weight makes unnecessary; we did not clip any
+arm (App.~\ref{subsec:a-numerics} saturates only where the true gradient
+leaves the float range). Whether the tail control buys anything once a
+competitor is properly clipped is the experiment we did not run, and it is the
+one we would run next.
+
+\emph{Conditioning and unbiasedness are different goods.} The log-space arm is
+the strongest controller in the table at every dimension --- by $12$ to $26$
+points --- while carrying a value bias of $1.6$ to $4.1$ nats in the direction
+\eqref{eq:jensen-gap} predicts. A loss can be well conditioned and wrong. If
+the value is wanted only as a gradient that trade is available and cheap; if
+$\Vf$ itself is the object --- and $\Vf(0,0)=\log Z$ --- it is not a trade at
+all, which is the argument of \S\ref{sec:03_expmse} made empirical.
+
+\paragraph{One axis separates nothing.}
+We counted non-finite batches per arm and found none, in any arm, at any
+dimension. Once the stabilised implementations of \S\ref{sec:03_expmse} and
+App.~\ref{subsec:a-numerics} are used, the overflow failures that motivated
+this work do not recur, and the differences above are differences in what the
+losses \emph{learn}, not in whether they run. The stability axis motivates the
+numerics and is then removed by them.
 
 \paragraph{Scope.}
 This experiment isolates the divergence by construction, and therefore says

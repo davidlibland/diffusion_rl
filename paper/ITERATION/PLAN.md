@@ -85,3 +85,36 @@ the results table stubbed pending the experiment.
    (1e-4), so the grid was widened to 1e-5..3e-3 and rerun. Re-check for
    boundary optima before reporting, and say so in the text either way.
 4. Reviewer findings (two fresh-context reviewers running on draft_v1).
+
+## Status after iteration 2
+
+Reviews: two fresh-context NeurIPS-style reviewers on draft_v1, then a
+rename-damage audit on draft_v2. Between them they found six errors I had
+written (four mathematical) plus a real methodological confound. All fixed;
+see git log. The audit process is earning its cost — the u -> y rename alone
+left two stragglers *inside numbered equations*, which no amount of reading my
+own prose would have caught.
+
+**Length: unresolved, and I am recording it rather than pretending.** Main body
+is 17pp against a ~9pp target, and it grew during iteration 2 despite two
+compressions, because the correctness additions (integrability remark, the KL
+remark, the tuning-asymmetry disclosure, the no-clipping paragraph) cost more
+than the cuts saved. Most of the gap is the `article` class -- a NeurIPS style
+file is far denser -- but not all of it. When a venue is chosen, cut in this
+order:
+  1. S6 and S7.1-7.2 (the *secondary* contribution currently outweighs the
+     primary one), compressing to ~1pp with pointers to App. B.
+  2. S2.4's bootstrapped-target and backward-noising paragraphs -> S6, where
+     they are actually used. Both reviewers flagged this placement.
+  3. S9's opening paragraph, which is a third restatement of the abstract.
+Do NOT cut: the integrability remark, the KL remark, the tuning-asymmetry
+disclosure, or the backward-noising caveat. Those are the paper's honesty.
+
+## Open items
+
+- S5 results (grid running; `run_grid.sh` chains tune -> pick -> grid ->
+  analyse -> `ablation.json`, and `figures/make_ablation_table.py` writes the
+  section).
+- The off-policy d=512 anchor sweep that would close the tuning asymmetry.
+- Equivalence test (TOST) for any "ties" claim, if that claim is wanted back.
+- A compute- or reward-call-matched version of Fig. 2.

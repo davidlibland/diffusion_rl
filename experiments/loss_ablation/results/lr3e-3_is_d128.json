@@ -1,0 +1,44 @@
+{
+ "loss": "is",
+ "dim": 128,
+ "lr": 0.003,
+ "steps": 4000,
+ "seeds": [
+  {
+   "seed": 0,
+   "plateau": -26.20084082569395,
+   "opt_reward": -21.493367197104014,
+   "E_base": -27.493367197104025,
+   "frac_closed": 0.21542106190167942,
+   "v_rmse": 1.7583281687344976,
+   "v_bias": 1.1321572542190552,
+   "v_nonfinite": 0,
+   "skips": 0,
+   "error": null
+  },
+  {
+   "seed": 1,
+   "plateau": -35.21705281280336,
+   "opt_reward": -29.901148193017548,
+   "E_base": -35.90114819301759,
+   "frac_closed": 0.11401589670237182,
+   "v_rmse": 4.508046146458132,
+   "v_bias": 3.9970862807273866,
+   "v_nonfinite": 0,
+   "skips": 0,
+   "error": null
+  },
+  {
+   "seed": 2,
+   "plateau": -29.225123935275608,
+   "opt_reward": -23.122831357351824,
+   "E_base": -29.1228313573518,
+   "frac_closed": -0.01704876298730144,
+   "v_rmse": NaN,
+   "v_bias": NaN,
+   "v_nonfinite": 20000,
+   "skips": 201,
+   "error": "RuntimeError: Predictions are not finite"
+  }
+ ]
+}

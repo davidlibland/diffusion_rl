@@ -3,7 +3,14 @@
 \label{sec:C_experimental_details}
 
 \paragraph{Problem family.}
-The base process is the pinned interpolant of \S\ref{sec:02_setting} with
+The pinned-interpolant construction gives exact ground truth and a closed-form
+bridge at once, which is why we use it: conditioning on $X_1=x_1$ makes the
+path a Brownian bridge, so the training pairs of \S\ref{subsec:targets} are
+available in closed form, while the terminal law $\nu$ can be chosen to make
+$\Vf$ and $\log Z$ analytic. Setting $\nu=\mathcal{N}(0,2aI)$ recovers
+driftless Brownian motion, which is the case used for the Boltzmann
+benchmarks. For the dimensional-scaling study the base process is the pinned
+interpolant of \S\ref{sec:02_setting} with
 terminal law $\nu$ a $K=20$ component Gaussian mixture, means drawn
 $\mathcal{U}[-2,2]$, variances $\mathcal{U}[0.01,0.5]$, Dirichlet weights, and
 diffusion coefficient $a=1$. The reward is
@@ -57,8 +64,11 @@ latency-bound rather than throughput-bound: many single-threaded CPU processes
 in parallel outperform the GPU by roughly a factor of five.
 
 \paragraph{Reproducibility.}
-Every dimensional-scaling number in the paper is recomputed from per-seed
-records by \texttt{figures/collect\_results.py}, which writes the
+Every dimensional-scaling number in the paper --- including the
+Appendix~\ref{sec:B_onpolicy_zoo} arms and their paired tests --- is recomputed
+from per-seed records by \texttt{figures/collect\_results.py}, which writes the
 \texttt{results.json} consumed by the figure scripts, so text and figures
-cannot disagree. The loss figure imports the shipped loss implementation
+cannot disagree. The loss-ablation numbers are produced the same way, by
+\texttt{analyse\_ablation.py} and \texttt{make\_ablation\_table.py}, which emit
+Table~\ref{tab:ablation} directly rather than through a transcription step. The loss figure imports the shipped loss implementation
 directly rather than reimplementing it.

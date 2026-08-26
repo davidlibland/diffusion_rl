@@ -9,9 +9,9 @@ import numpy as np
 from scipy import stats
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ARMS = ["quad", "mse", "is", "logmse"]
+ARMS = ["quad", "mse", "is", "gkl", "logmse"]
 NICE = {"quad": "Spence", "mse": "exp-MSE", "is": "Itakura-Saito",
-        "logmse": "log-MSE (biased)"}
+        "gkl": "gen. KL (beta=1)", "logmse": "log-MSE (biased)"}
 METRICS = ["frac_closed", "v_rmse", "v_bias", "skips"]
 
 

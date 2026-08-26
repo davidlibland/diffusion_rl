@@ -34,10 +34,11 @@ hedged in text as a scope condition, **OPEN** not yet supported.
 
 | # | Claim | Evidence | Status |
 |---|---|---|---|
-| E1 | **Spence beats exp-MSE** | `experiments/loss_ablation` | **OPEN — running** |
-| E2b | Generalised KL (beta=1) is a real competitor, not a strawman | added as a 5th arm after review | **OPEN — running** |
-| E2 | IS is an intermediate, better than MSE, worse than Spence | same | **OPEN — running** |
-| E3 | log-space MSE converges but to a biased value | same (`v_bias` column) | **OPEN — running** |
+| E1 | **Spence beats exp-MSE on both axes at every d** | loss_ablation grid; RMSE −0.37 to −0.75, sig. at d=2,32 | E |
+| E2b | Generalised KL ties Spence on control, loses on value at every d | paired, −0.10 to −0.23 in our favour | E |
+| E2 | ~~IS worse than Spence~~ **FALSE above d=2** | IS beats Spence on value RMSE at d=8/32/128 (sig. at 128); Spence wins d=2 | E |
+| E3 | log-MSE is the best controller and worst value estimator | +12 to +26 control; bias −1.6 to −4.1 nats | E |
+| E15 | No arm produces non-finite batches; the stability axis separates nothing | zero skips, all arms, all d | E |
 | E4 | On-policy beats off-policy at `d=8..32` | n=30 paired, `p<0.05`; `results.json` | E |
 | E5 | Naive on-policy laws collapse at high `d` (-7.8 at 512) | n=30 paired, `p<0.05` | E |
 | E6 | Refitted laws match/beat off-policy at every `d` in 2..512 | n=30 paired; ties elsewhere, never sig. below | E |
