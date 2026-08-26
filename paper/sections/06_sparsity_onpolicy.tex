@@ -54,11 +54,24 @@ place the corridor is thinnest, using two modifications.
 \item \textbf{Backward-noising expansion.} Each sampled point $(x_s,s)$ is
   noised backwards through the base backward kernel
   \eqref{eq:backward-kernel} and the target is attached to the noised point as
-  well. Because $e^{\Vf}$ is harmonic this is exact, not an approximation, and
-  because the kernel is independent of the terminal law
-  (App.~\ref{sec:D_proofs}) it is available for any pinned-interpolant base
-  model. It converts one trajectory into many training pairs at earlier,
-  noisier times.
+  well, converting one trajectory into many training pairs at earlier, noisier
+  times. The kernel is independent of the terminal law
+  (App.~\ref{sec:D_proofs}), so the construction is available for any
+  pinned-interpolant base model, not only for Brownian motion.
+
+  One caveat needs stating precisely, because it is easy to overstate this
+  step. The identity \eqref{eq:hmart} transfers the target exactly when the
+  point being noised is \emph{base}-distributed, as it is for the off-policy
+  anchors of \S\ref{subsec:targets}. Under a twisted sweep it is not:
+  $x_s\sim\mu\neq p_{\Base}^{(s)}$, so the conditional law of $x_s$ given the
+  noised $x_t$ is $\mu(x_s)p_{\Base}(x_t\mid x_s)$ renormalised, which is not
+  the base conditional, and the Girsanov weight of \eqref{eq:girsanov-rho}
+  does not repair it --- that weight corrects the forward sweep, not the
+  reversal. Carrying the sweep's accumulated ratio $\rho_{0\to s}$ as a row
+  weight restores exactness; the arms reported here do not, so the expanded
+  rows are biased under the twist. We report this as an empirically useful
+  approximation rather than an exact identity, which is what the ablations in
+  App.~\ref{sec:B_onpolicy_zoo} actually establish.
 \item \textbf{Finer integration.} A larger Euler--Maruyama step count for the
   sweep. The two are independent --- one changes where data sits, the other
   changes sampling bias --- and their gains are close to additive.

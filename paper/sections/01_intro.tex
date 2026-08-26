@@ -82,14 +82,15 @@ coverage at small $t$.
 \item We derive the Spence loss by solving for the weight
   $w(u)=\ln u/(u-1)$ whose gradient is linear in the log-space prediction in
   both tails, give its closed-form gradient and dilogarithm value, and give a
-  branch-wise evaluation that is finite for every float input, unlike
+  branch-wise evaluation that is finite for every finite float input, unlike
   automatic differentiation of the divergence
   (\S\ref{subsec:spence}, App.~\ref{sec:A_spence}).
-\item We measure the four losses --- Spence, exponential-space squared error,
-  Itakura--Saito, and the biased log-space baseline --- against each other with
-  per-loss learning-rate tuning on a benchmark with an analytic value function,
-  scoring both control quality and the RMSE of the learned value against the
-  exact one (\S\ref{sec:05_offpolicy_exp}).
+\item We measure five losses --- Spence, exponential-space squared error,
+  Itakura--Saito with and without gradient clipping, and the biased log-space
+  baseline --- against each other with per-loss learning-rate tuning on a
+  benchmark whose value function is available analytically, scoring control
+  quality, the RMSE of the learned value against the exact one, and stability
+  (\S\ref{sec:05_offpolicy_exp}).
 \item We show that on-policy twisted sampling, with coverage widened by
   backward noising, matches or beats off-policy training at every dimension
   from $2$ to $512$, and that the naive version instead collapses to $7.8$

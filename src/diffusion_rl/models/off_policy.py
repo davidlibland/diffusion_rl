@@ -9,6 +9,7 @@ from diffusion_rl.losses.exp_mse import exp_mse
 from diffusion_rl.losses.log_quadratic_bregman import log_quadratic_bregman_divergence
 from diffusion_rl.losses.itakura_saito import itakura_saito
 from diffusion_rl.losses.log_mse import log_mse
+from diffusion_rl.losses.gen_kl import gen_kl
 from typing import Callable
 
 
@@ -117,6 +118,8 @@ class OffPolicyValue(L.LightningModule):
             loss = itakura_saito(pred_value - c0, true_value - c0).mean()
         elif self.loss_type == "logmse":
             loss = log_mse(pred_value - c0, true_value - c0).mean()
+        elif self.loss_type == "gkl":
+            loss = gen_kl(pred_value - c0, true_value - c0).mean()
         else:
             raise ValueError(f"unknown loss_type {self.loss_type!r}")
         self.log("train_loss", loss)

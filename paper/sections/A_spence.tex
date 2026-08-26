@@ -111,6 +111,12 @@ The three weights of Table~\ref{tab:loss-family} are ordered at both extremes:
 as $u\to\infty$, $1/u < \ln u/(u-1) < 2u$, and as $u\to0^{+}$,
 $2u < \ln u/(u-1) < 1/u$. In this asymptotic sense the Spence loss
 interpolates squared error and Itakura--Saito rather than introducing an
-unrelated third behaviour. We state this only asymptotically on purpose: the
-inequality is not global, failing in a narrow band around $u\approx0.6$, where
-$w$ dips slightly below $1/u$.
+unrelated third behaviour.
+
+The ordering is asymptotic and not global, and it is worth being precise about
+which half fails. Against Itakura--Saito it never fails: $w(u)<1/u$ for every
+$u<1$ and $w(u)>1/u$ for every $u>1$, the two crossing exactly once, at $u=1$,
+where both equal $1$. Against squared error it does fail: $2u<w(u)$ holds only
+on $(0,u^{\star})$ with $u^{\star}=0.62614\ldots$ the root of
+$2u(u-1)=\ln u$, and on $(u^{\star},1)$ --- that is, for predictions
+$p\in(-0.468,0)$ --- the Spence weight drops below the squared-error weight.

@@ -45,12 +45,12 @@ then solve for the weight $w(u)=\ln u/(u-1)$ whose gradient is linear in the
 log-space prediction in \emph{both} tails, yielding the \emph{Spence
 loss}\footnote{Named for the Spence (dilogarithm) function $\Spence$ appearing
 in its value; in our code and experiments it is the \texttt{quad} loss.}: a
-closed-form, numerically stable gradient under which neither over- nor
-under-predictions blow up or die. A secondary contribution analyzes why
-high-dimensional value learning is signal-sparse and studies on-policy
-importance-sampling schemes. We validate on 2-moons, a dimensional-scaling
-benchmark designed for clean statistical reads, and GMM-40, where our
-log-partition estimate is competitive with published diffusion samplers.
+closed-form, numerically stable gradient whose gradient grows only linearly
+in the log-space prediction on both sides. A secondary contribution analyzes
+why high-dimensional value learning is signal-sparse and studies on-policy
+importance-sampling schemes. We evaluate on a dimensional-scaling benchmark
+designed for clean statistical reads, spanning $d=2$ to $512$, and on the
+GMM-40 sampler benchmark.
 \end{abstract}
 
 \input{sections/01_intro}

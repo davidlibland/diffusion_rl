@@ -97,13 +97,24 @@ uncertainty interpretation for $\Vf$. A useful midpoint, but still one-sided
 Squared error and Itakura--Saito are the $\beta=2$ and $\beta=0$ members of the
 $\beta$-divergence family \citep{fevotte2011beta,cichocki2010families}, whose
 weight is the power law $w(u)\propto u^{\beta-1}$. It is natural to ask whether
-some intermediate $\beta$ already does what we want. It does not, and the
-reason is structural: with $w(u)=u^{\beta-1}$ the gradient is
-$e^{\beta p}-e^{(\beta-1)p+q}$, so as $p\to+\infty$ it grows like $e^{\beta p}$
---- exponentially for every $\beta>0$, and flat for $\beta=0$. Linear growth in
-$p$ is attainable at no value of $\beta$. A power-law weight cannot produce
-log-linear tails; the weight has to be logarithmic, which is what
-\S\ref{subsec:spence} constructs.
+some intermediate $\beta$ already does what we want. With $w(u)=u^{\beta-1}$
+the gradient is $e^{\beta p}-e^{(\beta-1)p+q}$, so as $p\to+\infty$ it grows
+like $e^{\beta p}$: exponentially for every $\beta>0$, and flat for $\beta=0$.
+Linear growth in $p$ is therefore attainable at no value of $\beta$, and a
+power-law weight cannot produce log-linear tails.
+
+We want to be careful about what that does and does not rule out. One member of
+the family, $\beta=1$ --- constant weight, $\varphi(u)=u\ln u-u$, the
+generalised KL or I-divergence --- has gradient $e^{p}-e^{q}$, which tends to
+$-e^{q}$ as $p\to-\infty$: bounded and non-zero. By the criterion of
+\S\ref{sec:03_expmse}, that already removes squared error's \emph{fatal}
+tail, leaving only a single exponential explosion above, which clipping
+handles. Generalised KL is thus a genuine competitor and not a straw arm, and
+we include it as such in \S\ref{sec:05_offpolicy_exp}. The claim we make for
+the Spence loss is correspondingly narrow: it is the member whose gradient is
+linear in $p$ on \emph{both} sides, and so the one that needs no clipping at
+all. Whether that buys anything over a clipped competitor is an empirical
+question, which is why the ablation includes both.
 
 % ---------------------------------------------------------------------------
 \subsection{The Spence loss}
@@ -178,8 +189,8 @@ The divergence value (used only for monitoring; training uses
 $S(x)=\Spence(1-e^{x})$ \citep{lewin1981dilogarithm}, using the dilogarithm identity
 $S'(x)=-\,x e^{x}/(e^{x}-1)=x/\mathrm{expm1}(-x)$; hence the name. The full
 derivation and the numerically stable branch-wise gradient --- finite for all
-float inputs, unlike naive autograd, which returns NaN for $p\gtrsim 88$ in
-single precision --- are in App.~\ref{sec:A_spence}.
+float inputs, unlike naive autograd, which returns NaN once the \emph{target}
+reaches $q\gtrsim85$ nats in single precision --- are in App.~\ref{sec:A_spence}.
 
 \paragraph{Implied observation model.}
 By the duality between regular Bregman divergences and regular exponential

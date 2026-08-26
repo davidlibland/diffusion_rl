@@ -245,9 +245,13 @@ does not depend on the terminal law $\nu$ at all:
 because conditioning a Brownian bridge on an interior point leaves a Brownian
 bridge to that point, whatever the endpoint distribution. The expansion is
 therefore available for base models with nontrivial drift, not only for
-Brownian motion. Since $x_s$ came from the base marginal and $x_t$ from the
-base backward kernel, the pair $(x_t, q)$ carries the base joint law and
-\eqref{eq:hmart} applies unchanged. This turns one trajectory into many
+Brownian motion. The hypothesis that does the work here is about the
+\emph{marginal}, not the kernel: \emph{provided} $x_s$ is drawn from the base
+marginal $p_{\Base}^{(\cdot,s)}$ and $x_t$ from the backward kernel, the pair
+$(x_t,q)$ carries the base joint law and \eqref{eq:hmart} applies unchanged.
+That holds for the off-policy anchors above; \S\ref{sec:06_sparsity_onpolicy}
+returns to what happens when the points instead come from a twisted sweep, for
+which it does not. This turns one trajectory into many
 training pairs at earlier, noisier times, and is the mechanism behind our best
 on-policy variant (\S\ref{sec:06_sparsity_onpolicy}).
 

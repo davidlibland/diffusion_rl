@@ -55,8 +55,9 @@ recomputed from per-seed records by a single script
 
 Figure~\ref{fig:dimscaling} shows the result that motivates
 \S\ref{sec:06_sparsity_onpolicy}. On-policy sampling is a large win at moderate
-dimension --- $+11.2$ points at $d=8$, $+4.5$ at $d=16$, $+2.4$ at $d=32$, all
-$p<0.05$ --- and the advantage decays as $d$ grows.
+dimension --- for the Monte-Carlo-target method, $+11.2$ points at $d=8$,
+$+4.5$ at $d=16$ and $+2.4$ at $d=32$, all $p<0.05$; the TD($\lambda$) variant
+reaches $+13.4$ at $d=8$ --- and the advantage decays as $d$ grows.
 
 The interesting part is the failure mode of the naive version. Hyperparameter
 laws fitted without the expansion and step-count knobs (dotted) track
@@ -111,9 +112,10 @@ ours, off-policy           & 0.19 & --- \\
 
 Table~\ref{tab:gmm40} reports the comparison. The learned value recovers
 $\log Z$ to $0.08$ nats, ahead of the best published number we found on this
-target, and mode coverage is complete ($40/40$). The on-policy sampler more
-than halves the off-policy error, so the dimensional-scaling conclusion
-reproduces on an external target.
+target, and mode coverage is complete ($40/40$). The on-policy sampler roughly halves the
+off-policy error on this target ($0.08$ against $0.19$), but at $d=2$ and with
+the plain twisted sweep rather than the tuned recipe, so this is a consistency
+check and not a reproduction of the dimensional-scaling result.
 
 Three scope conditions, since the headline is a favourable number.
 First, we compare on $\log Z$ and mode coverage; our sample-distance metric is
@@ -141,8 +143,11 @@ $P(x_{\mathrm{odd}}>0)=0.50$, where the target concentrates at $0.85$: it is not
 finding the deep wells, so $\Vf(0,0)$ integrates over mass that misses them.
 Increasing the guidance scale eightfold leaves the output bit-identical, which
 rules out a sampling-strength explanation and points at the value
-representation --- a symmetric network cannot express the per-well tilt, worth
-about $1.7$ nats in each of $16$ wells, which is the size of the shortfall. We
+representation rather than the sampler: a symmetric network cannot express the
+per-well tilt. The magnitudes are the same order but do not match --- the
+shortfall is $16.3$ nats over $16$ wells, about $1.0$ nat each, against a
+per-well tilt of roughly $1.7$ nats --- so the accounting is suggestive rather
+than closed, and we do not claim it explains the whole gap. We
 also apply no importance reweighting, though we have exact SMC weights; the
 published raw-to-reweighted improvements on this target are large. We regard
 this as unfinished rather than negative evidence about the loss, and record it
