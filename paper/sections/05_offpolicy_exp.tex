@@ -66,6 +66,44 @@ count non-finite batches, the stability axis of \S\ref{sec:03_expmse}.
 
 \input{sections/05_results_table}
 
+\paragraph{What the comparison shows.}
+Three readings, all paired on the same instances.
+
+\emph{The loss does what it was designed to do, and the margin is on the value
+axis.} Against exponential-space squared error the Spence loss is better on
+both metrics, and its value RMSE is the best of any arm --- significantly
+better than every competitor, including generalised KL. This is the claim the
+construction of \S\ref{subsec:spence} predicts: controlling both tails buys
+fidelity in the regions where the other losses' gradients misbehave, and those
+regions are exactly where the learned value is wrong by the most.
+
+\emph{On control alone, generalised KL is not distinguishable from ours.} It is
+the $\beta=1$ member of the power-law family, its weight is constant, and
+\S\ref{sec:04_bregman} explains why it does well: its under-prediction
+gradient is bounded and non-zero, so it never suffers squared error's fatal
+tail. It explodes for over-predictions, which nothing here clips, and it is
+worse on value RMSE --- but on the control metric the two are tied. We report
+this rather than a clean sweep because it is what the experiment says, and
+because it locates our contribution precisely: the Spence weight is the one
+that needs no clipping and estimates the value best, not the one that steers
+best.
+
+\emph{Conditioning and unbiasedness are different goods.} The log-space arm is
+the strongest controller in the table and by a wide margin, while carrying a
+value bias of several nats in the direction \eqref{eq:jensen-gap} predicts. A
+loss can be well conditioned and wrong. If the value is wanted only as a
+gradient, that trade is available and cheap; if $\Vf$ itself is the object ---
+and $\Vf(0,0)=\log Z$ --- it is not a trade at all, which is the argument of
+\S\ref{sec:03_expmse} made empirical.
+
+\paragraph{One axis separates nothing.}
+We also counted non-finite batches per arm and found none, in any arm, at any
+dimension. Once the stabilised implementations of \S\ref{sec:03_expmse} and
+App.~\ref{subsec:a-numerics} are used, the overflow failures that motivated
+this work do not recur, and the differences reported above are differences in
+what the losses \emph{learn}, not in whether they run. We record that plainly:
+the stability axis motivates the numerics, and the numerics remove it.
+
 \paragraph{Scope.}
 This experiment isolates the divergence by construction, and therefore says
 nothing about how the losses interact with an on-policy sampler, where the
