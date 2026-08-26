@@ -99,15 +99,25 @@ saturation our weight makes unnecessary, and no arm here was clipped. Whether
 tail control buys anything against a properly clipped competitor is the
 experiment that would settle the matter, and we did not run it.
 
-\emph{Conditioning and unbiasedness are different goods.} The log-space arm is
-the strongest controller in the table at every dimension --- by $12$ to $26$
-points --- while carrying a value bias of $1.6$ to $4.1$ nats in the direction
-\eqref{eq:jensen-gap} predicts. A loss can be well conditioned and wrong. For
-an application that reads only $\nabla \Vf$ --- which includes reward-guided
-generation and fine-tuning, the settings of \S\ref{sec:01_intro} --- that trade
-is available and cheap, and our results say to take it. The unbiased target
-earns its keep when $\Vf$ itself is the object, and since $\Vf(0,0)=\log Z$
-that includes every free-energy and log-partition use.
+\emph{Conditioning and unbiasedness are different goods, and for control the
+biased loss wins.} This is the most practically consequential number in the
+table and it runs against us, so we state it first among the caveats rather
+than last. The log-space arm closes about $10$ more points of headroom than
+ours at \emph{every} dimension ($+10.7$, $+9.8$, $+9.9$, $+10.9$; $p<0.05$
+throughout), and its penalty on value RMSE shrinks as dimension grows
+($+3.29$, $+1.78$, $+0.69$, $+0.16$), until at $d=128$ it is not
+distinguishable from ours ($p=0.19$) --- though it remains biased low by
+$1.45$ nats there, and by $4.1$ at $d=2$.
+
+The reading we take is that conditioning and unbiasedness buy different things.
+An application that consumes only $\nabla \Vf$ --- which includes
+reward-guided generation and fine-tuning, the settings this paper opens with
+--- should on this evidence use the well-conditioned biased loss and accept a
+value that is wrong by a constant-ish offset. The unbiased exponential-space
+target earns its keep when $\Vf$ itself is wanted, and since
+$\Vf(0,0)=\log Z$ that is every free-energy, normalizing-constant and
+model-evidence use. Our loss is for the second case. We had expected to be
+arguing for it in both.
 
 \paragraph{One axis separates nothing.}
 We counted non-finite batches per arm and found none, in any arm, at any
