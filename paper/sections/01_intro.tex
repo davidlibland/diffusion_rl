@@ -82,17 +82,17 @@ small $t$.
 \item We derive the Spence loss by solving for the weight
   $w(y)=\ln y/(y-1)$ whose gradient is linear in the log-space prediction in
   both tails, give its closed-form gradient and dilogarithm value, and give a
-  branch-wise evaluation that is finite for every finite float input, unlike
-  automatic differentiation of the divergence
+  branch-wise evaluation that is finite for every finite float input up to a
+  single saturation guard, unlike automatic differentiation of the divergence
   (\S\ref{subsec:spence}, App.~\ref{sec:A_spence}).
 \item We compare five losses --- Spence, exponential-space squared error,
   Itakura--Saito, generalised KL, and the biased log-space baseline --- with
   per-loss learning-rate tuning on a benchmark whose value function is
-  available analytically. The Spence weight repairs squared error on both
-  metrics at every dimension and beats generalised KL on value fidelity, but it
-  does \emph{not} dominate the family: unclipped Itakura--Saito is the better
-  value estimator above $d=2$. We report that rather than the clean sweep
-  (\S\ref{sec:05_offpolicy_exp}).
+  available analytically. The Spence weight repairs squared error on value
+  fidelity at every dimension and beats generalised KL there too, but it does
+  \emph{not} dominate the family: unclipped Itakura--Saito estimates the value
+  better above $d=2$, and generalised KL is at least as good a controller. We
+  report that rather than the clean sweep (\S\ref{sec:05_offpolicy_exp}).
 \item We show that on-policy twisted sampling, with coverage widened by
   backward noising, is significantly better than off-policy training at
   $d=8$--$32$ and never significantly worse anywhere in $2\le d\le512$, while

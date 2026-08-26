@@ -130,8 +130,10 @@ handles. Generalised KL is thus a genuine competitor and not a straw arm, and
 we include it as such in \S\ref{sec:05_offpolicy_exp}. The claim we make for
 the Spence loss is correspondingly narrow: it is the member whose gradient is
 linear in $p$ on \emph{both} sides, and so the one that needs no clipping at
-all. Whether that buys anything over a clipped competitor is an empirical
-question, which is why the ablation includes both.
+all. Whether that buys anything over a
+\emph{clipped} competitor is an empirical question that our ablation does not
+settle: we clip no arm, so \S\ref{sec:05_offpolicy_exp} compares the losses as
+derived rather than as they would be deployed.
 
 % ---------------------------------------------------------------------------
 \subsection{The Spence loss}

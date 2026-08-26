@@ -20,8 +20,8 @@
 \newcommand{\Breg}{D_{\varphi}}
 \newcommand{\Spence}{\mathrm{Li}_2}                  % dilogarithm
 
-\title{The Spence Loss: Well-Conditioned Value-Function Learning\\
-       for Reward-Guided Diffusion}
+\title{Loss Design for Log-Partition Value Functions\\
+       is the Choice of One Positive Weight}
 \author{David Li-Bland \and \ldots}
 \date{}
 
@@ -46,9 +46,10 @@ linearly in the log-space prediction in \emph{both} tails, yielding the
 \emph{Spence loss}\footnote{Named for the Spence (dilogarithm) function
 $\Spence$ appearing in its value.} and a closed-form, numerically stable
 gradient. Measured against four alternatives with per-loss tuning on a benchmark whose
-value function is known analytically, it repairs squared error on both control
-and value fidelity at every dimension, though it does not dominate the family:
-unclipped Itakura--Saito estimates the value at least as well above $d=2$. A
+value function is known analytically, it repairs squared error on value fidelity at
+every dimension, though it does not dominate the family: unclipped
+Itakura--Saito estimates the value better above $d=2$, and generalised KL
+matches it on control. A
 secondary contribution analyzes why high-dimensional value learning is
 signal-sparse and studies on-policy importance-sampling schemes. We evaluate on
 a dimensional-scaling benchmark designed for clean statistical reads, spanning
