@@ -49,11 +49,15 @@ gradient. Measured against four alternatives with per-loss tuning on a benchmark
 value function is known analytically, it repairs squared error on value fidelity at
 every dimension, though it does not dominate the family: unclipped
 Itakura--Saito estimates the value better above $d=2$, and generalised KL
-matches it on control. A
-secondary contribution analyzes why high-dimensional value learning is
-signal-sparse and studies on-policy importance-sampling schemes. We evaluate on
-a dimensional-scaling benchmark designed for clean statistical reads, spanning
-$d=2$ to $512$, and on the GMM-40 sampler benchmark.
+matches it on control. The comparison also isolates what the unbiased target is for: a
+well-conditioned but \emph{biased} log-space regression closes about ten more
+points of headroom than any exponential-space loss at every dimension, so an
+application consuming only $\nabla \Vf$ should prefer it, while the unbiased
+target earns its keep when $\Vf$ itself is wanted --- and $\Vf(0,0)=\log Z$. A
+secondary contribution studies on-policy twisted sampling for the same problem,
+where the useful finding is that widening coverage beats concentrating on the
+reward corridor. We evaluate on a dimensional-scaling benchmark designed for
+clean statistical reads and on the GMM-40 sampler benchmark.
 \end{abstract}
 
 \input{sections/01_intro}

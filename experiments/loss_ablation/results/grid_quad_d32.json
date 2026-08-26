@@ -75,6 +75,30 @@
    "v_nonfinite": 0,
    "skips": 0,
    "error": null
+  },
+  {
+   "seed": 6,
+   "plateau": -12.761112347245216,
+   "opt_reward": -8.849343699298062,
+   "E_base": -14.84934369929806,
+   "frac_closed": 0.348038558675474,
+   "v_rmse": 1.760451171727258,
+   "v_bias": 0.8941737854003906,
+   "v_nonfinite": 0,
+   "skips": 0,
+   "error": null
+  },
+  {
+   "seed": 7,
+   "plateau": -14.026734963059425,
+   "opt_reward": -10.119483249080169,
+   "E_base": -16.119483249080176,
+   "frac_closed": 0.3487913810034584,
+   "v_rmse": 1.4491138252250333,
+   "v_bias": 0.6302016273021698,
+   "v_nonfinite": 0,
+   "skips": 0,
+   "error": null
   }
  ]
 }

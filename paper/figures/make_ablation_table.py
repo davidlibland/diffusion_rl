@@ -73,9 +73,10 @@ if pv:
         if r:
             star = "*" if r["p"] < 0.05 else ""
             bits.append(f"$d={d}$: ${r['delta']:+.1f}${star}")
+    ns = ", ".join(f"$n_{{{d}}}={pv[str(d)]['frac_closed']['n']}$"
+                   for d in dims if str(d) in pv)
     prose.append("Against exponential-space squared error on the same instances, the "
                  "Spence loss gives paired differences of " + ", ".join(bits)
-                 + " points of headroom closed ($*$ marks $p<0.05$, "
-                 + f"$n={list(pv.values())[0]['frac_closed']['n']}$ pairs).")
+                 + " points of headroom closed ($*$ marks $p<0.05$; " + ns + ").")
 open(OUT, "w").write("\n".join(lines + prose) + "\n")
 print(f"wrote {OUT} ({len(ORDER)} arms x {len(dims)} dims)")
