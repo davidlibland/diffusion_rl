@@ -111,6 +111,41 @@ keep when $\Vf$ itself is wanted, and since $\Vf(0,0)=\log Z$ that is every
 free-energy and model-evidence use. Our loss is for the second case; we had
 expected to be arguing for it in both.
 
+\paragraph{The clipped comparison, which decides against us.}
+\label{par:clipped}
+The preceding results compare the losses as derived, with no arm clipped, and
+the argument for our weight rests on the claim that a two-sided weight makes
+clipping unnecessary. That claim is testable and we tested it: the same grid,
+same tuned rates, same seeds, with gradient-norm clipping at $1.0$ on every
+arm. Two things happen, and neither favours us.
+
+\emph{Clipping helps Itakura--Saito most, as predicted --- and helps us
+substantially too, which was not.} It gains $18.4$, $16.1$, $12.1$ and $12.4$
+points of headroom, by far the largest effect of any arm, consistent with a
+gradient that explodes for under-predictions. But the Spence loss also gains
+$12.9$, $8.1$, $5.8$ and $5.0$ points. That is not what a weight needing no
+clipping should do. In hindsight the intuition was loose: our gradient grows
+\emph{linearly} in $p$ rather than exponentially, and linear growth is still
+unbounded, so a fixed clip binds for us too. ``Well conditioned'' bought a
+slower blow-up, not the absence of one.
+
+\emph{With clipping, Itakura--Saito dominates our loss above $d=2$.} On
+control it beats us by $7.2$, $8.6$ and $5.8$ points at $d=8,32,128$, all
+significant. On value the gap we lost unclipped closes to nothing
+($-0.06$, $-0.03$, $+0.05$, none significant); we retain a large advantage only
+at $d=2$ ($-0.65$). So once the standard remedy is applied --- one line, no
+tuning --- a divergence from 1968 is better on one axis and indistinguishable
+on the other, everywhere except the lowest dimension.
+
+What survives is narrower and we state it as such. Against exponential-space
+squared error the Spence loss remains better clipped as well as unclipped, on
+both axes at every dimension ($+7.5$ to $+15.0$ points of control, $0.09$ to
+$0.34$ nats of value). Against generalised KL it retains a small control
+advantage under clipping ($+2.2$ to $+4.1$ points). But we cannot recommend it
+over clipped Itakura--Saito on this benchmark, and the reduction of
+\S\ref{sec:04_bregman} --- not this particular weight --- is what we would ask
+a reader to take away.
+
 \paragraph{One axis separates nothing.}
 We counted non-finite batches per arm and found none, in any arm, at any
 dimension. Once the stabilised implementations of \S\ref{sec:03_expmse} and

@@ -17,12 +17,16 @@ What the measurements support is narrower than that construction might suggest,
 and we would rather state it than let the framing carry it. The Spence weight
 repairs exponential-space squared error on both metrics at every dimension we
 ran, and beats generalised KL on value fidelity, so controlling both tails is
-demonstrably better than controlling one. It does not dominate the family:
-above $d=2$, unclipped Itakura--Saito is the more accurate value estimator. The
-durable contribution is therefore the reduction itself --- that loss design
-here is the choice of a single positive weight, and that squared error is a
-poor choice of it --- rather than a claim that our weight is the best available
-one.
+demonstrably better than controlling one. It does not dominate the family. We ran the
+experiment that would decide this --- the same grid with gradient clipping on
+every arm --- and it decided against us: clipped Itakura--Saito is the better
+controller above $d=2$ and ties on value, and clipping turns out to help our
+loss substantially too, which a weight that genuinely needed no clipping should
+not do. The durable contribution is therefore the reduction itself --- that
+loss design here is the choice of a single positive weight, and that squared
+error is a poor choice of it --- and not a claim that our weight is the best
+available one. We would recommend the reduction to a practitioner, and clipped
+Itakura--Saito as the loss.
 
 \paragraph{Limitations.}
 The empirical claims are narrower than the analysis.
