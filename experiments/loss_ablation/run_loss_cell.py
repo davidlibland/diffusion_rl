@@ -79,7 +79,7 @@ def value_error(vm, prob, dim, n=20000, seed=0):
             int((~ok).sum()))
 
 
-def run_seed(loss, dim, lr, s, steps, val_every, tail):
+def run_seed(loss, dim, lr, s, steps, val_every, tail, clip=None):
     prob = make_problem(dim, seed=s)
     _, e_opt, _ = optimal_terminal_and_reward(
         prob["means"], prob["sigma2"], prob["weights"], prob["c"],
@@ -98,7 +98,8 @@ def run_seed(loss, dim, lr, s, steps, val_every, tail):
     vc = ValCollector()
     tr = L.Trainer(max_steps=steps, val_check_interval=val_every, callbacks=[vc],
                    logger=False, enable_checkpointing=False,
-                   enable_progress_bar=False, num_sanity_val_steps=0)
+                   enable_progress_bar=False, num_sanity_val_steps=0,
+                   gradient_clip_val=clip)
     err = None
     try:
         tr.fit(model, loader, val_dataloaders=base.val_loader)
@@ -119,6 +120,7 @@ def run_seed(loss, dim, lr, s, steps, val_every, tail):
            "frac_closed": ((plateau - prob["diag"]["E_base_r"]) / 6.0
                            if math.isfinite(plateau) else float("nan")),
            "v_rmse": v_rmse, "v_bias": v_bias, "v_nonfinite": v_nonfin,
+           "clip": clip,
            "skips": int(getattr(model, "_nonfinite_count_total", 0)),
            "error": err}
     del model, vm, ds, loader, tr
@@ -126,7 +128,7 @@ def run_seed(loss, dim, lr, s, steps, val_every, tail):
     return out
 
 
-def cell(loss, dim, lr, seeds, steps, val_every, tail, tag):
+def cell(loss, dim, lr, seeds, steps, val_every, tail, tag, clip=None):
     os.makedirs(RESULTS, exist_ok=True)
     path = f"{RESULTS}/{tag}_{loss}_d{dim}.json"
     rec = (json.load(open(path)) if os.path.exists(path) else
@@ -139,7 +141,7 @@ def cell(loss, dim, lr, seeds, steps, val_every, tail, tag):
     for s in range(seeds):
         if s in done: continue
         t0 = time.time()
-        out = run_seed(loss, dim, lr, s, steps, val_every, tail)
+        out = run_seed(loss, dim, lr, s, steps, val_every, tail, clip)
         rec["seeds"].append(out)
         json.dump(rec, open(path, "w"), indent=1)
         print(f"  seed {s:2d}: closed={100*out['frac_closed']:6.1f}% "
@@ -166,13 +168,17 @@ def main():
     ap.add_argument("--val-every", type=int, default=500)
     ap.add_argument("--tail", type=int, default=8)
     ap.add_argument("--tag", default="grid")
+    ap.add_argument("--clip", type=float, default=None,
+                    help="gradient-norm clip; None = no clipping (the default "
+                         "everywhere else in this study)")
     a = ap.parse_args()
     if a.lr_grid:
         for lr in LR_GRID:
             cell(a.loss, a.dim, lr, a.seeds, a.steps, a.val_every, a.tail,
                  f"lrscan{lr:.0e}")
     else:
-        cell(a.loss, a.dim, a.lr, a.seeds, a.steps, a.val_every, a.tail, a.tag)
+        cell(a.loss, a.dim, a.lr, a.seeds, a.steps, a.val_every, a.tail, a.tag,
+             a.clip)
 
 
 if __name__ == "__main__":

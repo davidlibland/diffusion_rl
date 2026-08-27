@@ -131,9 +131,12 @@ we include it as such in \S\ref{sec:05_offpolicy_exp}. The claim we make for
 the Spence loss is correspondingly narrow: it is the member whose gradient is
 linear in $p$ on \emph{both} sides, and so the one that needs no clipping at
 all. Whether that buys anything over a
-\emph{clipped} competitor is an empirical question that our ablation does not
-settle: we clip no arm, so \S\ref{sec:05_offpolicy_exp} compares the losses as
-derived rather than as they would be deployed.
+\emph{clipped} competitor is an empirical question, and
+\S\ref{par:clipped} answers it in the negative: with clipping applied to every
+arm, generalised KL and Itakura--Saito both close most of the gap, and
+Itakura--Saito overtakes us on control. We keep the derivation because the
+weight is the clean solution to the stated design problem, not because it wins
+the comparison.
 
 % ---------------------------------------------------------------------------
 \subsection{The Spence loss}
