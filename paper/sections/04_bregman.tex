@@ -226,6 +226,18 @@ $\pi^{2}/6$. The loss therefore behaves like the log-likelihood of a family
 whose natural parameter saturates, which is a second way of seeing why
 over-predictions cannot produce \emph{exponentially} large gradients.
 
+\paragraph{What the weight ultimately controls.}
+It is worth naming the chain the rest of the paper follows, because each link
+is measured separately in \S\ref{sec:05_offpolicy_exp} and they are easier to
+read as one argument. The weight fixes the shape of the gradient's tails. The
+tails fix how heavy and how \emph{stationary} the distribution of gradient
+norms is over training. That fixes how often a clipping threshold engages at
+convergence. And clipping, being a biased operator, converts its engagement
+rate into a bias in the learned value. So the choice of $w$ propagates all the
+way to how well-calibrated $\Vf_\theta$ is, through a mechanism that has
+nothing to do with the divergence's minimiser --- which is the same for all of
+them. Tail design is not, in the end, about avoiding overflow.
+
 % ---------------------------------------------------------------------------
 \begin{table}[t]
 \centering
