@@ -104,11 +104,9 @@ clipping fixes). It is moreover \emph{scale-invariant}
 depends on $q-p$ alone) and is the negative log-likelihood of a
 gamma/exponential observation model \citep{fevotte2009isnmf}, giving a natural
 uncertainty interpretation for $\Vf$. It is one-sided
-(Fig.~\ref{fig:loss_curves}, middle), and we should say at the outset that
-one-sidedness turns out to cost it little: in \S\ref{sec:05_offpolicy_exp} it
-is the most accurate value estimator of any arm above $d=2$. What it gives up is that its
-surviving tail explodes, so it relies on clipping --- which, applied, turns out
-to be enough to make it the better loss overall (\S\ref{par:clipped}).
+(Fig.~\ref{fig:loss_curves}, middle): what it gives up is that its surviving
+tail explodes, so it relies on clipping. That reliance is measurable and it is
+expensive, and it is the thread \S\ref{par:clipped} follows.
 
 \paragraph{Why not simply retune $\beta$?}
 Squared error and Itakura--Saito are the $\beta=2$ and $\beta=0$ members of the
@@ -229,14 +227,20 @@ over-predictions cannot produce \emph{exponentially} large gradients.
 \paragraph{What the weight ultimately controls.}
 It is worth naming the chain the rest of the paper follows, because each link
 is measured separately in \S\ref{sec:05_offpolicy_exp} and they are easier to
-read as one argument. The weight fixes the shape of the gradient's tails. The
-tails fix how heavy and how \emph{stationary} the distribution of gradient
-norms is over training. That fixes how often a clipping threshold engages at
-convergence. And clipping, being a biased operator, converts its engagement
-rate into a bias in the learned value. So the choice of $w$ propagates all the
-way to how well-calibrated $\Vf_\theta$ is, through a mechanism that has
-nothing to do with the divergence's minimiser --- which is the same for all of
-them. Tail design is not, in the end, about avoiding overflow.
+read as one argument. The weight fixes the shape of the gradient's tails, and it does so in two
+independent ways that matter separately. It fixes how \emph{heavy} the
+distribution of gradient norms is; and, because a one-sided weight explodes on
+whichever side the residuals migrate toward as training proceeds, it fixes
+whether that distribution is \emph{stationary}. These are not the same
+property --- \S\ref{par:gradnorms} finds the heaviest-tailed loss to be
+perfectly stationary and the tightest-tailed one to be the only drifting one.
+Together they set how much gradient mass sits above a clipping threshold at
+convergence, and clipping, being a biased operator --- it shortens large
+gradients and leaves small ones untouched --- converts that mass into a bias in
+the learned value. So the choice of $w$ propagates to how well-calibrated
+$\Vf_\theta$ is, by a route with nothing to do with the divergence's minimiser,
+which is identical for all of them. Tail design is not, in the end, about
+avoiding overflow.
 
 % ---------------------------------------------------------------------------
 \begin{table}[t]

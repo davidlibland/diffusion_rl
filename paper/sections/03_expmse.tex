@@ -30,11 +30,11 @@ That reading is incomplete, and correcting it is one of this paper's results.
 Clipping does recover the step, but it is a biased operator --- it shortens
 large gradients and leaves small ones alone, so a loss whose large gradients
 arrive disproportionately from one side has its fixed point pulled toward the
-other. \S\ref{par:clipped} measures this: clipping costs every
-exponential-space loss between a fifth of a nat and a nat and a half of
-downward bias, in proportion to how often it engages. ``Recoverable'' therefore
-means recoverable at a price in calibration, and the price is set by the tail
-shape --- which is set by the gradient weight, which is what
+other. \S\ref{par:clipped} measures this. The bill ranges from nothing at all, for a
+loss with no tail for the clip to catch, up to $1.3$ nats for the loss whose
+tail sits most heavily above the threshold. ``Recoverable'' therefore means
+recoverable at a price in calibration, the price is set by how much gradient
+mass the clip intercepts, and that is set by the weight --- which is what
 \S\ref{sec:04_bregman} is about.
 
 \paragraph{Under-prediction vanishes (genuinely unrecoverable).}

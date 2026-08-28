@@ -69,28 +69,26 @@ def cell(a, d, m, fmt="{:+.1f}"):
 
 L = [r"\begin{table}[t]", r"\centering\small",
      r"\caption{Effect of gradient clipping, at a per-arm threshold set to each",
-     r"loss's own $90$th-percentile gradient norm so that it binds a comparable",
-     r"fraction of the time for every arm. Entries are paired differences",
-     r"(clipped $-$ unclipped) over the same $n=12$ instances; \textbf{bold} is",
-     r"$p<0.05$. Clipping is not a free stabiliser: it buys control for the",
-     r"one-sided losses and charges them bias, and it charges Itakura--Saito",
-     r"most of all.}", r"\label{tab:clip}",
-     r"\begin{tabular}{lc" + "c"*len(DIMS)*3 + "}", r"\toprule",
-     (r"& clip rate & \multicolumn{%d}{c}{$\Delta$ headroom (pts)}"
-      r" & \multicolumn{%d}{c}{$\Delta$ value RMSE}"
-      r" & \multicolumn{%d}{c}{$\Delta$ signed bias}\\") % (len(DIMS), len(DIMS), len(DIMS)),
-     r"loss & (tail) & " + " & ".join(f"${d}$" for d in DIMS) + " & "
-     + " & ".join(f"${d}$" for d in DIMS) + " & "
-     + " & ".join(f"${d}$" for d in DIMS) + r"\\", r"\midrule"]
-for a in ORDER:
+     r"loss's own $90$th-percentile gradient norm. \emph{Clip rate} is the",
+     r"fraction of steps on which the clip engages over the final fifth of",
+     r"training; the remaining rows are paired differences (clipped $-$",
+     r"unclipped) over the same $n=12$ instances, \textbf{bold} for $p<0.05$.",
+     r"The threshold is calibrated identically for every arm, so the spread in",
+     r"clip rate is a property of the losses, not of the protocol.}",
+     r"\label{tab:clip}",
+     r"\begin{tabular}{llcccc}", r"\toprule",
+     r"loss & quantity & $d=2$ & $d=8$ & $d=32$ & $d=128$\\", r"\midrule"]
+for k, a in enumerate(ORDER):
     rs = [rate(a, d) for d in DIMS]
-    rs = [r for r in rs if r is not None]
-    rtxt = f"{np.mean(rs):.2f}" if rs else "---"
-    row = [NICE[a], rtxt]
-    row += [cell(a, d, "frac_closed") for d in DIMS]
-    row += [cell(a, d, "v_rmse", "{:+.2f}") for d in DIMS]
-    row += [cell(a, d, "v_bias", "{:+.2f}") for d in DIMS]
-    L.append(" & ".join(row) + r"\\")
+    L.append(" & ".join([r"\multirow{4}{*}{%s}" % NICE[a], "clip rate"]
+             + [f"{r:.2f}" if r is not None else "---" for r in rs]) + r"\\")
+    L.append(" & ".join(["", r"$\Delta$ headroom (pts)"]
+             + [cell(a, d, "frac_closed") for d in DIMS]) + r"\\")
+    L.append(" & ".join(["", r"$\Delta$ value RMSE"]
+             + [cell(a, d, "v_rmse", "{:+.2f}") for d in DIMS]) + r"\\")
+    L.append(" & ".join(["", r"$\Delta$ signed bias"]
+             + [cell(a, d, "v_bias", "{:+.2f}") for d in DIMS]) + r"\\")
+    L.append(r"\midrule" if k < len(ORDER) - 1 else "")
 L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
 open(OUT, "w").write("\n".join(L) + "\n")
 print(f"wrote {OUT}")
