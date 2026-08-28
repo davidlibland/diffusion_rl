@@ -19,14 +19,25 @@ squared error gives
 Both tails are pathological, but asymmetrically so
 (Fig.~\ref{fig:loss_curves}, left).
 
-\paragraph{Over-prediction explodes (recoverable).}
+\paragraph{Over-prediction explodes (recoverable, but not free).}
 As $p\to+\infty$ the gradient grows like $2e^{2p}$ and overflows single
-precision once $p\gtrsim 44$ nats (the square needs $e^{2p}$). This is a
-nuisance but a benign one: the gradient merely needs to be a full-size,
-correctly-signed step, so saturating it to a large finite value (or clipping)
-recovers a usable update.
+precision once $p\gtrsim 44$ nats (the square needs $e^{2p}$). The standard
+reading, which we adopt provisionally and then revise, is that this is the
+benign half: the gradient merely needs to be a full-size, correctly-signed
+step, so saturating it or clipping it recovers a usable update.
 
-\paragraph{Under-prediction vanishes (unrecoverable).}
+That reading is incomplete, and correcting it is one of this paper's results.
+Clipping does recover the step, but it is a biased operator --- it shortens
+large gradients and leaves small ones alone, so a loss whose large gradients
+arrive disproportionately from one side has its fixed point pulled toward the
+other. \S\ref{par:clipped} measures this. The bill ranges from nothing at all, for a
+loss with no tail for the clip to catch, up to $1.3$ nats for the loss whose
+tail sits most heavily above the threshold. ``Recoverable'' therefore means
+recoverable at a price in calibration, the price is set by how much gradient
+mass the clip intercepts, and that is set by the weight --- which is what
+\S\ref{sec:04_bregman} is about.
+
+\paragraph{Under-prediction vanishes (genuinely unrecoverable).}
 As $p\to-\infty$ the gradient behaves like $-2e^{p+q}\to 0$. This is exactly
 the regime where the model is \emph{most wrong}: it assigns near-zero value
 $e^{p}\approx 0$ to a state whose true value $e^{q}$ is large --- a rare,

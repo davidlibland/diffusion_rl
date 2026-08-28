@@ -91,8 +91,8 @@ appears exactly on the axis the second tail governs.
 
 \emph{Itakura--Saito is the better value estimator above $d=2$.} We win at
 $d=2$ ($-0.12$) and lose at $d=8$, $32$ and $128$ ($+0.10$, $+0.27$, $+0.22$),
-all significant. On this benchmark, above two dimensions, a divergence from
-1968 estimates the value better than the one we derived. It does so with a
+all significant. Above two dimensions, then, Itakura--Saito is the more accurate value
+estimator on this benchmark. It achieves that with a
 gradient that explodes for under-predictions, so without clipping it is paying
 a price our weight does not. Whether tail control still buys anything once that
 price is removed is settled in \S\ref{par:clipped}.
@@ -107,8 +107,7 @@ consumes only $\nabla \Vf$ --- reward-guided generation and fine-tuning, the
 settings this paper opens with --- should on this evidence use the
 well-conditioned biased loss. The unbiased exponential-space target earns its
 keep when $\Vf$ itself is wanted, and since $\Vf(0,0)=\log Z$ that is every
-free-energy and model-evidence use. Our loss is for the second case; we had
-expected to be arguing for it in both.
+free-energy and model-evidence use. Our loss is for the second case.
 
 \paragraph{Gradient norms: the mechanism, measured.}
 \label{par:gradnorms}
@@ -135,10 +134,20 @@ log-space squared error      & 2.6 & 2.2 & 2.0 & 1.9\\
 Squared error's gradient distribution develops a heavy tail precisely at
 $d=128$, which is where its control collapses ($13.1\%$ headroom closed against
 our $24.9\%$). That is the exploding tail of \S\ref{sec:03_expmse} observed
-directly rather than inferred, and it is the one place where the theory and the
-measurement line up without qualification. The Spence weight stays tight
-($2.4$--$3.2$) at every dimension, as its construction requires. The design
-works; \S\ref{par:clipped} is about whether it matters.
+directly rather than inferred. The Spence weight stays tight ($2.4$--$3.2$) at
+every dimension, as its construction requires.
+
+A second property matters more than the first, and only shows up over training.
+Comparing the median gradient norm over all steps with the median over the
+final fifth, every arm is stationary or contracting --- $0.89$ to $1.04$ ---
+\emph{except} Itakura--Saito, whose norms grow by $1.08$ to $1.35$. This is
+what its weight predicts: $\partial L/\partial p = 1-e^{q-p}$ diverges as the
+prediction falls below the target, so as the model sharpens and its residual
+under-predictions become more extreme, the gradient distribution widens rather
+than settles. A two-sided linear weight cannot do this; its gradient grows only
+as fast as $p$ itself. The consequence is the subject of the next paragraph:
+a clipping threshold calibrated early stays calibrated for four of the five
+losses and becomes progressively more binding for the fifth.
 
 \paragraph{Clipping, applied as a brake.}
 \label{par:clipped}
@@ -165,9 +174,11 @@ significant).
 
 \emph{It is also what Itakura--Saito most depends on, and it charges for it.}
 Even with the threshold set to its own $90$th percentile, its clip binds on
-$44\%$ of steps at convergence, against $8$--$12\%$ for every other arm: its
-gradient distribution widens as training proceeds, so a brake calibrated early
-is applied constantly later. The bill arrives as bias. Clipping shifts its
+$44\%$ of steps at convergence, against $8$--$12\%$ for every other arm. This
+is the drift above cashing out: the threshold was calibrated to catch a tenth
+of the distribution, the distribution then moved underneath it, and by
+convergence the brake is engaged nearly half the time. The bill arrives as
+bias. Clipping shifts its
 learned value down by $1.1$ to $1.3$ nats at every dimension, three to six times
 the shift it induces in ours ($0.20$--$0.54$) and an order of magnitude more
 than in the log-space arm, whose gradients have no tail to catch. Clipping is

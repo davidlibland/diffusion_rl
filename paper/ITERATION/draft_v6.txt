@@ -1,0 +1,2135 @@
+Loss Design for Log-Partition Value Functions
+is the Choice of One Positive Weight
+David Li-Bland
+
+…
+
+Abstract
+Reward-guided diffusion and diffusion fine-tuning are, through entropy-regularized stochastic control,
+the problem of learning a value function V (x, t) = log Ebase [exp r(X1 ) | Xt = x]—a conditional logpartition function whose gradient is the optimal control. The unbiased Monte-Carlo target for V lives in
+exponential space, so squared-error regression has gradients that explode for over-predictions and, worse,
+vanish for under-predictions, where the model is most wrong and gradient clipping cannot help. We
+observe that every Bregman divergence has the value function as its population minimizer, and that such
+a loss reaches the optimizer only through a scalar gradient weight w(y) = yφ′′ (y) on the exponentialspace residual—so the design space is exactly the choice of w, with squared error (w = 2y) and the
+Itakura–Saito divergence (w = 1/y) as its two extremes. We then solve for the weight w(y) = ln y/(y − 1)
+whose gradient grows only linearly in the log-space prediction in both tails, yielding the Spence loss1 and
+a closed-form, numerically stable gradient. Measured against four alternatives with per-loss tuning on
+a benchmark whose value function is known analytically, it repairs squared error on both axes at every
+dimension, clipped or not. It does not, however, dominate the family: Itakura–Saito, once clipped, is the
+better controller at every dimension. But clipping is not the free remedy the standard framing assumes
+— calibrated to bind a tenth of the time it still binds on 44% of Itakura–Saito’s steps at convergence and
+shifts its learned value down by over a nat, three to six times the bias it induces in ours. The choice is
+therefore between control and calibration rather than a ranking. The comparison also isolates what the
+unbiased target is for: a well-conditioned but biased log-space regression closes about ten more points
+of headroom than any exponential-space loss at every dimension, so an application consuming only ∇V
+should prefer it, while the unbiased target earns its keep when V itself is wanted — and V (0, 0) = log Z. A
+secondary contribution studies on-policy twisted sampling for the same problem, where the useful finding
+is that widening coverage beats concentrating on the reward corridor. We evaluate on a dimensionalscaling benchmark designed for clean statistical reads and on the GMM-40 sampler benchmark.
+
+1
+
+Introduction
+
+Steering a diffusion model with a reward — fine-tuning it toward a preference model, conditioning it on a
+constraint, or using it to sample a Boltzmann density — has a single mathematical formulation, given by
+Uehara et al. [47] following the entropy-regularized control tradition of Dai Pra [14] and Kappen [25]. One
+asks for the path measure P⋆ that reweights a base diffusion P by er(X1 ) , and the object that produces it is
+the soft value function
+
+
+V (x, t) = log Ebase er(X1 ) | Xt = x ,
+(1)
+whose gradient is the optimal control, u⋆ = 2a∇V . Learning V is therefore the whole problem, and V is a
+conditional log-partition function: at t = 0 it is log Z itself.
+Log-partition functions are awkward to regress. The H-martingale property eV (x,t) = Ebase [eV (Xs ,s) |
+Xt = x] supplies targets that are conditionally unbiased — but for eV , not for V , and no plug-in in log
+space repairs the difference, since the Jensen gap that separates E[q] from log E[eq ] is precisely the quantity
+a soft maximum is made of. The target is therefore stuck in exponential space, and the obvious loss, squared
+error between ep and eq , behaves badly there. Its gradient is 2ep (ep − eq ), which explodes as e2p when the
+model over-predicts and, more seriously, decays to zero when it under-predicts. The second case is the one
+that matters. It is exactly the state whose true value is large and whose predicted value is small: a rare,
+1 Named for the Spence (dilogarithm) function Li
+
+2 appearing in its value.
+
+1
+
+high-reward target the model has failed to find. Gradient clipping tames the first pathology, but it cannot
+manufacture a gradient that has already vanished.
+Our starting observation is that this loss was never forced on us. For any strictly convex φ, the Bregman
+divergence Dφ (eq , ep ) has the same population minimizer, V — the Savage representation of proper scoring
+rules [40, 20, 5] — so φ is free to be chosen for conditioning. What makes that freedom usable is that in log
+space the whole family collapses:
+
+
+∂
+Dφ eq , ep = w(ep ) ep − eq ,
+∂p
+
+w(y) = y φ′′ (y) > 0.
+
+(2)
+
+A Bregman loss reaches the optimizer only through the scalar weight w, so designing one means choosing a
+positive function on (0, ∞) and nothing else. Squared error is w(y) = 2y, growing with the prediction, which
+is why it explodes above and dies below; Itakura–Saito is w(y) = 1/y, which inverts the asymmetry rather
+than removing it. Both are power laws, and no power law will do: with w(y) ∝ y β−1 the gradient grows like
+eβp , so it is exponential for every β > 0 and flat at β = 0.
+Solving (2) for a weight whose gradient grows linearly in p in both directions gives w(y) = ln y/(y − 1),
+the reciprocal logarithmic mean, and with it a loss we call the Spence loss: its gradient is p (ep − eq )/(ep − 1)
+in closed form, and its value is expressible through the Spence function Li2 (1 − ex ), which names it.
+A better-conditioned loss does not, however, make rare targets easier to find. That is a sampling problem,
+and in high dimension it dominates: importance sampling for E[er ] from the base process needs on the order
+⋆
+of eKL(P ∥P) samples [11]. Because the H-martingale identity survives any adapted twist once the Girsanov
+ratio is applied, the sampler is free, and the learned value is itself the optimal twist. The second half of this
+paper studies that loop. The useful finding there is a negative one: at high dimension, concentrating the
+sampler on the reward corridor is worse than not doing so, even with an oracle twist. What helps instead is
+widening coverage at small t.
+Contributions.
+• We show that a Bregman loss applied to the unbiased exponential-space target acts on the optimizer
+only through the gradient weight w(y) = yφ′′ (y) of (2), which reduces loss design for value functions
+to the choice of one positive function, and places squared error and Itakura–Saito as the β = 2 and
+β = 0 members of a power-law family no member of which has both tails controlled (§4).
+• We use the reduction to derive a weight rather than pick one: solving for linear growth in both tails gives
+w(y) = ln y/(y − 1), the reciprocal logarithmic mean, with a closed-form gradient, a dilogarithm value,
+and a branch-wise evaluation finite for every float input up to one saturation guard (§4.3, App. A). It
+does what it was designed to do at the level of the gradient — its norm distribution is the tightest
+of any arm, where squared error’s develops a 53× tail at d = 128 — which turns out not to be what
+decides the comparison.
+• We compare five losses — Spence, exponential-space squared error, Itakura–Saito, generalised KL, and
+the biased log-space baseline — with per-loss learning-rate tuning on a benchmark whose value function
+is available analytically. The Spence weight repairs squared error on both axes at every dimension,
+and beats generalised KL on value fidelity. It does not dominate the family: clipped Itakura–Saito is
+the better controller everywhere. We report that rather than the clean sweep, and we measure two
+things the framing had taken for granted — that clipping charges bias in proportion to how much a
+loss needs it (over a nat for Itakura–Saito, a fifth of that for ours), and that at a standard threshold
+it binds on essentially every step, so the usual clipped comparison is not a comparison of losses at all
+(§5).
+• We show that on-policy twisted sampling, with coverage widened by backward noising, is significantly
+better than off-policy training at d = 8–32 and never significantly worse anywhere in 2 ≤ d ≤ 512,
+while the naive version instead collapses to 7.8 points below off-policy at d = 512 (§6, §7).
+• On GMM-40 the learned value recovers log Z to 0.30 ± 0.07 nats over 15 runs with complete mode
+coverage, comparable to the best published samplers on that target, and we verify by re-initialising
+the value head ±4 nats away from the truth that the estimate is learned rather than inherited from
+initialisation (§7.3).
+2
+
+2
+
+Setting: value functions for reward-guided diffusion
+
+2.1
+
+The base process and the tilted target
+
+Fix a time horizon t ∈ [0, 1] and a base diffusion on Rd ,
+√
+dXt = f (Xt , t) dt + 2a dWt ,
+
+X0 = 0,
+
+(3)
+
+with a > 0 a scalar diffusion coeﬀicient and W a standard d-dimensional Brownian motion. Write P for the
+induced path measure, Ebase and pbase for expectations and marginals under it, and L = f · ∇ + a∆ for its
+generator. Given a terminal reward r : Rd → R, the object we wish to sample from is the reward-tilted path
+measure
+
+
+er(X1 )
+dP⋆
+=
+,
+Z = Ebase er(X1 ) ,
+(4)
+dP
+Z
+whose terminal marginal is p⋆ (x) ∝ pbase (x) er(x) . This is the common form of reward-guided generation
+and of diffusion fine-tuning [44, 6, 47], and it also covers Boltzmann sampling: to target π ∝ e−E one sets
+r = −E − log pbase , which is how we instantiate the GMM-40 benchmark in §7.
+Nothing below depends on f having a particular form: if P is a pretrained diffusion or flow model, f is
+its learned drift and the whole development applies unchanged.2
+The base family we use. Our base processes are pinned interpolants [3, 31]: X0 = 0, a prescribed
+terminal marginal ν, and a Brownian bridge between the two given X1 = x1 . The induced drift f (x, t) =
+E[(X1 − Xt )/(1 − t) | Xt = x] vanishes exactly when ν = N (0, 2aI); taking ν to be a Gaussian mixture
+instead gives a base model with nontrivial but analytically known f , V and log Z, which is what makes the
+study of §7 possible. Details in App. C.
+
+2.2
+
+Control formulation and the value function
+
+√
+Realizing (4) means adding a drift. For a control u giving the controlled dynamics dXt = (f +u) dt+ 2a dWt
+R1 1
+with path measure Pu , Girsanov’s theorem gives KL(Pu k P) = EPu 0 4a
+kut k2 dt, so (4) is the solution of the
+entropy-regularized control problem [14, 27]
+
+
+Z 1
+kut k2
+max EPu r(X1 ) −
+dt ,
+u
+4a
+0
+
+(5)
+
+whose optimum is log Z. The central object is the soft value function, the continuous-time counterpart of
+the soft value of maximum-entropy reinforcement learning [22, 28],
+
+
+(6)
+V (x, t) = log Ebase er(X1 ) Xt = x ,
+a conditional log-partition function. It solves the HJB equation ∂t V + f · ∇V + a∆V + ak∇V k2 = 0 with
+terminal condition V (·, 1) = r, the optimal control is
+u⋆ (x, t) = 2a ∇x V (x, t),
+
+(7)
+
+and, since X0 = 0 is deterministic, V (0, 0) = log Z — the normalizing constant, which is the headline metric
+on external sampler benchmarks (§7). Learning V therefore solves the sampling problem, the fine-tuning
+problem, and the free-energy-estimation problem at once, and everything downstream reduces to regressing
+V from Monte-Carlo targets.
+2 Note the time convention: t runs from a deterministic start X = 0 to the model’s samples at t = 1, as in the diffusion0
+sampler literature [55, 49], rather than the denoising direction of DDPM-style presentations.
+
+3
+
+2.3
+
+The H-martingale property
+
+Exponentiating (6) linearizes the HJB equation — the Hopf–Cole change of variables underlying linearlysolvable and path-integral control [25, 46]. Writing h = eV , Feynman–Kac gives ∂t h+Lh = 0: h is space-time
+harmonic for the base process, so h(Xt , t) is a P-martingale, and (7) is exactly the Doob h-transform drift
+f + 2a∇ log h. Concretely, for any 0 ≤ t < s ≤ 1,
+
+
+eV (x,t) = Ebase eV (Xs , s) Xt = x
+
+(8)
+
+with the terminal case V (·, 1) = r. We call (8) the H-martingale property; it is the source of every target in
+this paper, and two of its features drive the design.
+(i) Targets are unbiased in exponential space — and only there. Equation (8) says that a single
+draw of Xs from the base kernel supplies a scalar q = V (Xs , s) (or q = r(X1 ) when s = 1) satisfying
+
+
+(9)
+E eq Xt = x = eV (x,t) .
+The estimator is unbiased for eV , not for V : the natural log-space plug-ins are both biased low by a Jensen
+gap (§3). This is a property of the log-partition function rather than of a particular scheme, and it is what
+forces the regression into exponential space — and hence into the conditioning problem of §3–§4.
+(ii) The identity is twist-independent. Suppose we do not want to draw Xs from the base kernel —
+for instance because base samples rarely reach high-reward regions: importance sampling for E[er ] needs on
+⋆
+the order of eKL(P ∥P) samples [11], which is the quantitative form of the sparsity argument of §6. Propose
+instead under any adapted twist u, giving the drift f + u and path measure Pu , and correct by the Radon–
+Nikodym derivative of the base law with respect to it. By Girsanov’s theorem, restricted to the interval
+[t, s],
+
+
+Z s
+Z s
+1
+1
+dP
+2
+=
+exp
+−
+u
+·
+dB
+−
+ku
+k
+dτ
+,
+(10)
+ρt→s =
+τ
+τ
+τ
+dPu [t,s]
+2a t
+4a t
+√
+where dBτ = 2a dWτu is the driving noise under Pu (so the stochastic integral is an Itô integral against the
+noise actually realized by the sampler). Under Novikov’s condition ρt→s is an exponential martingale with
+unit mean, and (8) becomes
+
+
+eV (x,t) = EPu ρt→s eV (Xs ,s) Xt = x .
+(11)
+In an Euler–Maruyama discretization (10) factorizes over steps, each contributing − u·∆B/(2a)−kuk2 ∆t/(4a)
+with ∆B ∼ N (0, 2a∆t I); this per-step ratio is the incremental weight of twisted-SMC samplers, a construction that predates its diffusion applications [52, 21, 23, 42]. The twist u is therefore free: it changes the
+variance of the target, never its mean. The proposal is a variance-reduction device, not a modeling choice
+— which is what licenses the importance-sampling and SMC machinery of §6 without changing the object
+being learned.
+
+2.4
+
+How training pairs are formed
+
+A learner Vθ is fit to pairs (xt , q), of two kinds. Anchored targets terminate at the true reward and satisfy (9)
+exactly, so eq is unbiased for eV (xt ,t) however wrong the current Vθ is. Bootstrapped targets substitute the
+learner’s own value at a later time, and satisfy no such identity. Both appear below; the distinction matters,
+and we are explicit about which guarantee is in force.
+Off-policy (bridge) anchors. Draw a terminal point x1 ∼ ν from the base terminal marginal, place xt
+on the base bridge to it, and take q = r(x1 ). For the pinned interpolants of §2 that bridge is the Brownian
+bridge in closed form,
+p
+xt = t x1 + 2a t(1 − t) ε,
+ε ∼ N (0, I),
+(12)
+so the sampled joint (xt , x1 ) is exactly the base joint and q is anchored in the sense above. What matters
+is that x1 is drawn from the base marginal ν: anchoring on a reward-aware or held-out data distribution
+instead breaks the conditional and biases the targets.
+4
+
+These anchors are cheap per sample — no trajectory is integrated, and each pair costs a single evaluation
+of r — and they cover the whole marginal. Two caveats. First, x1 is drawn without regard to r, which
+is what fails in high dimension (§6). Second, cheap per sample is not the same as cheap in total: because
+the anchors are uninformative about where r is large, reaching a given accuracy can take many more of
+them, and hence many more reward evaluations, than a targeted scheme. When r is itself expensive — a
+quantum-chemistry calculation, a docking score, a simulator rollout — total calls to r, not wall-clock per
+sample, is the budget that binds, and the ranking between the constructions can invert. Our benchmarks
+all have cheap analytic rewards, so we report sample counts rather than reward-call counts; we flag this as
+a limitation in §9.
+On-policy (bootstrapped) targets. Roll a sequential-Monte-Carlo sweep forward from X0 = 0 under
+the current twist u = 2a∇Vθ . A particle at (xt , t) spawns k children at s = t + ∆t under the guided
+(i)
+kernel; writing ρi for the per-step ratio of (10) and vi = Vθ (xs , s), the target attached to the parent is the
+log-mean-exp over its siblings,
+
+ P
+k
+(13)
+q = log k1 i=1 ρi evi .
+It is worth being exact about what this estimates. Define the one-step backup operator Ts — the continuoustime analogue of the soft Bellman backup [22] — acting on a candidate value function W by
+
+
+(14)
+(Ts W )(x, t) = log Ebase eW (Xs ,s) Xt = x .
+The children are i.i.d. from the guided kernel given the parent, so by (11)
+
+
+E eq | xt = e(Ts Vθ )(xt ,t) .
+
+(15)
+
+That is the whole guarantee: (13) is an exp-space unbiased estimate of the backup of the current network,
+and of nothing else. In particular it is not an estimate of V (xt , t). Because eVθ is not harmonic, the children’s
+values need not be good estimates of the true value at the parent, and whatever error Vθ carries at time s
+is inherited rather than corrected. What keeps the recursion honest is the terminal step, where the children
+carry q = r(X1 ) exactly; the scheme is useful to the extent that this anchoring propagates backwards. By
+(8) the true value is a fixed point, Ts V = V , but we prove nothing about convergence to it and treat the
+bootstrap as an empirical device throughout.
+Backward-noising expansion. Because eV is harmonic, a target attached at (xs , s) remains valid at any
+point noised backwards from it under the base backward kernel. For the pinned interpolants this kernel is
+available in closed form and, notably, does not depend on the terminal law ν at all:
+
+
+Xt Xs = xs ∼ N st xs , 2a t(s−t)
+I
+,
+t < s,
+(16)
+s
+because conditioning a Brownian bridge on an interior point leaves a Brownian bridge to that point, whatever
+the endpoint distribution. The expansion is therefore available for base models with nontrivial drift, not
+only for Brownian motion. The hypothesis that does the work here is about the marginal, not the kernel:
+(·,s)
+provided xs is drawn from the base marginal pbase and xt from the backward kernel, the pair (xt , q) carries
+the base joint law and (8) applies unchanged. That holds for the off-policy anchors above; §6 returns to
+what happens when the points instead come from a twisted sweep, for which it does not. This turns one
+trajectory into many training pairs at earlier, noisier times, and is the mechanism behind our best on-policy
+variant (§6).
+In every case the learning problem has the same shape: given pairs (xt , q) with E[eq | xt ] = eV (xt ,t) , fit
+p = Vθ (xt ). The rest of the paper concerns the two remaining degrees of freedom — the divergence applied
+to (p, q), and the sampler that produces the pairs.
+
+5
+
+3
+
+The problem with exponential-space squared error
+
+The value V (x, t) = log Ebase [er(X1 ) | Xt = x] is a conditional log-partition function, and the H-martingale
+property (§2) supplies conditionally unbiased targets in exponential space: eV (xt ) = E[eq | xt ] for a onestep target q (the terminal reward, or a bootstrapped value). A network predicts the value in log space,
+p = Vθ (xt ); matching ep to the unbiased target eq with squared error gives
+2
+LMSE (p, q) = eq − ep ,
+
+
+∂LMSE
+= 2ep ep − eq = 2e2p − 2ep+q .
+∂p
+
+(17)
+
+Both tails are pathological, but asymmetrically so (Fig. 1, left).
+Over-prediction explodes (recoverable, but not free). As p → +∞ the gradient grows like 2e2p and
+overflows single precision once p ≳ 44 nats (the square needs e2p ). The standard reading, which we adopt
+provisionally and then revise, is that this is the benign half: the gradient merely needs to be a full-size,
+correctly-signed step, so saturating it or clipping it recovers a usable update.
+That reading is incomplete, and correcting it is one of this paper’s results. Clipping does recover the step,
+but it is a biased operator — it shortens large gradients and leaves small ones alone, so a loss whose large
+gradients arrive disproportionately from one side has its fixed point pulled toward the other. §5 measures this:
+clipping costs every exponential-space loss between a fifth of a nat and a nat and a half of downward bias,
+in proportion to how often it engages. “Recoverable” therefore means recoverable at a price in calibration,
+and the price is set by the tail shape — which is set by the gradient weight, which is what §4 is about.
+Under-prediction vanishes (genuinely unrecoverable). As p → −∞ the gradient behaves like −2ep+q →
+0. This is exactly the regime where the model is most wrong: it assigns near-zero value ep ≈ 0 to a state
+whose true value eq is large — a rare, high-reward target it has failed to find. The learning signal there is not
+merely ill-scaled, it is absent, and no amount of gradient clipping [36] can manufacture a gradient that has
+decayed to zero. In the high-dimensional, signal-sparse regime of §6, where the useful targets are precisely
+the rare large ones, this is the dominant failure mode.
+Why not regress in log space? The obvious escape is to drop the exponentials and fit (p − q)2 directly,
+which is perfectly conditioned. It is also biased. Squared error in q is minimized by E[q | xt ], whereas the
+value is V = log E[eq | xt ]; by Jensen the two differ by the log-partition gap
+
+
+V (xt ) − E[q | xt ] = log E eq−E[q] ≥ 0,
+(18)
+≈ 12 Var(q | xt ) for small spread,
+and this gap is largest in exactly the heavy-tailed, high-dimensional regime the method is meant to handle: it
+is the quantity that a soft-max is all about, so discarding it discards the signal. Unbiasedness pins us to the
+exponential-space target; only the divergence applied to it is negotiable. That is the opening the Bregman
+family exploits (§4).
+It is worth being clear about what this costs and what it does not. Nothing here says the log-space fit
+is a bad controller. The control reads only ∇Vθ , and a value function displaced by a slowly-varying offset
+still points the same way, so a well-conditioned but biased loss can steer perfectly well while getting V itself
+wrong. The measurement in §5 bears this out, and sharply. What the bias costs is the value: V (0, 0) is
+log Z, so a scheme that gives up unbiasedness gives up the free energy, the log-partition estimate, and every
+downstream use of the value that is not the gradient.
+Empirical pathology. Beyond the asymptotics, the finite-precision behavior is severe; the overflowavoidance patterns we rely on are standard [7]. In our convergence runs the naive loss skipped or aborted a
+large fraction of batches on overflow — in one FBRRT run, 18% of batches once predictions reached moderate magnitude — and a single non-finite prediction propagated through the shared value network to poison
+every subsequent batch. We report the full stability audit in §5. A stabilized implementation with the exact
+gradient of (17) saturated to the float range (our exp_mse) removes the overflow and the poisoning, and it is
+the baseline we compare against throughout, so that the comparison isolates the divergence rather than the
+arithmetic. What it cannot remove is the vanishing gradient, which is a property of the divergence itself.
+6
+
+loss value
+
+Squared error
+
+107 w(y) = 2y
+106 pL = 2ep(ep eq)
+105
+104
+103
+102
+101
+100
+0
+
+Itakura--Saito
+
+q= 2
+q = +0
+q = +2
+
+103
+
+Spence (ours)
+
+w(y) = 1/y
+q p
+pL = 1 e
+
+102
+
+102
+
+w(y) = lny/(y 1)
+p e q)/(e p 1)
+pL = p(e
+
+101
+
+101
+
+100
+
+100
+0
+
+0
+
+gradient L/ p
+
+bounded
+
+107
+106
+105
+104
+103
+102
+101
+100
+0
+100
+101
+
+explodes
+
+101
+
+0
+
+100
+
+100
+
+0
+
+101
+102
+
+100
+101
+
+103
+
+vanishes
+
+5.0
+
+100
+
+2.5
+
+0.0 2.5
+prediction p
+
+5.0
+
+7.5
+
+5.0 explodes
+2.5 0.0 2.5
+prediction p
+
+5.0
+
+7.5
+
+5.0
+
+2.5
+
+0.0 2.5
+prediction p
+
+5.0
+
+7.5
+
+linear both sides
+
+Figure 1: Loss value (top) and gradient ∂L/∂p (bottom) of Dφ (eq , ep ) as functions of the prediction p,
+for three targets q ∈ {−2, 0, 2} (dots mark the minimizer p = q; symmetric-log axes). Squared error
+vanishes for under-predictions (p < q, gradient → 0) and explodes for over-predictions. Itakura–Saito
+inverts this: the over-prediction gradient saturates at +1, while under-predictions now explode — trading
+the unrecoverable pathology for a clippable one. Spence (ours) is linear in p in both tails, so neither side
+vanishes nor explodes exponentially.
+Prior fixes rescale the target; we cannot. Badly-scaled value regression is a known problem in reinforcement learning, and the standard remedies transform the target: adaptive normalisation [48], an
+invertible square-root rescaling [37], or replacing regression by classification over bins [17]. Each conditions
+the problem by changing what is regressed. None is available here, because each destroys the one property
+(9) gives us — that the target is unbiased for eV — and with it the guarantee that the minimiser is the value.
+That constraint is what forces the fix into the divergence.
+
+4
+
+Bregman divergences for value learning
+
+4.1
+
+Any Bregman divergence learns the value function
+
+For a twice continuously differentiable potential φ on (0, ∞) with φ′′ > 0, the Bregman divergence [9] of a
+prediction y from a target T is
+Dφ (T, y) = φ(T ) − φ(y) − φ′ (y) (T − y).
+
+(19)
+
+Squared error is the special case φ(y) = y 2 , giving Dφ (T, y) = (T − y)2 . The order of the arguments matters:
+the prediction must occupy the second slot, which is the one whose minimizer is a plain mean.3
+The fact that a Bregman divergence is minimised in expectation by the mean is classical — it is the
+Savage representation of proper scoring rules [40, 20], and Bregman divergences are exactly the losses with
+that property [5]. What we add is the reparameterisation. Because the value is a log-partition function the
+network predicts p = log y, and in that variable the whole family collapses onto a single scalar weight.
+3With the arguments swapped, arg min
+
+of T for φ = − ln y, not E[T ].
+
+′
+′
+y E[Dφ (y, T )] solves φ (y) = E[φ (T )], a quasi-arithmetic mean — the harmonic mean
+
+7
+
+Lemma 1 (Gradient weight; the minimiser is classical). Let the regression target be eq , with q such that
+E[eq | xt ] = eV (xt ) (the H-martingale target, §2). Parameterize the prediction in log space, y = ep . Suppose
+further that E[φ(eq ) | xt ] < ∞, so the divergence has finite expectation. Then
+
+
+∂
+Dφ eq , ep = w(ep ) ep − eq ,
+∂p
+
+
+and consequently arg minp Eq|xt Dφ (eq , ep ) = V (xt ).
+
+w(y) := y φ′′ (y) > 0,
+
+(20)
+
+Proof sketch. Differentiating (19) in y, the φ′ (y) terms cancel and leave φ′′ (y)(y − T ); the chain rule contributes dy/dp = y. Because (20) is linear in the target, taking expectations gives E[∂L/∂p] = w(ep ) (ep −
+E[eq | xt ]), which is negative below eV and positive above it. Full proof in App. D.
+Remark 1 (The integrability hypothesis is not decorative). E[eq ] < ∞ alone does not give E[Dφ (eq , ep )] < ∞.
+For squared error the divergence carries an E[e2q ] term, which a heavy-tailed target can easily make infinite
+— and heavy-tailed targets are exactly the regime of §6. Where that happens the squared-error objective is
++∞ for every p and its minimiser is not defined, while the Spence loss, whose value grows only quadratically
+in p against a linear factor eq , remains finite under the weaker condition E[eq ] < ∞. The hypothesis therefore
+separates the family rather than merely tidying it.
+Two consequences drive the rest of this section. First, the choice of φ does not bias the learned value, so
+it is free to be chosen for conditioning. Second, (20) says that a Bregman loss acts on the optimizer only
+through the scalar gradient weight w multiplying the raw exp-space residual ep − eq . The design space is
+exactly the choice of a positive weight function w on (0, ∞), and the two losses we have met are its
+opposite extremes.
+
+4.2
+
+Two reference points
+
+Squared error: w(y) = 2y. The weight grows with the prediction, so ∂L/∂p = 2ep (ep − eq ) explodes
+like e2p for over-predictions and, because w(y) → 0 as y → 0, is driven to zero for under-predictions — the
+unrecoverable pathology of §3.
+Itakura–Saito: w(y) = 1/y. Taking φ(y) = − ln y gives the Itakura–Saito divergence [24], for which
+DIS (eq , ep ) = eq−p − (q − p) − 1 and
+∂LIS
+= 1 − eq−p .
+(21)
+∂p
+The weight decays fast enough to cancel the residual entirely on the over-prediction side: as p → +∞ the
+gradient saturates at +1, a bounded, correctly-signed step. On the under-prediction side it now explodes
+like −eq−p . Itakura–Saito therefore does not remove squared error’s asymmetry so much as invert it, and
+that is precisely why it helps: it converts the unrecoverable failure (a gradient that has decayed to zero)
+into the recoverable one (a gradient that is too large, which clipping fixes). It is moreover scale-invariant
+(DIS (cT, cy) = DIS (T, y), equivalently (21) depends on q − p alone) and is the negative log-likelihood of a
+gamma/exponential observation model [19], giving a natural uncertainty interpretation for V . It is one-sided
+(Fig. 1, middle), and we should say at the outset that one-sidedness turns out to cost it little: in §5 it is the
+most accurate value estimator of any arm above d = 2. What it gives up is that its surviving tail explodes,
+so it relies on clipping — which, applied, turns out to be enough to make it the better loss overall (§5).
+Why not simply retune β? Squared error and Itakura–Saito are the β = 2 and β = 0 members of the
+β-divergence family [18, 13], whose weight is the power law w(y) ∝ y β−1 . It is natural to ask whether some
+intermediate β already does what we want. With w(y) = y β−1 the gradient is eβp − e(β−1)p+q , so as p → +∞
+it grows like eβp : exponentially for every β > 0, and flat for β = 0. Linear growth in p is therefore attainable
+at no value of β, and a power-law weight cannot produce log-linear tails.
+We want to be careful about what that does and does not rule out. One member of the family, β = 1 —
+constant weight, φ(y) = y ln y − y, the generalised KL or I-divergence — has gradient ep − eq , which tends to
+−eq as p → −∞: bounded and non-zero. By the criterion of §3, that already removes squared error’s fatal
+8
+
+tail, leaving only a single exponential explosion above, which clipping handles. Generalised KL is thus a
+genuine competitor and not a straw arm, and we include it as such in §5. The claim we make for the Spence
+loss is correspondingly narrow: it is the member whose gradient is linear in p on both sides, so its blow-up
+is polynomial rather than exponential. We resist the tempting stronger statement that it therefore needs no
+clipping. Linear growth is still unbounded, a fixed clip still binds, and §5 finds that clipping helps our loss
+substantially — and helps Itakura–Saito enough to overtake us on control. We keep the derivation because
+the weight is the clean solution to the stated design problem, not because it wins the comparison.
+
+4.3
+
+The Spence loss
+
+Rather than pick a potential and inspect its tails, we ask directly what weight w we want. Writing y = ep
+and reading off (20), the two requirements are:
+p → +∞ (y → ∞) :
+
+w(y) y ∼ ln y
+
+p → −∞ (y → 0) :
+
+− w(y) e ∼ e ln y
+q
+
+q
+
+=⇒
+
+w(y) ∼ ln y / y,
+
+=⇒
+
+w(y) ∼ − ln y,
+
+(22)
+(23)
+
+i.e. in both directions the gradient should grow linearly in the log-space prediction p = ln y. The simplest
+smooth positive function meeting both is
+w(y) =
+
+ln y
+y−1
+
+⇐⇒
+
+φ′′ (y) =
+
+ln y
+,
+y (y − 1)
+
+(24)
+
+which is positive on all of (0, ∞) (both factors change sign at y = 1) and extends smoothly through the
+removable singularity with w(1) = 1. It is the reciprocal of the logarithmic mean of 1 and y [10], and at
+both extremes it lies between the squared-error and Itakura–Saito weights: the Spence loss interpolates the
+two reference points rather than adding a third unrelated one. The choice is not unique — (22)–(23) fix only
+the asymptotics — but (24) is the member with a closed-form gradient and a dilogarithm value (App. A).
+Substituting it into (20) gives
+∂L
+ep − eq
+(25)
+= p p
+∂p
+e −1
+zero iff p = q (the apparent zero at p = 0 is cancelled by the pole of 1/(ep − 1), the product tending to 1),
+with population minimizer V by Lemma 1.
+Both tails linear in the prediction.
+p → +∞ :
+p → −∞ :
+
+By construction,
+
+∂L
+→ p,
+∂p
+∂L
+→ p eq ,
+∂p
+
+no e2p blow-up,
+
+(26)
+
+non-vanishing corrective signal.
+
+(27)
+
+We stress what is and is not being claimed. The gradient is linear in the prediction p, not in the error
+p − q, so the loss grows like 12 p2 for over-predictions and like 12 p2 eq for under-predictions: it is quadratic in
+p on both sides, but with target-dependent curvature on the under-prediction branch. That eq factor is the
+reason the loss is not scale-invariant, and it is deliberate — it up-weights exactly the rare high-value targets
+that dominate the log-sum-exp and are hardest to find (§6), while still growing only polynomially in p. To
+our knowledge this is the first Bregman divergence proposed for exp-space value regression with both tails
+controlled in this sense. The alternative strand of work attacks the same conditioning problem by changing
+the objective rather than the divergence: log-variance and adjoint losses [35, 39, 16], and the trajectorybalance family [33, 32, 50], of which Zhang et al. [54] is closest — it also learns intermediate log-partition
+functions for a diffusion sampler, but through a partial-trajectory objective rather than by regressing an
+unbiased exponential-space target. Those objectives buy conditioning by giving up the unbiased target; we
+keep the target and change only the divergence applied to it.
+
+9
+
+Table 1: The value-learning loss family, organized by the gradient weight w of (20). Tails give ∂L/∂p as the
+prediction p → ±∞ at fixed target q. All three share the same minimizer, V = log E[eq | xt ] (Lemma 1);
+they differ only in conditioning.
+loss
+squared error
+Itakura–Saito
+Spence (ours)
+
+weight w(y)
+2y
+1/y
+ln y
+y−1
+
+under-predict (p → −∞)
+
+over-predict (p → +∞)
+
+scale-inv.
+
+noise model
+
+vanishes (→ 0)
+explodes (−eq−p )
+
+2p
+
+explodes (e )
+bounded (→ +1)
+
+no
+yes
+
+Gaussian
+gamma
+
+linear (p eq )
+
+linear (p)
+
+no
+
+implicit
+
+Value via the Spence function. The divergence value (used only for monitoring; training uses (25))
+is expressible through the Spence function S(x) = Li2 (1 − ex ) [29], using the dilogarithm identity S ′ (x) =
+− xex /(ex − 1) = x/expm1(−x); hence the name. The full derivation and the numerically stable branch-wise
+gradient — finite for all float inputs, unlike naive autograd, which returns NaN once the target reaches q ≳ 85
+nats in single precision — are in App. A.
+Implied observation model. By the duality between regular Bregman divergences and regular exponential families [5, 4], minimizing any Dφ is maximum likelihood under the exponential family whose cumulant
+is the convex conjugate φ∗ ; squared error recovers a Gaussian and Itakura–Saito a gamma. For (24) the
+conjugate is not a standard named family, but it has one notable feature. Since φ′ (y) = −Li2 (1 − y) − 12 ln2 y
+increases to π 2 /6 as y → ∞ and to −∞ as y → 0+ , the natural parameter of the implied family is bounded
+above by π 2 /6. The loss therefore behaves like the log-likelihood of a family whose natural parameter saturates, which is a second way of seeing why over-predictions cannot produce exponentially large gradients.
+What the weight ultimately controls. It is worth naming the chain the rest of the paper follows,
+because each link is measured separately in §5 and they are easier to read as one argument. The weight fixes
+the shape of the gradient’s tails. The tails fix how heavy and how stationary the distribution of gradient
+norms is over training. That fixes how often a clipping threshold engages at convergence. And clipping,
+being a biased operator, converts its engagement rate into a bias in the learned value. So the choice of w
+propagates all the way to how well-calibrated Vθ is, through a mechanism that has nothing to do with the
+divergence’s minimiser — which is the same for all of them. Tail design is not, in the end, about avoiding
+overflow.
+
+5
+
+The loss in isolation
+
+§4 is an argument about conditioning, and conditioning arguments are cheap to make and easy to get wrong.
+This section measures the five losses against each other directly.
+Design. Every arm trains the same network on the same problem instances from the same off-policy bridge
+anchors with the same budget; only loss_type differs. Training is off-policy throughout, deliberately: an onpolicy sampler would let the loss change the data it is subsequently trained on, and we want the divergence
+isolated from the sampler. The arms are the Spence loss, exponential-space squared error, Itakura–Saito,
+generalised KL (β = 1), and log-space squared error.
+The main comparison uses no gradient clipping. This is deliberate and it is what makes it a test of the
+tails rather than of a clipping heuristic: Itakura–Saito and generalised KL each explode on one side (§4),
+and clipping is the obvious remedy for both. We then repeat the whole grid with clipping in §5, which is
+where the comparison is decided.
+Two of these choices deserve comment. The squared-error arm is our stabilised implementation — exact
+gradient, saturated to the float range — and not the naive one. Comparing against the naive version would
+measure arithmetic rather than the divergence, and would flatter us: the naive loss simply fails. The logspace arm is included as a bias probe rather than as a candidate. It is perfectly conditioned and converges
+
+10
+
+Table 2: The loss in isolation: off-policy training on the constant-headroom benchmark, identical in every
+respect but the divergence. Headroom closed is the control metric (higher is better); value RMSE is measured
+against the analytic value function (lower is better). Each arm is reported at its own tuned learning rate. n
+paired seeds per cell (n = 12 throughout); ± is one standard error.
+headroom closed (%)
+loss
+Spence (ours)
+exp-space squared error
+Itakura–Saito
+generalised KL (β = 1)
+log-space squared error
+
+value RMSE vs analytic V
+
+d=2
+
+d=8
+
+d = 32
+
+d = 128
+
+d=2
+
+d=8
+
+d = 32
+
+d = 128
+
+76.5 ± 1.5
+71.8 ± 1.2
+71.5 ± 1.8
+77.4 ± 1.2
+87.1 ± 2.5
+
+53.1 ± 3.3
+46.8 ± 3.1
+52.4 ± 2.9
+52.7 ± 3.5
+62.7 ± 3.7
+
+33.4 ± 2.0
+34.3 ± 2.4
+35.7 ± 2.2
+36.1 ± 2.3
+46.4 ± 2.3
+
+24.9 ± 2.1
+13.1 ± 3.2
+23.3 ± 2.1
+27.8 ± 2.5
+36.8 ± 2.6
+
+1.30 ± 0.07
+1.67 ± 0.07
+1.42 ± 0.09
+1.43 ± 0.07
+4.59 ± 0.27
+
+1.40 ± 0.04
+1.77 ± 0.05
+1.30 ± 0.05
+1.52 ± 0.04
+3.22 ± 0.16
+
+1.81 ± 0.08
+2.26 ± 0.09
+1.54 ± 0.05
+1.91 ± 0.08
+2.43 ± 0.11
+
+1.91 ± 0.07
+2.61 ± 0.12
+1.69 ± 0.07
+2.13 ± 0.08
+1.98 ± 0.06
+
+happily; by (18) it converges to the wrong function, and the point of including it is to show that deficit
+rather than to propose it.
+Tuning, and why it matters here. The shared hyperparameters of the benchmark were originally fitted
+with the Spence loss in place. Evaluating the alternatives at those values would be a rigged comparison, and
+it is the first thing a reader should suspect. We therefore re-tune the learning rate per (loss, dimension) over
+a grid spanning 10−5 to 3 × 10−3 on separate tuning seeds at a shorter budget, and run the reported grid on
+fresh seeds at the chosen value. Each arm is thus reported at its own best learning rate rather than at ours.
+One caveat about that grid. At the larger dimensions several arms — including ours — select the smallest
+rate offered, 10−5 , so their optima may lie outside the range and the tuning is truncated. It is truncated
+identically for every arm, so the comparison remains matched, and it is a comparison of best rates within
+[10−5 , 3 × 10−3 ] rather than of global optima. We mention it because a boundary optimum is exactly the
+kind of detail that makes a tuned-versus-tuned claim less clean than it looks.
+Metrics. Two axes, because they can disagree, and the reason they can matters. The control only ever
+sees ∇Vθ , so a value function that is wrong by a slowly-varying offset still steers correctly; conversely a loss
+can score well on control while learning a badly biased value. The pathology of §3 concerns the magnitude
+of the learned value in under-predicted regions, so the value axis is where it should show, and a control-only
+comparison could miss it entirely.
+Control quality is the fraction of the calibrated 6-nat headroom closed, the same score used throughout
+§7. Value quality is the RMSE of Vθ against the analytic value over the base marginal — available because
+this problem family has V in closed form (App. C) — together with its signed mean, which exposes bias
+rather than variance. We also count non-finite batches, the stability axis of §3.
+Results. Against exponential-space squared error on the same instances, the Spence loss gives paired
+differences of d = 2: +4.7*, d = 8: +6.4*, d = 32: −0.9, d = 128: +11.8* points of headroom closed (∗
+marks p < 0.05; n2 = 12, n8 = 12, n32 = 12, n128 = 12).
+What the comparison shows. All comparisons are paired on the same n = 12 instances per cell. Significance is uncorrected across the four dimensions.
+The Spence loss repairs squared error on value fidelity, everywhere. The paired advantage is 0.37, 0.37,
+0.45 and 0.70 nats at d = 2, 8, 32, 128, significant at all four. This is the comparison the construction of §4.3
+predicts, and it is the cleanest result in the table.
+On control the repair is real but not uniform. We are ahead by 4.7, 6.4 and 11.8 points at d = 2, 8 and
+128 (p < 0.05), and behind by 0.9 at d = 32 (not significant). Squared error’s control failure is concentrated
+at the largest dimension, where it closes 13.1% of the headroom against our 24.9%; in the middle of the
+range the two are comparable.
+Generalised KL is the better controller, and this is measured, not directional. It leads us by 2.7 and 2.9
+points at d = 32 and d = 128 (p < 0.05), ties at d = 2 and d = 8. We lose that comparison. What we win
+
+11
+
+is value fidelity, at all four dimensions (0.09–0.22 nats, p < 0.05 throughout): fixing one tail is not the same
+as fixing both, and the difference appears exactly on the axis the second tail governs.
+Itakura–Saito is the better value estimator above d = 2. We win at d = 2 (−0.12) and lose at d = 8,
+32 and 128 (+0.10, +0.27, +0.22), all significant. On this benchmark, above two dimensions, a divergence
+from 1968 estimates the value better than the one we derived. It does so with a gradient that explodes for
+under-predictions, so without clipping it is paying a price our weight does not. Whether tail control still
+buys anything once that price is removed is settled in §5.
+For control, the biased loss wins outright. The log-space arm closes 10.7, 9.6, 13.0 and 11.9 more points
+of headroom than ours, significant at every dimension, while its value-RMSE penalty falls from 3.29 nats at
+d = 2 to 0.07 at d = 128, where it is no longer distinguishable from ours (p = 0.37) — though it remains biased
+low by 1.4 nats there and 4.1 at d = 2. Conditioning and unbiasedness buy different things. An application
+that consumes only ∇V — reward-guided generation and fine-tuning, the settings this paper opens with —
+should on this evidence use the well-conditioned biased loss. The unbiased exponential-space target earns
+its keep when V itself is wanted, and since V (0, 0) = log Z that is every free-energy and model-evidence use.
+Our loss is for the second case; we had expected to be arguing for it in both.
+Gradient norms: the mechanism, measured. Before turning to clipping, it is worth checking that the
+weights do at the gradient level what §4 designs them to do, since every claim above is downstream of that.
+Recording the pre-clip gradient norm at each optimizer step and taking the ratio of its 90th percentile to its
+median gives a scale-free measure of tail heaviness:
+∥g∥ tail ratio (p90/median)
+
+d=2
+
+d=8
+
+d = 32
+
+d = 128
+
+Spence
+Itakura–Saito
+generalised KL
+exp-space squared error
+log-space squared error
+
+2.4
+2.2
+2.4
+2.6
+2.6
+
+2.7
+2.4
+2.8
+3.7
+2.2
+
+2.7
+2.7
+2.9
+4.7
+2.0
+
+3.2
+2.5
+7.4
+52.9
+1.9
+
+Squared error’s gradient distribution develops a heavy tail precisely at d = 128, which is where its control
+collapses (13.1% headroom closed against our 24.9%). That is the exploding tail of §3 observed directly rather
+than inferred. The Spence weight stays tight (2.4–3.2) at every dimension, as its construction requires.
+A second property matters more than the first, and only shows up over training. Comparing the median
+gradient norm over all steps with the median over the final fifth, every arm is stationary or contracting —
+0.89 to 1.04 — except Itakura–Saito, whose norms grow by 1.08 to 1.35. This is what its weight predicts:
+∂L/∂p = 1 − eq−p diverges as the prediction falls below the target, so as the model sharpens and its residual
+under-predictions become more extreme, the gradient distribution widens rather than settles. A two-sided
+linear weight cannot do this; its gradient grows only as fast as p itself. The consequence is the subject of the
+next paragraph: a clipping threshold calibrated early stays calibrated for four of the five losses and becomes
+progressively more binding for the fifth.
+Clipping, applied as a brake. The argument for a two-sided weight is that competitors with an exploding
+tail depend on clipping, so the comparison should be repeated with clipping applied. Doing that correctly
+required one false start. At a gradient norm of 1.0, a standard default, we measured the clip binding on 99.8%
+of steps and 100% over the final fifth of training, for every arm — unsurprising once the norms above are
+known, since their medians run from 5 to 107. At that setting clipping is not a brake but a renormalisation,
+discarding the gradient magnitude that distinguishes these losses. We therefore set the threshold per arm,
+at each loss’s own 90th-percentile norm, so that it binds a comparable and occasional fraction of the time.
+Table 3 reports what that does.
+Clipping is what Itakura–Saito was missing. It gains 12.5 to 17.1 points of headroom, three to nine times
+any other arm, which is the predicted consequence of an exploding under-prediction tail meeting a brake.
+With it, and against us, it becomes the best controller in the exponential-space family at every dimension
+(−4.7, −7.4, −9.5, −8.1 points against ours, all significant).
+It is also what Itakura–Saito most depends on, and it charges for it. Even with the threshold set to
+its own 90th percentile, its clip binds on 44% of steps at convergence, against 8–12% for every other arm.
+12
+
+Table 3: Effect of gradient clipping, at a per-arm threshold set to each loss’s own 90th-percentile gradient
+norm so that it binds a comparable fraction of the time for every arm. Entries are paired differences (clipped
+− unclipped) over the same n = 12 instances; bold is p < 0.05. Clipping is not a free stabiliser: it buys
+control for the one-sided losses and charges them bias, and it charges Itakura–Saito most of all.
+loss
+Spence (ours)
+exp-space squared error
+Itakura–Saito
+generalised KL (β = 1)
+log-space squared error
+
+clip rate
+(tail)
+
+2
+
+0.12
+0.08
+0.44
+0.09
+0.12
+
++7.5
+-1.6
++17.1
++1.9
++1.5
+
+∆ headroom (pts)
+8
+32
++8.9
++0.3
++17.0
++3.7
++0.5
+
++6.4
+-5.0
++13.5
+-0.6
++0.5
+
+128
+
+2
+
++2.8
++5.2
++12.5
+-2.1
++1.0
+
++0.01
+-0.03
++0.65
+-0.02
+-0.04
+
+∆ value RMSE
+8
+32
+
+128
+
+2
+
+-0.19
+-0.14
++0.13
+-0.19
+-0.06
+
+-0.39
+-0.10
+-0.41
+-0.31
+-0.02
+
+-0.20
+-0.04
+-1.33
+-0.09
++0.05
+
+-0.37
+-0.27
+-0.18
+-0.37
+-0.01
+
+This is the drift above cashing out: the threshold was calibrated to catch a tenth of the distribution, the
+distribution then moved underneath it, and by convergence the brake is engaged nearly half the time. The
+bill arrives as bias. Clipping shifts its learned value down by 1.1 to 1.3 nats at every dimension, three to
+six times the shift it induces in ours (0.20–0.54) and an order of magnitude more than in the log-space arm,
+whose gradients have no tail to catch. Clipping is not a free stabiliser; its cost is calibration, and the loss
+that needs it most pays most.
+Under clipping our weight beats both power-law members outright. Against exponential-space squared
+error it is better on both axes at every dimension (+9.4 to +15.0 points of control, 0.33 to 0.99 nats of value).
+Against generalised KL it is now better on both axes at every dimension as well (+1.9 to +5.6 points, 0.10
+to 0.30 nats) — a comparison we lost on control without clipping. What we do not win is the exchange
+with Itakura–Saito, which trades 5 to 9 points of control for 1 nat of bias, and where we retain the value
+advantage only up to d = 8 (−0.76, −0.22; +0.23 against us at d = 128).
+The practical reading is a choice rather than a ranking. For control, clipped Itakura–Saito, accepting a
+badly calibrated value. For the value itself, our weight below d ≈ 32, which needs the least clipping and
+pays the least bias for it. Against the two power-law members of the family, ours is better either way.
+One axis separates nothing. We counted non-finite batches per arm and found none, in any arm, at
+any dimension. Once the stabilised implementations of §3 and App. A.3 are used, the overflow failures that
+motivated this work do not recur, and the differences above are differences in what the losses learn, not in
+whether they run. The stability axis motivates the numerics and is then removed by them.
+Scope. This experiment isolates the divergence by construction, and therefore says nothing about how the
+losses interact with an on-policy sampler, where the loss influences its own future training data. It is also a
+single problem family at one diﬀiculty setting. The dimensional trend within it is informative; extrapolating
+it to other families is not warranted.
+
+6
+
+On-policy sampling: coverage, not concentration
+
+A better-conditioned loss fixes what happens once a high-value target is in the batch. It does nothing about
+how rarely one arrives. This section is about the second problem, which is what limits value learning in high
+dimension.
+
+6.1
+
+Why off-policy anchors run out
+
+The value is a log-sum-exp, so it is a soft maximum: the expectation Ebase [er(X1 ) ] is dominated by whatever
+region of the base marginal carries the largest reward, and the size of that region shrinks as the tilt grows.
+The cost is quantitative rather than heuristic. Estimating E[er ] by importance sampling from P requires on
+the order of exp KL(P⋆ k P) samples [11], and that KL is exactly the reward tilt the task asks for. Off-policy
+anchors draw x1 from the base marginal ν with no reference to r (§2.4), so their useful-target rate decays
+on that schedule. Every anchor still carries a valid target; almost all of them carry an uninformative one.
+13
+
+∆ signed b
+8
+-0.54
+-0.17
+-1.28
+-0.41
++0.06
+
+-0
+-0
+-1
+-0
++
+
+Remark 2 (Our benchmark holds this cost fixed, by construction). The constant-headroom calibration of §7.1
+bounds the very quantity this argument turns on. Writing the headroom as EP⋆ [r] − Ebase [r] = 6 nats and
+using log Z = maxu {E[r]−KL}, one gets KL(P⋆ kP) = EP⋆ [r]−log Z, and since log Z = log Ebase [er ] ≥ Ebase [r]
+by Jensen this is at most the headroom, KL ≤ 6. Measured on our instances it is 1.4–2.6 nats and flat in
+d (1.36, 2.10, 2.55, 2.60, 1.83 at d = 2, 8, 32, 128, 512). The importance-sampling cost is therefore bounded
+and roughly dimension-independent here. That is the design working as intended — dimension is the only
+factor varying — but it means the study tests on-policy sampling at fixed sparsity rather than testing how
+the benefit scales with sparsity. We return to this in §7 and §9.
+The way out is already available. By §2(ii) the H-martingale identity survives any adapted twist once
+the Girsanov ratio (10) is applied, so the sampler may be chosen freely to put mass where the integrand is
+large without changing the object being learned. Since the optimal twist is 2a∇V and V is what we are
+fitting, the learner supplies its own proposal — a self-consistent loop of the same shape as controlled SMC
+[23].
+
+6.2
+
+Coverage beats concentration
+
+The obvious move is to sharpen the twist and concentrate on the reward corridor. In our dimensional-scaling
+study that is consistently the wrong move. Twisting with the analytic value — the strongest twist available,
+and an oracle no method could actually learn — makes matters worse at d = 512, and splicing off-policy
+coverage back alongside it does not rescue the arm (App. B.6). The failure is not one of tuning: introducing
+the concentration gradually rather than at once leaves the outcome unchanged across two orders of magnitude
+of ramp speed.
+The reading we take is that in high dimension a concentrated sampler buys target quality at a ruinous
+price in coverage. The corridor is a thin set; a value network trained only along it is unconstrained everywhere
+else, and the guided rollouts that follow immediately leave the region where it was fitted.
+
+6.3
+
+The method we recommend
+
+Accordingly the useful lever is not a sharper twist but a wider one. We keep the mild twist the learner
+produces on its own and add coverage in the place the corridor is thinnest, using two modifications.
+• Backward-noising expansion. Each sampled point (xs , s) is noised backwards through the base
+backward kernel (16) and the target is attached to the noised point as well, converting one trajectory
+into many training pairs at earlier, noisier times. The kernel is independent of the terminal law
+(App. D), so the construction is available for any pinned-interpolant base model, not only for Brownian
+motion.
+One caveat needs stating precisely, because it is easy to overstate this step. The identity (8) transfers
+the target exactly when the point being noised is base-distributed, as it is for the off-policy anchors of
+(s)
+§2.4. Under a twisted sweep it is not: xs ∼ µ 6= pbase , so the conditional law of xs given the noised
+xt is µ(xs )pbase (xt | xs ) renormalised, which is not the base conditional, and the Girsanov weight
+of (10) does not repair it — that weight corrects the forward sweep, not the reversal. Carrying the
+sweep’s accumulated ratio ρ0→s as a row weight restores exactness; the arms reported here do not, so
+the expanded rows are biased under the twist. We report this as an empirically useful approximation
+rather than an exact identity, which is what the ablations in App. B actually establish.
+• Finer integration. A larger Euler–Maruyama step count for the sweep. The two are independent —
+one changes where data sits, the other changes sampling bias — and their gains are close to additive.
+Neither is a target-network effect in disguise. Both modifications multiply the rows produced per trajectory and so slow the dataset’s regeneration by up to 6×, which would be an obvious confound. Subsampling
+each epoch back to the original cadence after generation leaves every gain intact (App. B); the effect is where
+the data sits, not how slowly it moves.
+
+14
+
+6.4
+
+Result
+
+Fitting the expansion fraction and step count as part of the per-dimension hyperparameter laws, rather
+than hand-setting them, yields a single configuration family that is significantly above off-policy training
+at d = 8–32 and never significantly below it anywhere in 2 ≤ d ≤ 512 (§7, Fig. 2). The fitted laws select
+nonzero expansion at every dimension.
+Two scope conditions. The recipe was tuned on this benchmark family, and it does not transfer unchanged
+to the Boltzmann targets of §7; and all of our rewards are cheap to evaluate, so we count samples rather than
+reward calls (§9). The zoo of alternative on-policy methods, the mechanisms that failed, and the per-method
+ablations are in App. B.
+
+7
+
+Experiments
+
+7.1
+
+A benchmark designed for clean reads
+
+Comparing value-learning methods across dimension is harder than it looks, because the diﬀiculty of the task
+moves with d at the same time as the method’s capacity to handle it. Three choices isolate the dimension.
+Constant headroom. For each d we calibrate the reward scale by bisection so that the gap between the
+optimally-controlled and the base terminal reward is exactly 6 nats. The tilt therefore asks for the same
+amount of work at every dimension, and the natural score — the fraction of that headroom a method closes
+— is comparable across d. Without this the reward scale silently confounds every dimensional comparison.
+Coordinate-nested instances. All mixture parameters are drawn once at dmax = 512 and truncated
+to the target dimension. Because the components are spherical, the d-dimensional instance is the exact
+marginal of the 512-dimensional one, so a curve across d walks through nested versions of a single problem
+rather than a fresh random problem at each point.
+Paired seeds. Seed s denotes the same problem instance for every method, so all comparisons are paired
+and we report paired differences with paired tests. This matters: the across-seed spread of these tasks is
+large relative to the effects, and unpaired error bars would hide most of what we report.
+Every number below is n = 30 seeds at 15k gradient steps, scored by the smoothed-tail plateau of
+validation reward, and recomputed from per-seed records by one script rather than transcribed. Gradient
+steps are the matched budget, and that choice favours the on-policy arms: each of their steps is fed by an
+SMC sweep with tens of integration steps and several children per particle, where an off-policy step costs one
+closed-form bridge draw and one reward call. A compute- or reward-call-matched axis would look different
+and we have not run it (§9). Full protocol in App. C.
+
+7.2
+
+On-policy sampling across dimension
+
+Figure 2 shows the result that motivates §6. On-policy sampling is a large win at moderate dimension —
+for the Monte-Carlo-target method, +11.2 points at d = 8, +4.5 at d = 16 and +2.4 at d = 32, all p < 0.05;
+the TD(λ) variant reaches +13.4 at d = 8 — and the advantage decays as d grows.
+That decay deserves comment, because it runs opposite to the naive reading of §6: if on-policy sampling
+exists to fight signal sparsity, and sparsity worsens with dimension, the advantage should grow. It does
+not, and Remark 2 says why. The constant-headroom calibration holds KL(P⋆ kP) at 1.4–2.6 nats at every
+dimension, so the importance-sampling cost this method addresses does not in fact grow along this axis.
+What does grow is the volume the value network must represent, a capacity and coverage problem rather
+than a sampling one — consistent with concentration becoming actively harmful at d = 512 (App. B.6). We
+therefore do not read Fig. 2 as evidence about how the sparsity benefit scales with sparsity; it is not designed
+to measure that.
+The interesting part is the failure mode of the naive version. Hyperparameter laws fitted without the
+expansion and step-count knobs (dotted) track off-policy until d = 64 and then fall away, reaching −4.5 at
+d = 256 and −7.8 at d = 512: on-policy sampling becomes actively harmful in exactly the regime where its
+15
+
+Paired difference (same instances; : p < 0.05)
+
+Absolute performance
+off-policy (control)
+on-policy, laws w/o recipe knobs
+on-policy, laws incl. expansion + steps
+
+80
+70
+60
+50
+40
+30
+21
+
+22
+
+23
+
+24
+
+26
+25
+dimension d
+
+27
+
+28
+
+15
+paired vs off-policy (pts)
+
+headroom closed (\%)
+
+90
+
+10
+5
+0
+5
+10
+
+29
+
+on-policy, laws w/o recipe knobs
+on-policy, laws incl. expansion + steps
+
+21
+
+22
+
+23
+
+24
+
+26
+25
+dimension d
+
+27
+
+28
+
+29
+
+Figure 2: Headroom closed against dimension, n = 30 paired seeds per point, error bars ±1 s.e. Left:
+absolute performance. Right: paired difference against the off-policy control on the same instances; stars
+mark p < 0.05. Fitting the recipe knobs (expansion fraction and integration steps) as part of the perdimension hyperparameter laws removes the high-dimensional collapse: the dotted family loses 7.8 points to
+off-policy at d = 512, while the solid one is significantly above the control at d = 8–32 and not significantly
+below it at any dimension. Stars are uncorrected for multiple comparisons.
+Table 4: GMM-40, log-partition bias against published samplers on the same target (log Z = 0). Baseline
+numbers are from Akhound-Sadegh et al. [1] and are single reported values. Ours is the mean absolute
+error over 15 runs (5 seeds × 3 head initialisations, see text) with its standard error. We do not report a
+sample-distance number: our sliced metric is a lower bound and is not comparable to the baselines’ W2 , and
+quoting it beside them would invite exactly the comparison it cannot support.
+method
+
+|∆ log Z|
+
+sample W2 (native)
+
+PIS [55]
+FAB [34]
+DDS [49]
+iDEM [1]
+
+2.24
+1.17
+0.36
+0.34
+
+7.64
+12.0
+9.31
+7.42
+
+0.30 ± 0.07
+
+—
+
+ours, on-policy (n = 15)
+
+motivation — signal sparsity — is strongest. Admitting the two coverage knobs into the laws (solid) removes
+the collapse without hand-switching between configurations by dimension. The refitted family is significantly
+above the control at d = 8–32 and never significantly below it anywhere. We avoid the word “matches” for
+the remaining dimensions: those rest on failure to reject at n = 30, and with paired standard errors near
+1.4 points the data cannot exclude a deficit of a few points. Establishing equivalence would require a test
+against a pre-specified margin, which we did not run, and the stars in Fig. 2 are uncorrected for testing
+across ten dimensions and two arms.
+The refitted family gives up about 3 points to the un-refitted one at d ≤ 16, where both are far above
+off-policy anyway, and recovers 6 to 9 points at d ≥ 256, where the un-refitted one is below it. Per-dimension
+retuning would likely recover both, at the cost of the single-family property this study was built to test.
+
+7.3
+
+GMM-40: an external Boltzmann target
+
+To check that the setting is not self-serving we take a benchmark from the sampler literature. GMM-40 is a
+40-mode Gaussian mixture in two dimensions with means spread over [−40, 40]2 ; the target is π ∝ e−E with
+E the mixture energy, mapped into our setting by the tilt correction r = −E − log pbase of §2. We use the
+configuration of Akhound-Sadegh et al. [1], so the comparison is on identical targets, and report |∆ log Z|,
+which is coordinate-free: our estimate is the learned V (0, 0).
+
+16
+
+Table 4 reports the comparison. The learned value recovers log Z to 0.30 ± 0.07 nats over 15 runs,
+comparable to the best published numbers on this target (0.34 and 0.36) rather than ahead of them, with
+complete mode coverage (40/40). We stress the seeding, because a single run of ours scored 0.08 and
+reporting that number would have been misleading: |∆ log Z| is a high-variance quantity and a favourable
+draw is cheap.
+The estimate is learned, not initialised. One threat to this measurement deserves an explicit check.
+GMM-40 is normalised so that log Z = 0, and our value head is initialised with a constant bias which for
+this target is also 0 — so the network begins at the answer, and a small final error could mean it simply
+never moved. To rule that out we re-ran with the head initialised ±4 nats away from the truth. The learned
+V (0, 0) returns to zero from both: −0.035 ± 0.161 from −4 and −0.170 ± 0.133 from +4, i.e. the network
+travels the full four nats. The offset arms are in fact more accurate than the unshifted one (0.23 against 0.45
+mean absolute error), which is the opposite of what an initialisation artifact would produce. Table 4 pools
+all three initialisations for this reason.
+Three scope conditions. First, we compare on log Z and mode coverage; our sample-distance metric is
+not comparable to the published W2 and we do not claim it. Second, the hyperparameters were fitted on the
+Gaussian-mixture family of §7.1, not tuned on this target. Third, the tuned on-policy recipe of §6 does not
+transfer to this family unchanged — applying it directly degrades the result — so the on-policy arm here is
+the plain twisted sweep. What transfers is the loss and the twisted-sampling idea, not the fitted constants.
+We also report a value-quality axis the sampler literature cannot: because the GMM-40 value is available
+analytically, we measure the RMSE of Vθ against the exact V over the base marginal, obtaining ≈ 0.5 nats.
+This separates value quality from sampler quality, and is the axis on which our negative result below is
+legible.
+A held-out negative result. We also ran Many-Well-32 [34] and do not report it as a result, because
+we do not reach a competitive number: our log Z error is 16.3 nats against published raw errors of 3.9–15.0
+and reweighted errors below 1 [41]. The diagnosis is specific rather than a tuning shortfall. The controlled
+process produces sign-balanced samples, P (xodd > 0) = 0.50, where the target concentrates at 0.85: it is
+not finding the deep wells, so V (0, 0) integrates over mass that misses them. Increasing the guidance scale
+eightfold leaves the output bit-identical, which rules out a sampling-strength explanation and points at the
+value representation rather than the sampler: a symmetric network cannot express the per-well tilt. The
+magnitudes are the same order but do not match — the shortfall is 16.3 nats over 16 wells, about 1.0 nat
+each, against a per-well tilt of roughly 1.7 nats — so the accounting is suggestive rather than closed, and
+we do not claim it explains the whole gap. We also apply no importance reweighting, though we have exact
+SMC weights; the published raw-to-reweighted improvements on this target are large. We regard this as
+unfinished rather than negative evidence about the loss, and record it so the GMM-40 number is not read
+as a general claim.
+
+8
+
+Related work
+
+Reward-guided diffusion as stochastic control. Casting diffusion fine-tuning as entropy-regularized
+control, with the tilted path measure (4) as the optimum, follows Uehara et al. [47]; the underlying variational
+identity is classical [14, 27]. That the exponentiated value is space-time harmonic, so that the optimal drift
+is a Doob h-transform, is the Hopf–Cole structure of linearly-solvable and path-integral control [25, 46], and
+V is the continuous-time soft value of maximum-entropy reinforcement learning [22, 28]. Our contribution
+is not the setting but what to do with the regression problem it hands you.
+Losses for diffusion samplers. The closest competing work changes the objective rather than the divergence: log-variance and adjoint losses [35, 39, 16, 15] replace pointwise regression with a path-space functional,
+and the trajectory-balance family [33, 32, 50] imposes a flow-consistency constraint instead. Zhang et al. [54]
+is nearest of all, learning intermediate log-partition functions for a diffusion sampler by partial-trajectory
+optimization. These methods are well motivated and several beat ours on sample quality. As §4.3 notes, the
+
+17
+
+distinction is that they buy conditioning by giving up the unbiased exponential-space target while we keep
+it; which trade is better is an empirical question we do not settle.
+Badly-scaled value regression. The reinforcement-learning literature fixes this by transforming the
+target [48, 37, 17]; §3 explains why that route is closed to us.
+Bregman divergences. The divergence is Bregman [9]; that its expectation is minimized by the mean,
+and that Bregman divergences are exactly the losses with this property, is the Savage representation of
+proper scoring rules [40, 20, 5]. The correspondence with exponential families is Banerjee et al. [5], Azoury
+and Warmuth [4]. Itakura–Saito [24] [19] and the β-divergence family [18, 13] are the standard alternatives;
+§4 shows why no member of that family has the tail behaviour we need. We are not aware of prior use of
+the potential (29) as a loss.
+Twisted SMC. Using a learned twist to steer a particle system, and correcting with the per-step kernel
+ratio, is the twisted particle filter [52, 21] and controlled SMC [23]; the diffusion-model instantiations are
+Wu et al. [53], Zhao et al. [56], Singhal et al. [42], Skreta et al. [43], and Wang et al. [51] adds the trustregion machinery we evaluate in App. B. Our use is standard; the contribution there is the coverage-versusconcentration finding, which runs against the natural intuition that a sharper twist should help.
+Diffusion samplers. The benchmark targets and baselines come from the neural-sampler literature [55,
+49, 38, 34, 1, 41, 12], evaluated following the protocol concerns raised by Blessing et al. [8].
+
+9
+
+Limitations and conclusion
+
+The value function of a reward-guided diffusion is a conditional log-partition function, and the only unbiased
+Monte-Carlo targets for it live in exponential space. That fact is what forces the awkward regression, and
+squared error handles it badly and asymmetrically: over-predictions explode and under-predictions vanish.
+Since every Bregman divergence has the value as its minimizer, the potential is free, and in log space the
+entire family reduces to one positive weight on the residual. That reduction is the paper’s thesis, and it
+survives everything below.
+The weight we derive from it, ln y/(y − 1), does what it was designed to do at the level of the gradient:
+its norm distribution is the tightest of any arm at every dimension, where squared error’s develops a 53×
+tail at d = 128 (§5). What we did not anticipate is how little that settles. The asymmetry we opened with
+— explosions are recoverable, vanishing is not — turned out to be the wrong frame for the outcome. No arm
+produced a single non-finite batch once the arithmetic was stabilised; clipping, the standard remedy for the
+recoverable half, helps every arm including ours and biases every one of them downward by around a nat;
+and a deliberately biased log-space regression is the best controller in the table at every dimension. Tail
+shape is real and measurable, and it is not what decides the comparison.
+What the measurements support is narrower than that construction might suggest, and we would rather
+state it than let the framing carry it. The Spence weight repairs exponential-space squared error on both
+metrics at every dimension we ran, and beats generalised KL on value fidelity, so controlling both tails is
+demonstrably better than controlling one. It does not dominate the family. Against the two power-law
+members — squared error and generalised KL — it is better on both axes at every dimension, clipped or
+not. Against Itakura–Saito it loses control and, above d ≈ 32, value as well.
+That exchange is the paper’s most useful finding, because of what it costs. Itakura–Saito earns its control
+by clipping: even at a threshold calibrated to bind a tenth of the time, the brake is engaged on 44% of its
+steps at convergence, and it pays over a nat of downward bias for that, three to six times what our weight
+pays. Clipping is treated in this literature as a free stabiliser for the recoverable half of the pathology. It
+is not free, it is not neutral across losses, and it costs most exactly where it is needed most. A practitioner
+choosing between these losses is choosing between control and calibration, and the gradient-weight reduction
+is what makes that trade visible — which is the contribution we would stand behind.
+
+18
+
+Limitations. The empirical claims are narrower than the analysis.
+Reward-call budget. All our targets have cheap analytic rewards, so we measure cost in samples seen.
+Under an expensive reward — a quantum-chemistry calculation, a docking score, a simulator rollout — the
+binding budget is total evaluations of r, and the ranking between off-policy anchors and on-policy sampling
+could differ from what we report (§2.4).
+Transfer. The on-policy recipe was fitted on one benchmark family, and does not transfer unchanged to
+the Boltzmann targets of §7.3. We report the fitted constants as an existence proof that a single family can
+cover the dimension range, not as values anyone should reuse.
+Many-Well-32. We do not reach a competitive number on this target and have diagnosed but not fixed
+the cause (§7.3). Until that is closed, the GMM-40 result should be read as one favourable external target
+rather than as a general claim about Boltzmann sampling.
+No pretrained model. This is the largest gap. §2 observes that if the base process is a pretrained diffusion
+or flow model then f is its learned drift and nothing in the development changes, and we believe that, but
+we never test it: every experiment here uses analytic base processes — Gaussian-mixture interpolants and
+driftless Brownian motion — with residual MLPs at gradient batch size 4 on synthetic tilts. Whether the
+conditioning differences we measure survive at the scale and with the learned drifts of an actual reward-guided
+diffusion is untested, and a reader should weight the results accordingly.
+Scope of the benchmark. The dimensional-scaling study fixes headroom at 6 nats and caps network width
+at 256 for d ≥ 8. Both the crossover dimension between on- and off-policy training and the size of the loss
+effect plausibly move with these, and we have not varied them.
+What the loss does not do. The Spence loss improves conditioning. It does not make rare high-value
+targets easier to find, which is the separate problem of §6 and the reason the two halves of this paper are
+both necessary.
+Outlook. The gradient-weight view suggests its own next question. Once the design space is a single
+positive function w on (0, ∞), the weight can be chosen for things other than tail behaviour — robustness
+to target noise, or a prescribed influence function — and (22)–(23) pin down only the asymptotics, leaving
+a family of admissible weights that we have not explored.
+
+References
+[1] Tara Akhound-Sadegh, Jarrid Rector-Brooks, Avishek Joey Bose, Sarthak Mittal, Pablo Lemos, ChengHao Liu, Marcin Sendera, Siamak Ravanbakhsh, Gauthier Gidel, Yoshua Bengio, Nikolay Malkin, and
+Alexander Tong. Iterated denoising energy matching for sampling from boltzmann densities. arXiv
+preprint arXiv:2402.06121, 2024.
+[2] Takuya Akiba, Shotaro Sano, Toshihiko Yanase, Takeru Ohta, and Masanori Koyama. Optuna: A
+next-generation hyperparameter optimization framework. In KDD, 2019.
+[3] Michael S. Albergo, Nicholas M. Boﬀi, and Eric Vanden-Eijnden. Stochastic interpolants: A unifying
+framework for flows and diffusions. arXiv preprint arXiv:2303.08797, 2023.
+[4] Katy S. Azoury and Manfred K. Warmuth. Relative loss bounds for on-line density estimation with the
+exponential family of distributions. Machine Learning, 43(3):211–246, 2001.
+[5] Arindam Banerjee, Srujana Merugu, Inderjit S. Dhillon, and Joydeep Ghosh. Clustering with Bregman
+divergences. Journal of Machine Learning Research, 6:1705–1749, 2005.
+[6] Kevin Black, Michael Janner, Yilun Du, Ilya Kostrikov, and Sergey Levine. Training diffusion models
+with reinforcement learning. arXiv preprint arXiv:2305.13301, 2023.
+[7] Pierre Blanchard, Desmond J. Higham, and Nicholas J. Higham. Accurately computing the log-sum-exp
+and softmax functions. IMA Journal of Numerical Analysis, 41(4):2311–2330, 2021.
+
+19
+
+[8] Denis Blessing, Xiaogang Jia, Johannes Esslinger, Francisco Vargas, and Gerhard Neumann. Beyond
+ELBOs: A large-scale evaluation of variational methods for sampling. arXiv preprint arXiv:2406.07423,
+2024.
+[9] L. M. Bregman. The relaxation method of finding the common point of convex sets and its application to
+the solution of problems in convex programming. USSR Computational Mathematics and Mathematical
+Physics, 7(3):200–217, 1967.
+[10] B. C. Carlson. The logarithmic mean. American Mathematical Monthly, 79(6):615–618, 1972.
+[11] Sourav Chatterjee and Persi Diaconis. The sample size required in importance sampling. The Annals
+of Applied Probability, 2018. arXiv:1511.01437.
+[12] Junhua Chen, Lorenz Richter, Julius Berner, Denis Blessing, Gerhard Neumann, and Anima Anandkumar. Sequential controlled Langevin diffusions. arXiv preprint arXiv:2412.07081, 2024.
+[13] Andrzej Cichocki and Shun-ichi Amari. Families of alpha- beta- and gamma- divergences: Flexible and
+robust measures of similarities. Entropy, 12(6):1532–1568, 2010.
+[14] Paolo Dai Pra. A stochastic control approach to reciprocal diffusion processes. Applied Mathematics
+and Optimization, 23:313–329, 1991.
+[15] Carles Domingo-Enrich, Jiequn Han, Brandon Amos, Joan Bruna, and Ricky T. Q. Chen. Stochastic
+optimal control matching. arXiv preprint arXiv:2312.02027, 2023.
+[16] Carles Domingo-Enrich, Michal Drozdzal, Brian Karrer, and Ricky T. Q. Chen. Adjoint matching:
+Fine-tuning flow and diffusion generative models with memoryless stochastic optimal control. arXiv
+preprint arXiv:2409.08861, 2024.
+[17] Jesse Farebrother, Jordi Orbay, Quan Vuong, Adrien Ali Taïga, Yevgen Chebotar, Ted Xiao, Alex Irpan,
+Sergey Levine, Pablo Samuel Castro, Aleksandra Faust, Aviral Kumar, and Rishabh Agarwal. Stop regressing: Training value functions via classification for scalable deep rl. arXiv preprint arXiv:2403.03950,
+2024.
+[18] Cédric Févotte and Jérôme Idier. Algorithms for nonnegative matrix factorization with the betadivergence. Neural Computation, 23(9):2421–2456, 2011.
+[19] Cédric Févotte, Nancy Bertin, and Jean-Louis Durrieu. Nonnegative matrix factorization with the
+itakura-saito divergence: With application to music analysis. Neural Computation, 21(3):793–830, 2009.
+[20] Tilmann Gneiting and Adrian E. Raftery. Strictly proper scoring rules, prediction, and estimation.
+Journal of the American Statistical Association, 102(477):359–378, 2007.
+[21] Pieralberto Guarniero, Adam M. Johansen, and Anthony Lee. The iterated auxiliary particle filter.
+Journal of the American Statistical Association, 2017. arXiv:1511.06286.
+[22] Tuomas Haarnoja, Haoran Tang, Pieter Abbeel, and Sergey Levine. Reinforcement learning with deep
+energy-based policies. In ICML, 2017.
+[23] Jeremy Heng, Adrian N. Bishop, George Deligiannidis, and Arnaud Doucet. Controlled sequential monte
+carlo. The Annals of Statistics, 2020. arXiv:1708.08396.
+[24] Fumitada Itakura and Shuzo Saito. Analysis synthesis telephony based on the maximum likelihood
+method. In Proc. 6th International Congress on Acoustics, pages C17–C20, Tokyo, 1968.
+[25] Hilbert J. Kappen. Path integrals and symmetry breaking for optimal control theory. Journal of
+Statistical Mechanics: Theory and Experiment, 2005. arXiv:physics/0505066.
+[26] Diederik P. Kingma and Jimmy Ba. Adam: A method for stochastic optimization. In ICLR, 2015.
+
+20
+
+[27] Christian Léonard. A survey of the Schrödinger problem and some of its connections with optimal
+transport. Discrete and Continuous Dynamical Systems A, 34(4):1533–1574, 2014.
+[28] Sergey Levine. Reinforcement learning and control as probabilistic inference: Tutorial and review. arXiv
+preprint arXiv:1805.00909, 2018.
+[29] Leonard Lewin. Polylogarithms and Associated Functions. North-Holland, 1981.
+[30] Lisha Li, Kevin Jamieson, Giulia DeSalvo, Afshin Rostamizadeh, and Ameet Talwalkar. Hyperband: A
+novel bandit-based approach to hyperparameter optimization. Journal of Machine Learning Research,
+18(185):1–52, 2018.
+[31] Yaron Lipman, Ricky T. Q. Chen, Heli Ben-Hamu, Maximilian Nickel, and Matt Le. Flow matching
+for generative modeling. In ICLR, 2023.
+[32] Kanika Madan, Jarrid Rector-Brooks, Maksym Korablyov, Emmanuel Bengio, Moksh Jain, Andrei Nica,
+Tom Bosc, Yoshua Bengio, and Nikolay Malkin. Learning GFlowNets from partial episodes for improved
+convergence and stability. arXiv preprint arXiv:2209.12782, 2022.
+[33] Nikolay Malkin, Moksh Jain, Emmanuel Bengio, Chen Sun, and Yoshua Bengio. Trajectory balance:
+Improved credit assignment in GFlowNets. arXiv preprint arXiv:2201.13259, 2022.
+[34] Laurence Illing Midgley, Vincent Stimper, Gregor N. C. Simm, Bernhard Schölkopf, and José Miguel
+Hernández-Lobato. Flow annealed importance sampling bootstrap. arXiv preprint arXiv:2111.11510,
+2021.
+[35] Nikolas Nüsken and Lorenz Richter. Solving high-dimensional hamilton–jacobi–bellman pdes using
+neural networks: perspectives from the theory of controlled diffusions and measures on path space.
+Partial Differential Equations and Applications, 2021. arXiv:2005.05409.
+[36] Razvan Pascanu, Tomas Mikolov, and Yoshua Bengio. On the diﬀiculty of training recurrent neural
+networks. In ICML, 2013.
+[37] Tobias Pohlen, Bilal Piot, Todd Hester, Mohammad Gheshlaghi Azar, Dan Horgan, David Budden,
+Gabriel Barth-Maron, Hado van Hasselt, John Quan, Mel Večerík, Matteo Hessel, Rémi Munos, and
+Olivier Pietquin. Observe and look further: Achieving consistent performance on atari. arXiv preprint
+arXiv:1805.11593, 2018.
+[38] Lorenz Richter and Julius Berner.
+arXiv:2307.01198, 2023.
+
+Improved sampling via learned diffusions.
+
+arXiv preprint
+
+[39] Lorenz Richter, Ayman Boustati, Nikolas Nüsken, Francisco J. R. Ruiz, and Ömer Deniz Akyildiz.
+VarGrad: A low-variance gradient estimator for variational inference. arXiv preprint arXiv:2010.10436,
+2020.
+[40] Leonard J. Savage. Elicitation of personal probabilities and expectations. Journal of the American
+Statistical Association, 66(336):783–801, 1971.
+[41] Marcin Sendera, Minsu Kim, Sarthak Mittal, Pablo Lemos, Luca Scimeca, Jarrid Rector-Brooks, Alexandre Adam, Yoshua Bengio, and Nikolay Malkin. Improved off-policy training of diffusion samplers. arXiv
+preprint arXiv:2402.05098, 2024.
+[42] Raghav Singhal, Zachary Horvitz, Ryan Teehan, Mengye Ren, Zhou Yu, Kathleen McKeown, and
+Rajesh Ranganath. A general framework for inference-time scaling and steering of diffusion models.
+arXiv preprint arXiv:2501.06848, 2025.
+[43] Marta Skreta, Tara Akhound-Sadegh, Viktor Ohanesian, Roberto Bondesan, Alán Aspuru-Guzik, Arnaud Doucet, Rob Brekelmans, Alexander Tong, and Kirill Neklyudov. Feynman-kac correctors in
+diffusion: Annealing, guidance, and product of experts. arXiv preprint arXiv:2503.02819, 2025.
+
+21
+
+[44] Yang Song, Jascha Sohl-Dickstein, Diederik P. Kingma, Abhishek Kumar, Stefano Ermon, and Ben
+Poole. Score-based generative modeling through stochastic differential equations. arXiv preprint
+arXiv:2011.13456, 2020.
+[45] Henri Theil. A rank-invariant method of linear and polynomial regression analysis. Proceedings of the
+Royal Netherlands Academy of Sciences, 53:386–392, 1950.
+[46] Emanuel Todorov. Eﬀicient computation of optimal actions. Proceedings of the National Academy of
+Sciences, 106(28):11478–11483, 2009.
+[47] Masatoshi Uehara, Yulai Zhao, Kevin Black, Ehsan Hajiramezanali, Gabriele Scalia, Nathaniel Lee
+Diamant, Alex M Tseng, Tommaso Biancalani, and Sergey Levine. Fine-tuning of continuous-time
+diffusion models as entropy-regularized control. arXiv preprint arXiv:2402.15194, 2024.
+[48] Hado van Hasselt, Arthur Guez, Matteo Hessel, Volodymyr Mnih, and David Silver. Learning values
+across many orders of magnitude. arXiv preprint arXiv:1602.07714, 2016.
+[49] Francisco Vargas, Will Grathwohl, and Arnaud Doucet. Denoising diffusion samplers. arXiv preprint
+arXiv:2302.13834, 2023.
+[50] Siddarth Venkatraman, Moksh Jain, Luca Scimeca, Minsu Kim, Marcin Sendera, Mohsin Hasan, Luke
+Rowe, Sarthak Mittal, Pablo Lemos, Emmanuel Bengio, Alexandre Adam, Jarrid Rector-Brooks, Yoshua
+Bengio, Glen Berseth, and Nikolay Malkin. Amortizing intractable inference in diffusion models for
+vision, language, and control. arXiv preprint arXiv:2405.20971, 2024.
+[51] Weixin Wang, Yu Yang, Wei Deng, and Pan Xu. Inference-time alignment of diffusion models via
+trust-region iterative twisted sequential monte carlo. arXiv preprint arXiv:2605.25123, 2026.
+[52] Nick Whiteley and Anthony Lee. Twisted particle filters. The Annals of Statistics, 42(1):115–141, 2014.
+[53] Luhuan Wu, Brian L. Trippe, Christian A. Naesseth, David M. Blei, and John P. Cunningham. Practical
+and asymptotically exact conditional sampling in diffusion models. arXiv preprint arXiv:2306.17775,
+2023.
+[54] Dinghuai Zhang, Ricky T. Q. Chen, Cheng-Hao Liu, Aaron Courville, and Yoshua Bengio. Diffusion
+generative flow samplers: Improving learning signals through partial trajectory optimization. arXiv
+preprint arXiv:2310.02679, 2023.
+[55] Qinsheng Zhang and Yongxin Chen. Path integral sampler: A stochastic control approach for sampling.
+arXiv preprint arXiv:2111.15141, 2021.
+[56] Stephen Zhao, Rob Brekelmans, Alireza Makhzani, and Roger Grosse. Probabilistic inference in language
+models via twisted sequential monte carlo. arXiv preprint arXiv:2404.17546, 2024.
+
+A The Spence loss: derivation and implementation
+A.1
+
+From the gradient weight to the potential
+
+By Lemma 1, a Bregman loss in log space reaches the optimizer only through the weight w(y) = yφ′′ (y) in
+(20). We therefore specify w and recover φ, rather than the other way round.
+Requirements (22)–(23) ask that the gradient grow linearly in p = ln y in both directions, giving w(y) ∼
+ln y/y as y → ∞ and w(y) ∼ − ln y as y → 0. The choice
+w(y) =
+
+ln y
+,
+y−1
+
+φ′′ (y) =
+
+hence
+
+w(y)
+ln y
+=
+,
+y
+y (y − 1)
+
+(28)
+
+meets both. It is positive on all of (0, ∞), since ln y and y−1 change sign together at y = 1, and the singularity
+there is removable with w(1) = 1. Equivalently w(y) = 1/L(1, y), the reciprocal of the logarithmic mean
+L(a, b) = (b − a)/(ln b − ln a).
+22
+
+Integrating (28) twice gives the potential
+φ(y) = (1 − y) Li2 (1 − y) − 21 y ln2 y.
+
+(29)
+
+The two constants of integration are immaterial: a Bregman divergence is unchanged by adding an aﬀine
+function of y to its potential, since the added terms cancel between φ(T ) − φ(y) and φ′ (y)(T − y).
+
+A.2
+
+Closed forms
+
+Write S(x) = Li2 (1 − ex ). Substituting y = ep for the prediction and T = eq for the target into Dφ (T, y)
+with (29) gives the divergence in closed form,
+
+
+
+
+L(p, q) = Dφ eq , ep = 21 eq p2 − q 2 + eq − 1 S(p) − S(q) ,
+(30)
+which is the expression the implementation reports as the monitored loss value. Differentiating in p and
+using the dilogarithm identity
+S ′ (x) = Li′2 (1 − ex ) · (−ex ) = −
+
+x ex
+x
+=
+,
+x
+e −1
+expm1(−x)
+
+(31)
+
+which follows from Li′2 (z) = − ln(1 − z)/z, the cross terms cancel and leave
+
+∂L
+ep − eq
+= eq p + eq − 1 S ′ (p) = p p
+,
+∂p
+e −1
+
+(32)
+
+recovering (25). It is this appearance of the Spence function in (30) that names the loss.
+All four identities of this subsection — (28) as the second derivative of (29), (30) as Dφ (eq , ep ), (32) as
+its p-derivative, and (31) — are verified symbolically in the accompanying code.
+
+A.3
+
+Numerical implementation
+
+Training never evaluates (30). The backward pass returns (32) directly, which matters: differentiating (30)
+by automatic differentiation returns NaN in single precision once the target reaches q ≳ 85 nats, and again
+when prediction and target are both large (e.g. p = q = 100), because the eq prefactor of (30) overflows and
+multiplies an intermediate that has itself lost precision. Large predictions alone are harmless on this path
+— p = 300 with q = 0 differentiates correctly — so the failure is driven by the target, which is exactly the
+quantity the learner does not control. A single such batch propagates NaN through the shared value network
+and poisons every subsequent update.
+Even in closed form, (32) must not be evaluated literally: both ep − eq and ep − 1 overflow. We compute
+it branch-wise,
+
+expm1(p) − expm1(q)
+
+p
+, p < 0,
+
+
+
+expm1(p)
+
+
+∂L
+= p expm1(q − p) ,
+(33)
+p > 0,
+
+∂p
+
+expm1(−p)
+
+
+
+
+− expm1(q),
+p = 0,
+which is finite for every finite float input once the guard below is applied: the p > 0 branch evaluates
+expm1(q − p), which does overflow when q − p ≳ 88 in single precision, and the p < 0 branch has the same
+exposure through expm1(q). For p < 0, expm1(p) lies in [−1, 0) and the difference of expm1 values is free of
+cancellation, while an underflowing eq degrades gracefully to 0. For p > 0, factoring ep out of numerator and
+denominator leaves both expm1 arguments bounded above, so nothing overflows, and the expression tends
+to the true asymptote p. The p = 0 case is the removable singularity, limp→0 p/expm1(p) = 1. A final guard
+maps any residual non-finite value to ±1030 ; it is reachable only when the true gradient itself exceeds the
+float range, e.g. eq = ∞, where training is already pathological and a large finite gradient at least gives
+Adam a correctly-signed step.
+
+23
+
+A.4
+
+Where the Spence weight sits
+
+The three weights of Table 1 are ordered at both extremes: as y → ∞, 1/y < ln y/(y − 1) < 2y, and as
+y → 0+ , 2y < ln y/(y − 1) < 1/y. In this asymptotic sense the Spence loss interpolates squared error and
+Itakura–Saito rather than introducing an unrelated third behaviour.
+The ordering is asymptotic and not global, and it is worth being precise about which half fails. Against
+Itakura–Saito it never fails: w(y) < 1/y for every y < 1 and w(y) > 1/y for every y > 1, the two crossing
+exactly once, at y = 1, where both equal 1. Against squared error it does fail: 2y < w(y) holds only on (0, y ⋆ )
+with y ⋆ = 0.62614 . . . the root of 2y(y − 1) = ln y, and on (y ⋆ , 1) — that is, for predictions p ∈ (−0.468, 0) —
+the Spence weight drops below the squared-error weight.
+
+B
+
+On-policy sampling: the method zoo, the levers, and what failed
+
+§6 reports the single on-policy configuration we recommend. This appendix records how we arrived at it,
+including the arms that did not work — several of which are mechanisms the literature would predict should
+help.
+Unless stated otherwise, numbers are frac. closed — the fraction of the calibrated 6-nat headroom closed
+at the plateau (§7) — at d = 512, on paired nested seeds, with ± one standard error.
+
+B.1
+
+The zoo
+
+All on-policy arms run a twisted SMC sweep and differ in how targets are formed from it.
+• ssmc (single-seed MC): the log-mean-exp over siblings of (13), with Monte-Carlo terminal targets.
+• ssmc-td: the same sweep with TD(λ) targets, so the regression target bootstraps through a λ-weighted
+mixture.
+• amctl (ancestral MC + TD(λ)): resampling ancestrally rather than per-step.
+• fbrrt / fbrrt_cv: forward-backward reverse-ratio-tracking variants that add their own drift modification, with _cv using an EMA shadow network as the policy.
+
+B.2
+
+Two levers that worked, and they stack
+
+Backward-noising expansion. Reuse a sampled trajectory by noising each of its points backwards
+through (16) and attaching the same target. This adds training pairs at earlier, noisier times, precisely
+where an on-policy corridor is thinnest. At d = 512 it gains +3.0 over the ssmc control and reaches a
+statistical tie with off-policy (−1.8 ± 1.2, p = 0.18).
+Finer integration. Raising the Euler–Maruyama step count from the law-fitted ≈ 19 to 60 gains +3.2.
+The fitted law was wrong at high dimension for a mundane reason: the anchor sweeps ran at d ≤ 128, where
+the integrator bias is invisible.
+They stack. Together (expand_ns60) they gain +7.0 ± 2.5 over the ssmc control, close to the sum of the
+parts, confirming independent mechanisms — one acts on where data sits, the other on sampling bias. This
+was the first on-policy configuration to land above off-policy at d = 512, and at the full 30-seed grid it holds:
+37.1 ± 2.7 against off-policy’s 34.3 ± 2.6, a paired +2.8 ± 1.4.
+
+B.3
+
+The control that mattered: staleness
+
+Both levers multiply the number of rows produced per trajectory, so the dataset regenerates up to 6× less
+often (≈ 1,920 gradient steps between regenerations versus ≈ 304 for the control). Slow-moving data is an
+implicit target network, and could by itself explain the gain. The _sub arms subsample each epoch uniformly
+back to the control’s row count after generation, restoring the original cadence exactly.
+
+24
+
+arm
+expand_ns60_sub
+expand_sub
+ns60_sub
+
+mean
+
+vs. ssmc control
+
+vs. its full arm
+
+34.7 ± 3.5
+28.7 ± 1.6
+27.9 ± 1.9
+
++8.9 ± 1.4 (p < .001, 10/10)
++2.8 ± 2.3
++2.0 ± 1.5
+
++1.9 ± 2.6 (p = .48)
+−0.2 ± 1.5 (p = .91)
+−1.2 ± 1.4 (p = .39)
+
+Staleness explains none of the gains: every _sub arm matches its full-epoch counterpart within noise. The
+controls also separate the mechanisms. ns60_sub keeps the integrator gain while discarding two thirds of its
+rows, so that lever lives in the sampling and not the row count; expand_sub shows the expanded off-path
+rows are worth at least as much as the on-path rows they displace. These arms consume the same training
+rows as everything else while discarding most of what they generate, and still win.
+
+B.4
+
+Generalisation across methods, and one clean split
+
+Applying the recipe to the other on-policy methods at d = 512 (paired seeds 0–9, off-policy control 30.7):
+method
+
+arm
+
+ssmc-td
+ssmc-td
+amctl
+amctl
+fbrrt
+
+expand_ns60
+expand_ns60_sub
+expand_ns60
+expand_ns60_sub
+expand_ns60
+
+mean
+
+vs. own control
+
+32.1 ± 2.0
+27.4 ± 1.9
+27.8 ± 2.5
+28.5 ± 1.8
+13.6 ± 3.8
+
++6.5 ± 2.0 (p = .011)
++1.8 ± 1.3 (p = .19)
++8.0 ± 1.6 (p = .001, 10/10)
++8.6 ± 1.3 (p < .001, 10/10)
++3.1 ± 6.2 (p = .63)
+
+The recipe transfers to both SMC-TD methods, and the staleness control exposes a mechanistic split
+worth recording: ssmc and amctl, whose targets are pure Monte-Carlo, keep their full gain under _sub,
+while ssmc-td — the one method whose targets bootstrap — loses most of its gain when the cadence is
+restored (+6.5 → +1.8). Bootstrapped targets genuinely benefit from a slower-moving dataset, on top of
+the placement effect. fbrrt does not benefit reliably, and its high-dimensional deficit is not recipe-shaped.
+
+B.5
+
+Folding the levers into the hyperparameter laws
+
+Treating expansion fraction, step count and epoch size as tunable and refitting the per-dimension laws (with
+an added d = 512 anchor) yields one configuration family that is significantly above off-policy at d = 8–32
+(up to +13.4 paired) and never significantly below it anywhere in 2 ≤ d ≤ 512. As in §7 we do not claim
+equivalence at the remaining dimensions: those rest on failure to reject, and we ran no equivalence test. The
+fitted laws chose nonzero expansion at every dimension and a moderate constant step count (29–33, not the
+hand-set 60).
+The fixed recipe, by contrast, cost up to −15 points at low dimension. The reason is instructive: it grafted
+frac= 1.0 and n_steps= 60 onto hyperparameters fitted under the old configuration. Moderate expansion
+with co-adapted learning rate and twist is harmless at d = 2–8; the damage came from un-co-adapted knobs,
+not from expansion itself.
+
+B.6
+
+What failed
+
+Concentrating on the reward corridor (oracle twist). Twisting the sampler toward high reward using
+the analytic value — the strongest possible twist — makes things worse at d = 512, and splicing off-policy
+coverage back in does not rescue it: the blended arm sits 3.7 below the plain ssmc control and 8.5 below
+off-policy. Unweighting the corridor sources recovers only about half the damage. On this benchmark family
+at d = 512, broad coverage of the marginal beat concentration on the corridor in every arm we ran, which
+is why the recommended method expands coverage rather than sharpening the twist.
+Trust-region control of the twist. Implementing the KL-budgeted twist update of Wang et al. [51] left
+the twist untouched: the mixing coeﬀicient hit β = 1.0 at all ≈ 50 updates even at the tightest budget, so
+every budget produced bit-identical runs. The learned twist already moves far slower than any reasonable
+KL budget. This null retroactively explains why EMA and staleness knobs barely move ssmc — its twist is
+not the fast-moving object; for ssmc-td the bootstrapped targets are.
+25
+
+Ramped concentration. Introducing the oracle twist gradually rather than at once does not help. Ramp
+speed was varied over two orders of magnitude and had no effect (20.1/19.2/20.9 across the scan; a slow
+ramp spanning most of training gives 20.2 ± 1.4, statistically identical to the instant ramp at p = .75).
+Concentration harm is ramp-speed invariant in every reachable regime.
+Both extremes of importance correction. Within the expansion family the weighting scheme traces a
+clean bias–variance U: uniform weights (no correction, biased targets) give 18.0±1.7; raw weights clamped at
+100× (unbiased, high variance) give 21.9 ± 2.7; the dual-tempered weights of Wang et al. [51] give 25.2 ± 3.4.
+The tempered form is the one mechanism from the trust-region literature we adopt.
+Known-open. fbrrt_cv returns negative frac. closed at d ≥ 128, i.e. it ends below the base process; we
+have not audited this and make no claim about the variant. The hidden width is capped at 256 for all d ≥ 8,
+so capacity–dimension interaction is unexplored, and the 6-nat headroom is a single diﬀiculty point — the
+crossover dimension between on- and off-policy very likely moves with it.
+
+C Experimental details
+Problem family. The pinned-interpolant construction gives exact ground truth and a closed-form bridge
+at once, which is why we use it: conditioning on X1 = x1 makes the path a Brownian bridge, so the
+training pairs of §2.4 are available in closed form, while the terminal law ν can be chosen to make V and
+log Z analytic. Setting ν = N (0, 2aI) recovers driftless Brownian motion, which is the case used for the
+Boltzmann benchmarks. For the dimensional-scaling study the base process is the pinned interpolant of §2
+with terminal law ν a K = 20 component Gaussian mixture, means drawn U [−2, 2], variances U [0.01, 0.5],
+Dirichlet weights, and diffusion coeﬀicient a = 1. The reward is r(x) = −s kx − ck2 with c ∼ U [−1, 1]d . All
+parameters are drawn once at dmax = 512 under a fixed seed and truncated, so the d-dimensional instance
+is the exact marginal of the largest one.
+Constant-headroom calibration. The reward scale s is set per instance by 200 steps of geometric
+bisection so that Eπ⋆ [r] − Ebase [r] = 6 nats exactly. Both expectations are available in closed form for
+this family (Gaussian algebra), so the calibration is exact rather than estimated. The score frac. closed is
+(plateau − Ebase [r])/6.
+Network and optimization. A residual MLP value network Vθ (x, t) with hidden width min(256, max(64, 32d)),
+Adam [26], gradient batch size 4. The output head is biased by the analytic V (0, 0), and the loss is evaluated
+on inputs shifted by the same constant: log Z is large and negative on this family (−2.4 at d = 2 falling to
+−36.1 at d = 512), so the raw exponential-space gradients carry a factor eV (0,0) of order 10−1 down to 10−16
+and disappear below Adam’s ε. Shifting by a constant leaves the minimizer at p = q and is again a Bregman
+divergence, in the tilted variables. This shift is applied identically to every loss arm; note that Itakura–Saito
+and log-space squared error are invariant to it, which is one of Itakura–Saito’s advantages.
+Scoring. Validation every 500 steps by rolling out the controlled SDE and averaging terminal reward; the
+plateau is the mean of the last 8 points of an 8-point rolling mean. Runs are 15k steps for the dimensionalscaling grid.
+Hyperparameter laws. Rather than tuning per dimension, we run Optuna [2] TPE+Hyperband [30]
+anchor sweeps at d ∈ {2, 16, 128, 512} and fit each hyperparameter against log d by Theil–Sen regression [45],
+choosing between a constant and a sloped model by leave-one-out error with a 10% bias toward constants.
+A method is then one configuration family, evaluated at every dimension without further tuning.
+Loss ablation. The ablation of §5 trains off-policy only, so that the divergence is the sole difference between
+arms. Because the shared hyperparameters were originally fitted under the Spence loss, comparing at those
+values would be unfair to the alternatives; we therefore re-tune the learning rate per (loss, dimension) over
+a grid before running the seed grid, and report tuned-against-tuned.
+26
+
+Compute. All runs are small MLPs on a single machine. The dimensional-scaling grid is the dominant cost.
+These models are tiny and run at gradient batch size 4, so they are latency-bound rather than throughputbound: many single-threaded CPU processes in parallel outperform the GPU by roughly a factor of five.
+Reproducibility. Every dimensional-scaling number in the paper — including the Appendix B arms and
+their paired tests — is recomputed from per-seed records by figures/collect_results.py, which writes the
+results.json consumed by the figure scripts, so text and figures cannot disagree. The loss-ablation numbers
+are produced the same way, by analyse_ablation.py and make_ablation_table.py, which emit Table 2
+directly rather than through a transcription step. The loss figure imports the shipped loss implementation
+directly rather than reimplementing it.
+
+D
+
+Proofs
+
+Throughout we assume Z = Ebase [er(X1 ) ] < ∞, which makes V finite and every conditional expectation below
+well defined. For Lemma 1 we assume in addition that E[φ(eq ) | xt ] < ∞; this is what licenses differentiating
+under the expectation, and it is strictly stronger than Z < ∞ for potentials that grow superlinearly (see the
+remark following the lemma).
+
+D.1
+
+The H-martingale property
+
+Proposition 1 (Eq. (8)). Let h = eV . Then h(Xt , t) is a P-martingale, and for all 0 ≤ t < s ≤ 1,
+eV (x,t) = Ebase [ eV (Xs ,s) | Xt = x ].
+Proof. Because X is Markov under P, h(Xt , t) = Ebase [ er(X1 ) | Xt ] = Ebase [ er(X1 ) | Ft ], so h(Xt , t) is
+the Doob martingale of the fixed integrable random variable er(X1 ) and is a martingale on [0, 1]. Applying
+the tower property between t and s and using the Markov property again gives the displayed identity.
+Equivalently, in PDE form, Feynman–Kac gives ∂t h + Lh = 0 with L = f · ∇ + a∆; substituting h = eV and
+dividing by h > 0 recovers the HJB equation of §2, since ∆h = h (k∇V k2 + ∆V ).
+The terminal case s = 1, with V (·, 1) = r, is the one that anchors every target in §2.4.
+
+D.2
+
+Bregman divergences are proper losses for the value
+
+Proof of Lemma 1. Fix xt and write T = eq for the (random) target and y = ep for the prediction. Differentiating the definition (19) in y, the first-order terms cancel,
+i
+∂ h
+φ(T ) − φ(y) − φ′ (y)(T − y) = −φ′ (y) − φ′′ (y)(T − y) + φ′ (y) = φ′′ (y) (y − T ),
+(34)
+∂y
+and the chain rule with dy/dp = y gives (20): ∂L/∂p = w(y)(y − T ) with w(y) = yφ′′ (y) > 0.
+The key structural point is that this is aﬀine in the target, so under the stated integrability the expectation
+passes through it (dominated convergence on any compact p-interval, where w(ep ) is bounded):
+
+
+
+
+
+
+∂L
+= w(ep ) ep − E[eq | xt ] = w(ep ) ep − eV (xt ,t) ,
+(35)
+Eq|xt
+∂p
+using (9). Since w > 0, the right-hand side is negative for p < V (xt , t) and positive for p > V (xt , t); hence
+p 7→ E[L] is strictly decreasing then strictly increasing, with the unique stationary point and global minimum
+at p⋆ = V (xt , t).
+The argument uses nothing about φ beyond φ ∈ C 2 with φ′′ > 0, which is the point: the potential is free,
+and only w — the conditioning — distinguishes the members of the family.
+Remark 3 (The argument order is not cosmetic). Had the prediction occupied the first slot, the derivative
+would be φ′ (y) − E[φ′ (T )] and the minimiser the quasi-arithmetic mean (φ′ )−1 (E[φ′ (T )]) — for φ = − ln y,
+the harmonic mean of T , not E[T ]. Squared error is symmetric and so hides the distinction; Itakura–Saito
+does not.
+27
+
+D.3
+
+Twist-independence
+
+Rs
+1
+kuk2 ) < ∞ (Novikov). Then ρt→s of (10)
+Proposition 2 (Eq. (11)). Let u be adapted with EPu exp( 4a
+t
+satisfies EPu [ρt→s Z | Ft ] = Ebase [Z | Ft ] for every Fs -measurable Z ≥ 0; taking Z = eV (Xs ,s) gives (11).
+Proof. Girsanov’s theorem states that ρt→s is a version of the Radon–Nikodym derivative dP/dPu on Fs
+given Ft , and Novikov’s condition makes it a true martingale with EPu [ρt→s | Ft ] = 1. The change-ofmeasure identity is then the definition of a Radon–Nikodym derivative. The claim follows with Z = eV (Xs ,s)
+and the previous proposition.
+Note what is not claimed: the variance of ρt→s eV (Xs ,s) depends strongly on u, and is what the sampler
+design of §6 manipulates. Only the mean is invariant.
+
+D.4
+
+The backward kernel does not depend on the terminal law
+
+Proposition 3 (Eq. (16)). Let P be a pinned interpolant: X0 = 0, X1 ∼ ν, and conditionally on X1 = x1 the
+
+path is a Brownian bridge with diffusion coeﬀicient 2a. Then for t < s, Xt | Xs = xs ∼ N st xs , 2a t(s−t)
+s I ,
+independently of ν.
+Proof. Condition on X1 = x1 . The path on [0, 1] is then a Brownian bridge from (0, 0) to (1, x1 ), and
+conditioning such a bridge further on Xs = xs leaves, on the subinterval [0, s], a Brownian bridge from
+(0, 0) to (s, xs ) — whose law does not involve x1 . Hence the conditional law of Xt given (Xs , X1 ) equals its
+conditional law given Xs alone, and is the stated Gaussian. Averaging over X1 ∼ ν changes nothing.
+This is why the backward-noising expansion of §2.4 applies to base models with nontrivial drift, and not
+only to Brownian motion: the induced drift f depends on ν, but the bridge used to generate extra training
+points does not.
+
+28
+
+

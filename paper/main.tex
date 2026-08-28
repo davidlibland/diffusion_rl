@@ -2,7 +2,7 @@
 % Swap for the target venue's style file when chosen (neurips/icml/tmlr...).
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb,amsthm}
-\usepackage{graphicx,booktabs,microtype}
+\usepackage{graphicx,booktabs,microtype,multirow}
 \usepackage[numbers]{natbib}
 \usepackage{hyperref}
 
@@ -46,8 +46,9 @@ linearly in the log-space prediction in \emph{both} tails, yielding the
 \emph{Spence loss}\footnote{Named for the Spence (dilogarithm) function
 $\Spence$ appearing in its value.} and a closed-form, numerically stable
 gradient. Measured against four alternatives with per-loss tuning on a benchmark whose
-value function is known analytically, it repairs squared error on both axes at every
-dimension, clipped or not. It does not, however, dominate the family:
+value function is known analytically, it improves on squared error at every
+dimension --- decisively on value fidelity, and on control everywhere except
+$d=32$, where the two are indistinguishable. It does not, however, dominate the family:
 Itakura--Saito, once clipped, is the better controller at every dimension. But
 clipping is not the free remedy the standard framing assumes --- calibrated to
 bind a tenth of the time it still binds on $44\%$ of Itakura--Saito's steps at
