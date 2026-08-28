@@ -27,18 +27,21 @@ What the measurements support is narrower than that construction might suggest,
 and we would rather state it than let the framing carry it. The Spence weight
 repairs exponential-space squared error on both metrics at every dimension we
 ran, and beats generalised KL on value fidelity, so controlling both tails is
-demonstrably better than controlling one. It does not dominate the family: unclipped Itakura--Saito
-estimates the value better above $d=2$. The durable contribution is therefore
-the reduction itself --- that loss design here is the choice of a single
-positive weight, and that squared error is a poor choice of it --- and not a
-claim that our weight is the best available one.
+demonstrably better than controlling one. It does not dominate the family. Against the two
+power-law members --- squared error and generalised KL --- it is better on both
+axes at every dimension, clipped or not. Against Itakura--Saito it loses
+control and, above $d\approx32$, value as well.
 
-The clipped comparison, which would settle whether tail control matters once
-the standard remedy is applied, is unresolved: our first attempt used a
-threshold that bound on every step and so compared normalised-gradient descent
-rather than the losses (\S\ref{par:clipped}). The per-arm rerun is the single
-experiment we would most want completed before drawing a practical
-recommendation.
+That exchange is the paper's most useful finding, because of what it costs.
+Itakura--Saito earns its control by clipping: even at a threshold calibrated to
+bind a tenth of the time, the brake is engaged on $44\%$ of its steps at
+convergence, and it pays over a nat of downward bias for that, three to six
+times what our weight pays. Clipping is treated in this literature as a free
+stabiliser for the recoverable half of the pathology. It is not free, it is not
+neutral across losses, and it costs most exactly where it is needed most. A
+practitioner choosing between these losses is choosing between control and
+calibration, and the gradient-weight reduction is what makes that trade visible
+--- which is the contribution we would stand behind.
 
 \paragraph{Limitations.}
 The empirical claims are narrower than the analysis.

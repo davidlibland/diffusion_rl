@@ -140,37 +140,55 @@ measurement line up without qualification. The Spence weight stays tight
 ($2.4$--$3.2$) at every dimension, as its construction requires. The design
 works; \S\ref{par:clipped} is about whether it matters.
 
-\paragraph{Clipping, and why our first attempt at it was not a test.}
+\paragraph{Clipping, applied as a brake.}
 \label{par:clipped}
 The argument for a two-sided weight is that competitors with an exploding tail
-depend on clipping. Testing that requires clipping to behave as practitioners
-use it --- an occasional brake, not a permanent one --- and our first attempt
-did not. Clipping at a gradient norm of $1.0$, a standard default, we measured
-the clip binding on $99.8\%$ of steps overall and $100\%$ over the final fifth
-of training, for every arm. The table above says why: median gradient norms
-here run from $5$ to $107$. At that setting the clip is not a safety net but a
-wholesale renormalisation, discarding the gradient magnitude that distinguishes
-these losses and reducing every arm to normalised-gradient descent. Whatever
-that experiment compared, it was not the losses.
+depend on clipping, so the comparison should be repeated with clipping applied.
+Doing that correctly required one false start. At a gradient norm of $1.0$, a
+standard default, we measured the clip binding on $99.8\%$ of steps and $100\%$
+over the final fifth of training, for every arm --- unsurprising once the norms
+above are known, since their medians run from $5$ to $107$. At that setting
+clipping is not a brake but a renormalisation, discarding the gradient
+magnitude that distinguishes these losses. We therefore set the threshold
+per arm, at each loss's own $90$th-percentile norm, so that it binds a
+comparable and occasional fraction of the time. Table~\ref{tab:clip} reports
+what that does.
 
-Two findings from it survive, because neither depends on the clip being
-occasional. First, clipping is \emph{not free}: it shifts the learned value
-downward by $0.6$ to $1.6$ nats in every arm at every dimension, all
-significant, and most in Itakura--Saito. A remedy that costs a nat of
-calibration is not the cheap fix the framing of \S\ref{sec:03_expmse} implies.
-Second, clipping helps our loss substantially ($+5$ to $+13$ points of
-headroom), which a weight needing no clipping should not show --- linear growth
-is still unbounded, and a binding clip still bites. We therefore withdraw the
-claim that the Spence weight needs no clipping; what it has is a polynomial
-rather than exponential blow-up, which the tail ratios confirm and which is a
-weaker property than we had been asserting.
+\input{sections/05_clip_table}
 
-The comparison this section set out to make --- clipping applied as a brake,
-at each arm's own $90$th-percentile norm so that it binds about a tenth of the
-time for every loss --- is running at the time of writing and is not reported
-here. We state the design and the reason for it so that the absence is
-legible: the clipped ranking is unresolved, and the unclipped ranking above
-stands on its own.
+\emph{Clipping is what Itakura--Saito was missing.} It gains $12.5$ to $17.1$
+points of headroom, three to nine times any other arm, which is the predicted
+consequence of an exploding under-prediction tail meeting a brake. With it, and
+against us, it becomes the best controller in the exponential-space family at
+every dimension ($-4.7$, $-7.4$, $-9.5$, $-8.1$ points against ours, all
+significant).
+
+\emph{It is also what Itakura--Saito most depends on, and it charges for it.}
+Even with the threshold set to its own $90$th percentile, its clip binds on
+$44\%$ of steps at convergence, against $8$--$12\%$ for every other arm: its
+gradient distribution widens as training proceeds, so a brake calibrated early
+is applied constantly later. The bill arrives as bias. Clipping shifts its
+learned value down by $1.1$ to $1.3$ nats at every dimension, three to six times
+the shift it induces in ours ($0.20$--$0.54$) and an order of magnitude more
+than in the log-space arm, whose gradients have no tail to catch. Clipping is
+not a free stabiliser; its cost is calibration, and the loss that needs it most
+pays most.
+
+\emph{Under clipping our weight beats both power-law members outright.}
+Against exponential-space squared error it is better on both axes at every
+dimension ($+9.4$ to $+15.0$ points of control, $0.33$ to $0.99$ nats of
+value). Against generalised KL it is now better on both axes at every dimension
+as well ($+1.9$ to $+5.6$ points, $0.10$ to $0.30$ nats) --- a comparison we
+lost on control without clipping. What we do not win is the exchange with
+Itakura--Saito, which trades $5$ to $9$ points of control for $1$ nat of bias,
+and where we retain the value advantage only up to $d=8$ ($-0.76$, $-0.22$;
+$+0.23$ against us at $d=128$).
+
+The practical reading is a choice rather than a ranking. For control, clipped
+Itakura--Saito, accepting a badly calibrated value. For the value itself, our
+weight below $d\approx32$, which needs the least clipping and pays the least
+bias for it. Against the two power-law members of the family, ours is better
+either way.
 
 \paragraph{One axis separates nothing.}
 We counted non-finite batches per arm and found none, in any arm, at any

@@ -93,11 +93,13 @@ small $t$.
   per-loss learning-rate tuning on a benchmark whose value function is
   available analytically. The Spence weight repairs squared error on both
   axes at every dimension, and beats generalised KL on value fidelity. It does
-  not dominate the family: unclipped Itakura--Saito estimates the value better
-  above $d=2$. We report that rather than the clean sweep, and we measure two
-  things the framing had taken for granted --- that gradient clipping biases
-  every loss downward by around a nat, and that at a standard threshold it
-  binds on essentially every step (\S\ref{sec:05_offpolicy_exp}).
+  not dominate the family: clipped Itakura--Saito is the better controller
+  everywhere. We report that rather than the clean sweep, and we measure two
+  things the framing had taken for granted --- that clipping charges bias in
+  proportion to how much a loss needs it (over a nat for Itakura--Saito,
+  a fifth of that for ours), and that at a standard threshold it binds on
+  essentially every step, so the usual clipped comparison is not a comparison
+  of losses at all (\S\ref{sec:05_offpolicy_exp}).
 \item We show that on-policy twisted sampling, with coverage widened by
   backward noising, is significantly better than off-policy training at
   $d=8$--$32$ and never significantly worse anywhere in $2\le d\le512$, while
