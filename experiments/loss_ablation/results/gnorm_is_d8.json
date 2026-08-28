@@ -1,0 +1,40 @@
+{
+ "loss": "is",
+ "dim": 8,
+ "lr": 1e-05,
+ "steps": 3000,
+ "seeds": [
+  {
+   "seed": 0,
+   "plateau": -8.215168639024098,
+   "opt_reward": -3.960511148303497,
+   "E_base": -9.960511148303496,
+   "frac_closed": 0.290890418213233,
+   "v_rmse": 1.8421513257466207,
+   "v_bias": 0.9926228516221046,
+   "v_nonfinite": 0,
+   "clip": null,
+   "gnorm_median": 12.916317899261022,
+   "gnorm_p90": 30.940510371764926,
+   "gnorm_median_tail": 13.58626482244743,
+   "skips": 0,
+   "error": null
+  },
+  {
+   "seed": 1,
+   "plateau": -7.500008036030664,
+   "opt_reward": -3.9357172082669916,
+   "E_base": -9.93571720826699,
+   "frac_closed": 0.4059515287060543,
+   "v_rmse": 1.5814618936511993,
+   "v_bias": 0.6774588967621327,
+   "v_nonfinite": 0,
+   "clip": null,
+   "gnorm_median": 12.863182273874466,
+   "gnorm_p90": 29.785414479497923,
+   "gnorm_median_tail": 14.151635749479928,
+   "skips": 0,
+   "error": null
+  }
+ ]
+}

@@ -79,21 +79,27 @@ small $t$.
   squared error and Itakura--Saito as the $\beta=2$ and $\beta=0$ members of a
   power-law family no member of which has \emph{both} tails controlled
   (\S\ref{sec:04_bregman}).
-\item We derive the Spence loss by solving for the weight
-  $w(y)=\ln y/(y-1)$ whose gradient is linear in the log-space prediction in
-  both tails, give its closed-form gradient and dilogarithm value, and give a
-  branch-wise evaluation that is finite for every finite float input up to a
-  single saturation guard, unlike automatic differentiation of the divergence
-  (\S\ref{subsec:spence}, App.~\ref{sec:A_spence}).
+\item We use the reduction to \emph{derive} a weight rather than pick one:
+  solving for linear growth in both tails gives $w(y)=\ln y/(y-1)$, the
+  reciprocal logarithmic mean, with a closed-form gradient, a dilogarithm
+  value, and a branch-wise evaluation finite for every float input up to one
+  saturation guard (\S\ref{subsec:spence}, App.~\ref{sec:A_spence}). It does
+  what it was designed to do at the level of the gradient --- its norm
+  distribution is the tightest of any arm, where squared error's develops a
+  $53\times$ tail at $d=128$ --- which turns out not to be what decides the
+  comparison.
 \item We compare five losses --- Spence, exponential-space squared error,
   Itakura--Saito, generalised KL, and the biased log-space baseline --- with
   per-loss learning-rate tuning on a benchmark whose value function is
   available analytically. The Spence weight repairs squared error on both
-  axes at every dimension, clipped or unclipped. It does not dominate the
-  family: with gradient clipping applied to every arm, Itakura--Saito is the
-  better controller above $d=2$ and ties on value, so we do not recommend our
-  weight over it. We report that rather than the clean sweep
-  (\S\ref{sec:05_offpolicy_exp}).
+  axes at every dimension, and beats generalised KL on value fidelity. It does
+  not dominate the family: clipped Itakura--Saito is the better controller
+  everywhere. We report that rather than the clean sweep, and we measure two
+  things the framing had taken for granted --- that clipping charges bias in
+  proportion to how much a loss needs it (over a nat for Itakura--Saito,
+  a fifth of that for ours), and that at a standard threshold it binds on
+  essentially every step, so the usual clipped comparison is not a comparison
+  of losses at all (\S\ref{sec:05_offpolicy_exp}).
 \item We show that on-policy twisted sampling, with coverage widened by
   backward noising, is significantly better than off-policy training at
   $d=8$--$32$ and never significantly worse anywhere in $2\le d\le512$, while

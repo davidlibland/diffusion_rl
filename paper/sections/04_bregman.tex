@@ -106,9 +106,9 @@ gamma/exponential observation model \citep{fevotte2009isnmf}, giving a natural
 uncertainty interpretation for $\Vf$. It is one-sided
 (Fig.~\ref{fig:loss_curves}, middle), and we should say at the outset that
 one-sidedness turns out to cost it little: in \S\ref{sec:05_offpolicy_exp} it
-is the most accurate value estimator of any arm above $d=2$. What it gives up
-is that its surviving tail explodes, so it relies on the clipping or saturation
-that a two-sided weight makes unnecessary.
+is the most accurate value estimator of any arm above $d=2$. What it gives up is that its
+surviving tail explodes, so it relies on clipping --- which, applied, turns out
+to be enough to make it the better loss overall (\S\ref{par:clipped}).
 
 \paragraph{Why not simply retune $\beta$?}
 Squared error and Itakura--Saito are the $\beta=2$ and $\beta=0$ members of the
@@ -129,14 +129,13 @@ tail, leaving only a single exponential explosion above, which clipping
 handles. Generalised KL is thus a genuine competitor and not a straw arm, and
 we include it as such in \S\ref{sec:05_offpolicy_exp}. The claim we make for
 the Spence loss is correspondingly narrow: it is the member whose gradient is
-linear in $p$ on \emph{both} sides, and so the one that needs no clipping at
-all. Whether that buys anything over a
-\emph{clipped} competitor is an empirical question, and
-\S\ref{par:clipped} answers it in the negative: with clipping applied to every
-arm, generalised KL and Itakura--Saito both close most of the gap, and
-Itakura--Saito overtakes us on control. We keep the derivation because the
-weight is the clean solution to the stated design problem, not because it wins
-the comparison.
+linear in $p$ on \emph{both} sides, so its blow-up is polynomial rather than
+exponential. We resist the tempting stronger statement that it therefore needs
+no clipping. Linear growth is still unbounded, a fixed clip still binds, and
+\S\ref{par:clipped} finds that clipping helps our loss substantially --- and
+helps Itakura--Saito enough to overtake us on control. We keep the derivation
+because the weight is the clean solution to the stated design problem, not
+because it wins the comparison.
 
 % ---------------------------------------------------------------------------
 \subsection{The Spence loss}

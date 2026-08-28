@@ -53,11 +53,50 @@ LOSSES = ["quad", "mse", "is", "logmse", "gkl"]
 LR_GRID = [1e-5, 3e-5, 1e-4, 3e-4, 1e-3, 3e-3]
 
 
+class GradNormCollector(Callback):
+    """Record the PRE-clip gradient norm at every optimizer step.
+
+    Lightning clips after this hook fires, so what we see is the norm the clip
+    would act on.  We keep the running list to report (a) how often the clip
+    binds, and (b) whether it binds more in the tail of training than early,
+    which is what decides whether clipping is a transient stabiliser or a
+    standing modification of the objective.
+    """
+
+    def __init__(self):
+        super().__init__(); self.norms = []
+
+    def on_before_optimizer_step(self, trainer, pl_module, optimizer):
+        tot = 0.0
+        for p_ in pl_module.parameters():
+            if p_.grad is not None:
+                tot += float(p_.grad.detach().norm(2)) ** 2
+        self.norms.append(tot ** 0.5)
+
+
 class ValCollector(Callback):
     def __init__(self): super().__init__(); self.vals = []
     def on_validation_end(self, trainer, pl):
         m = trainer.callback_metrics.get("val_reward_mean")
         if m is not None: self.vals.append(float(m))
+
+
+def _gradnorm_stats(norms, clip):
+    """Clip-binding rate overall and over the final fifth of training."""
+    if not norms:
+        return {}
+    a = np.asarray(norms, dtype=float)
+    a = a[np.isfinite(a)]
+    if not len(a):
+        return {}
+    tail = a[int(0.8 * len(a)):]
+    out = {"gnorm_median": float(np.median(a)),
+           "gnorm_p90": float(np.percentile(a, 90)),
+           "gnorm_median_tail": float(np.median(tail))}
+    if clip:
+        out["clip_rate"] = float((a > clip).mean())
+        out["clip_rate_tail"] = float((tail > clip).mean())
+    return out
 
 
 @torch.no_grad()
@@ -96,7 +135,8 @@ def run_seed(loss, dim, lr, s, steps, val_every, tail, clip=None):
                                    a=A, batch_size=1024)
     loader = DataLoader(ds, batch_size=base.BS)
     vc = ValCollector()
-    tr = L.Trainer(max_steps=steps, val_check_interval=val_every, callbacks=[vc],
+    gn = GradNormCollector()
+    tr = L.Trainer(max_steps=steps, val_check_interval=val_every, callbacks=[vc, gn],
                    logger=False, enable_checkpointing=False,
                    enable_progress_bar=False, num_sanity_val_steps=0,
                    gradient_clip_val=clip)
@@ -121,6 +161,7 @@ def run_seed(loss, dim, lr, s, steps, val_every, tail, clip=None):
                            if math.isfinite(plateau) else float("nan")),
            "v_rmse": v_rmse, "v_bias": v_bias, "v_nonfinite": v_nonfin,
            "clip": clip,
+           **_gradnorm_stats(gn.norms, clip),
            "skips": int(getattr(model, "_nonfinite_count_total", 0)),
            "error": err}
     del model, vm, ds, loader, tr

@@ -1,0 +1,40 @@
+{
+ "loss": "gkl",
+ "dim": 128,
+ "lr": 1e-05,
+ "steps": 3000,
+ "seeds": [
+  {
+   "seed": 0,
+   "plateau": -25.710683557722305,
+   "opt_reward": -21.493367197104014,
+   "E_base": -27.493367197104025,
+   "frac_closed": 0.2971139398969533,
+   "v_rmse": 2.364103402851177,
+   "v_bias": 1.5738127507209778,
+   "v_nonfinite": 0,
+   "clip": null,
+   "gnorm_median": 7.284483090631053,
+   "gnorm_p90": 54.23409978425522,
+   "gnorm_median_tail": 8.88191380250236,
+   "skips": 0,
+   "error": null
+  },
+  {
+   "seed": 1,
+   "plateau": -34.78035051557753,
+   "opt_reward": -29.901148193017548,
+   "E_base": -35.90114819301759,
+   "frac_closed": 0.18679961290667654,
+   "v_rmse": 2.396305480330613,
+   "v_bias": 1.3979681125640868,
+   "v_nonfinite": 0,
+   "clip": null,
+   "gnorm_median": 8.640312330641397,
+   "gnorm_p90": 30.260030658005732,
+   "gnorm_median_tail": 9.397972751640168,
+   "skips": 0,
+   "error": null
+  }
+ ]
+}

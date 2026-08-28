@@ -1,0 +1,23 @@
+\begin{table}[t]
+\centering\small
+\caption{Effect of gradient clipping, at a per-arm threshold set to each
+loss's own $90$th-percentile gradient norm so that it binds a comparable
+fraction of the time for every arm. Entries are paired differences
+(clipped $-$ unclipped) over the same $n=12$ instances; \textbf{bold} is
+$p<0.05$. Clipping is not a free stabiliser: it buys control for the
+one-sided losses and charges them bias, and it charges Itakura--Saito
+most of all.}
+\label{tab:clip}
+\begin{tabular}{lccccccccccccc}
+\toprule
+& clip rate & \multicolumn{4}{c}{$\Delta$ headroom (pts)} & \multicolumn{4}{c}{$\Delta$ value RMSE} & \multicolumn{4}{c}{$\Delta$ signed bias}\\
+loss & (tail) & $2$ & $8$ & $32$ & $128$ & $2$ & $8$ & $32$ & $128$ & $2$ & $8$ & $32$ & $128$\\
+\midrule
+\textbf{Spence (ours)} & 0.12 & \textbf{+7.5} & \textbf{+8.9} & \textbf{+6.4} & +2.8 & +0.01 & \textbf{-0.19} & \textbf{-0.37} & \textbf{-0.39} & \textbf{-0.20} & \textbf{-0.54} & \textbf{-0.53} & \textbf{-0.50}\\
+exp-space squared error & 0.08 & \textbf{-1.6} & +0.3 & \textbf{-5.0} & \textbf{+5.2} & \textbf{-0.03} & \textbf{-0.14} & \textbf{-0.27} & \textbf{-0.10} & \textbf{-0.04} & \textbf{-0.17} & \textbf{-0.29} & +0.04\\
+Itakura--Saito & 0.44 & \textbf{+17.1} & \textbf{+17.0} & \textbf{+13.5} & \textbf{+12.5} & \textbf{+0.65} & +0.13 & \textbf{-0.18} & \textbf{-0.41} & \textbf{-1.33} & \textbf{-1.28} & \textbf{-1.18} & \textbf{-1.10}\\
+generalised KL ($\beta=1$) & 0.09 & \textbf{+1.9} & \textbf{+3.7} & -0.6 & -2.1 & -0.02 & \textbf{-0.19} & \textbf{-0.37} & \textbf{-0.31} & \textbf{-0.09} & \textbf{-0.41} & \textbf{-0.54} & \textbf{-0.33}\\
+log-space squared error & 0.12 & +1.5 & \textbf{+0.5} & \textbf{+0.5} & \textbf{+1.0} & -0.04 & \textbf{-0.06} & -0.01 & -0.02 & +0.05 & \textbf{+0.06} & +0.00 & +0.02\\
+\bottomrule
+\end{tabular}
+\end{table}
