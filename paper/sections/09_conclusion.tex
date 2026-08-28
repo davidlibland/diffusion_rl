@@ -5,28 +5,40 @@
 The value function of a reward-guided diffusion is a conditional log-partition
 function, and the only unbiased Monte-Carlo targets for it live in exponential
 space. That fact is what forces the awkward regression, and squared error
-handles it badly in a specific and asymmetric way: over-predictions explode,
-which clipping survives, and under-predictions vanish, which nothing survives.
-Since every Bregman divergence has the value as its minimizer, the potential is
-free, and in log space the entire family reduces to one positive weight on the
-residual. Choosing that weight to be $\ln y/(y-1)$ gives gradients linear in the
-prediction on both sides, in closed form, with a numerically stable
-implementation. It is a drop-in replacement for a loss function.
+handles it badly and asymmetrically: over-predictions explode and
+under-predictions vanish. Since every Bregman divergence has the value as its
+minimizer, the potential is free, and in log space the entire family reduces to
+one positive weight on the residual. That reduction is the paper's thesis, and
+it survives everything below.
+
+The weight we derive from it, $\ln y/(y-1)$, does what it was designed to do at
+the level of the gradient: its norm distribution is the tightest of any arm at
+every dimension, where squared error's develops a $53\times$ tail at $d=128$
+(\S\ref{par:gradnorms}). What we did not anticipate is how little that settles.
+The asymmetry we opened with --- explosions are recoverable, vanishing is not
+--- turned out to be the wrong frame for the outcome. No arm produced a single
+non-finite batch once the arithmetic was stabilised; clipping, the standard
+remedy for the recoverable half, helps \emph{every} arm including ours and
+biases every one of them downward by around a nat; and a deliberately biased
+log-space regression is the best controller in the table at every dimension.
+Tail shape is real and measurable, and it is not what decides the comparison.
 
 What the measurements support is narrower than that construction might suggest,
 and we would rather state it than let the framing carry it. The Spence weight
 repairs exponential-space squared error on both metrics at every dimension we
 ran, and beats generalised KL on value fidelity, so controlling both tails is
-demonstrably better than controlling one. It does not dominate the family. We ran the
-experiment that would decide this --- the same grid with gradient clipping on
-every arm --- and it decided against us: clipped Itakura--Saito is the better
-controller above $d=2$ and ties on value, and clipping turns out to help our
-loss substantially too, which a weight that genuinely needed no clipping should
-not do. The durable contribution is therefore the reduction itself --- that
-loss design here is the choice of a single positive weight, and that squared
-error is a poor choice of it --- and not a claim that our weight is the best
-available one. We would recommend the reduction to a practitioner, and clipped
-Itakura--Saito as the loss.
+demonstrably better than controlling one. It does not dominate the family: unclipped Itakura--Saito
+estimates the value better above $d=2$. The durable contribution is therefore
+the reduction itself --- that loss design here is the choice of a single
+positive weight, and that squared error is a poor choice of it --- and not a
+claim that our weight is the best available one.
+
+The clipped comparison, which would settle whether tail control matters once
+the standard remedy is applied, is unresolved: our first attempt used a
+threshold that bound on every step and so compared normalised-gradient descent
+rather than the losses (\S\ref{par:clipped}). The per-arm rerun is the single
+experiment we would most want completed before drawing a practical
+recommendation.
 
 \paragraph{Limitations.}
 The empirical claims are narrower than the analysis.

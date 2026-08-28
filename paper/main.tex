@@ -47,10 +47,12 @@ linearly in the log-space prediction in \emph{both} tails, yielding the
 $\Spence$ appearing in its value.} and a closed-form, numerically stable
 gradient. Measured against four alternatives with per-loss tuning on a benchmark whose
 value function is known analytically, it repairs squared error on both axes at every
-dimension, clipped or not. It does not, however, dominate the family: once
-gradient clipping is applied --- one line, no tuning --- the Itakura--Saito
-divergence is the better controller above $d=2$ and indistinguishable on value,
-so we do not recommend our weight over it. The comparison also isolates what the unbiased target is for: a
+dimension, clipped or not. It does not, however, dominate the family:
+unclipped Itakura--Saito estimates the value better above $d=2$, and
+generalised KL matches it on control. We also find that gradient clipping, the
+standard remedy for the tail our weight removes, biases every loss downward by
+around a nat --- so the usual framing of explosions as the cheaply-fixable
+pathology understates their cost. The comparison also isolates what the unbiased target is for: a
 well-conditioned but \emph{biased} log-space regression closes about ten more
 points of headroom than any exponential-space loss at every dimension, so an
 application consuming only $\nabla \Vf$ should prefer it, while the unbiased

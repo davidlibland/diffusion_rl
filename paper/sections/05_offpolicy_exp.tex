@@ -15,12 +15,12 @@ the divergence isolated from the sampler. The arms are the Spence loss,
 exponential-space squared error, Itakura--Saito, generalised KL
 ($\beta=1$), and log-space squared error.
 
-\emph{No arm uses gradient clipping.} This is deliberate and it is what makes
-the comparison a test of the tails rather than of a clipping heuristic:
+\emph{The main comparison uses no gradient clipping.} This is deliberate and
+it is what makes it a test of the tails rather than of a clipping heuristic:
 Itakura--Saito and generalised KL each explode on one side
-(\S\ref{sec:04_bregman}), and clipping is the obvious remedy for both. Whether
-a clipped competitor closes the gap is the natural follow-up and we have not
-run it, so nothing here should be read as a claim against clipped variants.
+(\S\ref{sec:04_bregman}), and clipping is the obvious remedy for both. We then
+repeat the whole grid \emph{with} clipping in \S\ref{par:clipped}, which is
+where the comparison is decided.
 
 Two of these choices deserve comment. The squared-error arm is our
 \emph{stabilised} implementation --- exact gradient, saturated to the float
@@ -93,10 +93,9 @@ appears exactly on the axis the second tail governs.
 $d=2$ ($-0.12$) and lose at $d=8$, $32$ and $128$ ($+0.10$, $+0.27$, $+0.22$),
 all significant. On this benchmark, above two dimensions, a divergence from
 1968 estimates the value better than the one we derived. It does so with a
-gradient that explodes for under-predictions, so it depends on the clipping our
-weight makes unnecessary --- and no arm here is clipped. Whether tail control
-survives against a properly clipped competitor is the experiment that would
-settle this, and we did not run it.
+gradient that explodes for under-predictions, so without clipping it is paying
+a price our weight does not. Whether tail control still buys anything once that
+price is removed is settled in \S\ref{par:clipped}.
 
 \emph{For control, the biased loss wins outright.} The log-space arm closes
 $10.7$, $9.6$, $13.0$ and $11.9$ more points of headroom than ours, significant
@@ -111,40 +110,67 @@ keep when $\Vf$ itself is wanted, and since $\Vf(0,0)=\log Z$ that is every
 free-energy and model-evidence use. Our loss is for the second case; we had
 expected to be arguing for it in both.
 
-\paragraph{The clipped comparison, which decides against us.}
+\paragraph{Gradient norms: the mechanism, measured.}
+\label{par:gradnorms}
+Before turning to clipping, it is worth checking that the weights do at the
+gradient level what \S\ref{sec:04_bregman} designs them to do, since every
+claim above is downstream of that. Recording the pre-clip gradient norm at each
+optimizer step and taking the ratio of its $90$th percentile to its median
+gives a scale-free measure of tail heaviness:
+
+\begin{center}\small
+\begin{tabular}{lcccc}
+\toprule
+$\|g\|$ tail ratio (p90/median) & $d=2$ & $d=8$ & $d=32$ & $d=128$\\
+\midrule
+\textbf{Spence}              & 2.4 & 2.7 & 2.7 & \textbf{3.2}\\
+Itakura--Saito               & 2.2 & 2.4 & 2.7 & 2.5\\
+generalised KL               & 2.4 & 2.8 & 2.9 & 7.4\\
+exp-space squared error      & 2.6 & 3.7 & 4.7 & \textbf{52.9}\\
+log-space squared error      & 2.6 & 2.2 & 2.0 & 1.9\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Squared error's gradient distribution develops a heavy tail precisely at
+$d=128$, which is where its control collapses ($13.1\%$ headroom closed against
+our $24.9\%$). That is the exploding tail of \S\ref{sec:03_expmse} observed
+directly rather than inferred, and it is the one place where the theory and the
+measurement line up without qualification. The Spence weight stays tight
+($2.4$--$3.2$) at every dimension, as its construction requires. The design
+works; \S\ref{par:clipped} is about whether it matters.
+
+\paragraph{Clipping, and why our first attempt at it was not a test.}
 \label{par:clipped}
-The preceding results compare the losses as derived, with no arm clipped, and
-the argument for our weight rests on the claim that a two-sided weight makes
-clipping unnecessary. That claim is testable and we tested it: the same grid,
-same tuned rates, same seeds, with gradient-norm clipping at $1.0$ on every
-arm. Two things happen, and neither favours us.
+The argument for a two-sided weight is that competitors with an exploding tail
+depend on clipping. Testing that requires clipping to behave as practitioners
+use it --- an occasional brake, not a permanent one --- and our first attempt
+did not. Clipping at a gradient norm of $1.0$, a standard default, we measured
+the clip binding on $99.8\%$ of steps overall and $100\%$ over the final fifth
+of training, for every arm. The table above says why: median gradient norms
+here run from $5$ to $107$. At that setting the clip is not a safety net but a
+wholesale renormalisation, discarding the gradient magnitude that distinguishes
+these losses and reducing every arm to normalised-gradient descent. Whatever
+that experiment compared, it was not the losses.
 
-\emph{Clipping helps Itakura--Saito most, as predicted --- and helps us
-substantially too, which was not.} It gains $18.4$, $16.1$, $12.1$ and $12.4$
-points of headroom, by far the largest effect of any arm, consistent with a
-gradient that explodes for under-predictions. But the Spence loss also gains
-$12.9$, $8.1$, $5.8$ and $5.0$ points. That is not what a weight needing no
-clipping should do. In hindsight the intuition was loose: our gradient grows
-\emph{linearly} in $p$ rather than exponentially, and linear growth is still
-unbounded, so a fixed clip binds for us too. ``Well conditioned'' bought a
-slower blow-up, not the absence of one.
+Two findings from it survive, because neither depends on the clip being
+occasional. First, clipping is \emph{not free}: it shifts the learned value
+downward by $0.6$ to $1.6$ nats in every arm at every dimension, all
+significant, and most in Itakura--Saito. A remedy that costs a nat of
+calibration is not the cheap fix the framing of \S\ref{sec:03_expmse} implies.
+Second, clipping helps our loss substantially ($+5$ to $+13$ points of
+headroom), which a weight needing no clipping should not show --- linear growth
+is still unbounded, and a binding clip still bites. We therefore withdraw the
+claim that the Spence weight needs no clipping; what it has is a polynomial
+rather than exponential blow-up, which the tail ratios confirm and which is a
+weaker property than we had been asserting.
 
-\emph{With clipping, Itakura--Saito dominates our loss above $d=2$.} On
-control it beats us by $7.2$, $8.6$ and $5.8$ points at $d=8,32,128$, all
-significant. On value the gap we lost unclipped closes to nothing
-($-0.06$, $-0.03$, $+0.05$, none significant); we retain a large advantage only
-at $d=2$ ($-0.65$). So once the standard remedy is applied --- one line, no
-tuning --- a divergence from 1968 is better on one axis and indistinguishable
-on the other, everywhere except the lowest dimension.
-
-What survives is narrower and we state it as such. Against exponential-space
-squared error the Spence loss remains better clipped as well as unclipped, on
-both axes at every dimension ($+7.5$ to $+15.0$ points of control, $0.09$ to
-$0.34$ nats of value). Against generalised KL it retains a small control
-advantage under clipping ($+2.2$ to $+4.1$ points). But we cannot recommend it
-over clipped Itakura--Saito on this benchmark, and the reduction of
-\S\ref{sec:04_bregman} --- not this particular weight --- is what we would ask
-a reader to take away.
+The comparison this section set out to make --- clipping applied as a brake,
+at each arm's own $90$th-percentile norm so that it binds about a tenth of the
+time for every loss --- is running at the time of writing and is not reported
+here. We state the design and the reason for it so that the absence is
+legible: the clipped ranking is unresolved, and the unclipped ranking above
+stands on its own.
 
 \paragraph{One axis separates nothing.}
 We counted non-finite batches per arm and found none, in any arm, at any
