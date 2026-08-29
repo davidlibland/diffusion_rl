@@ -1,0 +1,14 @@
+{
+ "method": "off_policy",
+ "loss": "quad",
+ "dim": 8,
+ "seeds": [
+  {
+   "seed": 0,
+   "plateau": -9.113747775554657,
+   "E_base": -9.960511148303496,
+   "frac_closed": 0.14112722879147319,
+   "error": null
+  }
+ ]
+}

@@ -42,10 +42,24 @@ As $p\to-\infty$ the gradient behaves like $-2e^{p+q}\to 0$. This is exactly
 the regime where the model is \emph{most wrong}: it assigns near-zero value
 $e^{p}\approx 0$ to a state whose true value $e^{q}$ is large --- a rare,
 high-reward target it has failed to find. The learning signal there is not
-merely ill-scaled, it is \emph{absent}, and no amount of gradient clipping \citep{pascanu2013difficulty} can
-manufacture a gradient that has decayed to zero. In the high-dimensional,
-signal-sparse regime of \S\ref{sec:06_sparsity_onpolicy}, where the useful
-targets are precisely the rare large ones, this is the dominant failure mode.
+merely ill-scaled, it is \emph{absent}, and no amount of gradient clipping
+\citep{pascanu2013difficulty} can manufacture a gradient that has decayed to
+zero.
+
+This is worth stating precisely, because it is a defect of \emph{one} loss
+rather than a hazard of exponential-space regression as such --- and that loss
+is the one in standard use. Reading ahead to \eqref{eq:weight-grad}, the
+gradient of any Bregman divergence here is $w(e^{p})(e^{p}-e^{q})$, so it
+vanishes as $p\to-\infty$ exactly when the weight $w$ vanishes at the origin.
+Squared error is the member with $w(y)=2y$, and it is the \emph{only} one of
+the four alternatives we test with that property. At a target $q=1$ and a
+prediction $p=-25$, its gradient is $-7.6\times10^{-11}$; Itakura--Saito's is
+$-2.0\times10^{11}$, generalised KL's is $-2.72$, and ours is $-68$. Three of
+the four retain a usable corrective signal at arbitrary under-prediction; the
+standard choice is the one that does not. That the field's default loss is
+singular in this way is, we think, the most practically useful consequence of
+the reduction in \S\ref{sec:04_bregman}: it is visible immediately from $w$,
+and invisible from the divergence.
 
 \paragraph{Why not regress in log space?}
 The obvious escape is to drop the exponentials and fit $(p-q)^2$ directly,

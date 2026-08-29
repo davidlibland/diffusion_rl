@@ -47,8 +47,12 @@ usable is that in log space the whole family collapses:
 A Bregman loss reaches the optimizer only through the scalar weight $w$, so
 designing one means choosing a positive function on $(0,\infty)$ and nothing
 else. Squared error is $w(y)=2y$, growing with the prediction, which is why it
-explodes above and dies below; Itakura--Saito is $w(y)=1/y$, which inverts the
-asymmetry rather than removing it. Both are power laws, and no power law will
+explodes above and dies below --- and, since the gradient vanishes precisely
+when $w$ does at the origin, squared error is the \emph{only} loss we consider
+whose corrective signal disappears under arbitrary under-prediction. That the
+standard choice is the singular one in this respect is visible immediately from
+$w$ and not at all from the divergence. Itakura--Saito is $w(y)=1/y$, which
+inverts the asymmetry rather than removing it. Both are power laws, and no power law will
 do: with $w(y)\propto y^{\beta-1}$ the gradient grows like $e^{\beta p}$, so it
 is exponential for every $\beta>0$ and flat at $\beta=0$.
 
