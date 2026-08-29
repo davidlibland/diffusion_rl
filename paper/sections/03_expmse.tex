@@ -37,11 +37,14 @@ recoverable at a price in calibration, the price is set by how much gradient
 mass the clip intercepts, and that is set by the weight --- which is what
 \S\ref{sec:04_bregman} is about.
 
-\paragraph{Under-prediction vanishes (genuinely unrecoverable).}
-As $p\to-\infty$ the gradient behaves like $-2e^{p+q}\to 0$. This is exactly
-the regime where the model is \emph{most wrong}: it assigns near-zero value
-$e^{p}\approx 0$ to a state whose true value $e^{q}$ is large --- a rare,
-high-reward target it has failed to find. The learning signal there is not
+\paragraph{Small predictions get no gradient at all (genuinely unrecoverable).}
+As $p\to-\infty$ the gradient behaves like $-2e^{p+q}\to 0$. Note what this
+condition is and is not. It depends on the \emph{prediction} being small, not
+on the error being large: the factor $e^{p}$ multiplies the residual whatever
+its sign, so the loss goes quiet across the whole low-value region rather than
+in some rare corner of it. Since a partially-trained network tracks its targets
+roughly, that region is where the true value is small --- by construction a
+constant fraction of the state space, not a needle in a haystack. The learning signal there is not
 merely ill-scaled, it is \emph{absent}, and no amount of gradient clipping
 \citep{pascanu2013difficulty} can manufacture a gradient that has decayed to
 zero.
@@ -60,6 +63,25 @@ standard choice is the one that does not. That the field's default loss is
 singular in this way is, we think, the most practically useful consequence of
 the reduction in \S\ref{sec:04_bregman}: it is visible immediately from $w$,
 and invisible from the divergence.
+
+\paragraph{Where the silence shows up, measured.}
+\label{par:strata}
+The prediction is testable and we test it in \S\ref{sec:05_offpolicy_exp}, by
+splitting the value error by decile of the \emph{true} value rather than
+averaging over the marginal. In the bottom decile --- where $e^{p}$ and $e^{q}$
+are both small and the gradient is therefore near zero regardless of the
+residual --- squared error over-predicts by $4.4$ nats at $d=8$ and $5.7$ at
+$d=128$, worse than every alternative by $0.65$ to $2.28$ nats, all significant
+($p\le0.002$, $n=8$). With no signal to hold them down, its predictions there
+simply drift upward. In the \emph{top} decile the four exponential-space losses
+are indistinguishable ($-0.38$ to $-0.73$).
+
+So the pathology is real, is specific to the standard loss, and is not quite
+the one usually described. It is not that rare high-reward targets go unfound;
+it is that an entire low-value region receives no gradient, and the learned
+value there is unconstrained. That region is a tenth of the state space by
+construction and it is where the aggregate bias of \S\ref{sec:05_offpolicy_exp}
+comes from.
 
 \paragraph{Why not regress in log space?}
 The obvious escape is to drop the exponentials and fit $(p-q)^2$ directly,

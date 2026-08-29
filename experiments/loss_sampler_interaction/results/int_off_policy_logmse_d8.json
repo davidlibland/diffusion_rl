@@ -1,0 +1,49 @@
+{
+ "method": "off_policy",
+ "loss": "logmse",
+ "dim": 8,
+ "seeds": [
+  {
+   "seed": 0,
+   "plateau": -6.946907132863998,
+   "E_base": -9.960511148303496,
+   "frac_closed": 0.5022673359065829,
+   "error": null
+  },
+  {
+   "seed": 1,
+   "plateau": -6.97350837290287,
+   "E_base": -9.93571720826699,
+   "frac_closed": 0.4937014725606866,
+   "error": null
+  },
+  {
+   "seed": 2,
+   "plateau": -6.260755114257336,
+   "E_base": -9.226142696710188,
+   "frac_closed": 0.494231263742142,
+   "error": null
+  },
+  {
+   "seed": 3,
+   "plateau": -7.200237214565277,
+   "E_base": -9.651181115206112,
+   "frac_closed": 0.4084906501068059,
+   "error": null
+  },
+  {
+   "seed": 4,
+   "plateau": -3.5135106705129147,
+   "E_base": -8.575914539101682,
+   "frac_closed": 0.8437339780981278,
+   "error": null
+  },
+  {
+   "seed": 5,
+   "plateau": -6.564868777990341,
+   "E_base": -10.594631739000057,
+   "frac_closed": 0.671627160168286,
+   "error": null
+  }
+ ]
+}

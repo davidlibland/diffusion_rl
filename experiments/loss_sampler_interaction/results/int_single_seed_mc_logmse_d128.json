@@ -1,0 +1,42 @@
+{
+ "method": "single_seed_mc",
+ "loss": "logmse",
+ "dim": 128,
+ "seeds": [
+  {
+   "seed": 0,
+   "plateau": -25.471584379673004,
+   "E_base": -27.493367197104025,
+   "frac_closed": 0.3369638029051701,
+   "error": null
+  },
+  {
+   "seed": 1,
+   "plateau": -34.41724580526352,
+   "E_base": -35.90114819301759,
+   "frac_closed": 0.2473170646256785,
+   "error": null
+  },
+  {
+   "seed": 2,
+   "plateau": -26.63309869170189,
+   "E_base": -29.1228313573518,
+   "frac_closed": 0.41495544427498504,
+   "error": null
+  },
+  {
+   "seed": 3,
+   "plateau": -26.951981604099274,
+   "E_base": -28.004302598058683,
+   "frac_closed": 0.17538683232656815,
+   "error": null
+  },
+  {
+   "seed": 4,
+   "plateau": -26.07459357380867,
+   "E_base": -27.807655848631892,
+   "frac_closed": 0.28884371247053703,
+   "error": null
+  }
+ ]
+}
