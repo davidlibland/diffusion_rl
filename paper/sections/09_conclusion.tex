@@ -49,15 +49,17 @@ The empirical claims are narrower than the analysis.
 \emph{Reward-call budget.} All our targets have cheap analytic rewards, so we
 measure cost in samples seen. Under an expensive reward --- a quantum-chemistry
 calculation, a docking score, a simulator rollout --- the binding budget is
-total evaluations of $r$, and the ranking between off-policy anchors and
-on-policy sampling could differ from what we report
-(\S\ref{subsec:targets}).
+total evaluations of $r$. That would change the balance between bridge anchors
+and twisted sweeps (App.~\ref{sec:B_onpolicy_zoo}), and we have not measured
+it.
 
-\emph{Transfer.} The on-policy recipe was fitted on one benchmark family, and
-does not transfer unchanged to the Boltzmann targets of
-\S\ref{subsec:gmm40}. We report the fitted constants as an existence proof that
-a single family can cover the dimension range, not as values anyone should
-reuse.
+\emph{The sampler is a tool, and a fitted one.} The twisted-SMC configuration
+of \S\ref{sec:06_sparsity_onpolicy} was fitted on one benchmark family and does
+not transfer unchanged to the Boltzmann targets of \S\ref{subsec:gmm40}. We
+make no claim for it beyond that it is what we used; its constants are not
+values anyone should reuse, and App.~\ref{sec:B_onpolicy_zoo} reports the
+comparison behind it together with the reasons not to read it as a sampler
+result.
 
 \emph{Many-Well-32.} We do not reach a competitive number on this target and
 have diagnosed but not fixed the cause (\S\ref{subsec:gmm40}). Until that is

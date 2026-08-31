@@ -230,6 +230,29 @@ capacity--dimension interaction is unexplored, and the $6$-nat headroom is a
 single difficulty point --- the crossover dimension between on- and off-policy
 very likely moves with it.
 
+\subsection{The sampler comparison across dimension}
+\label{subsec:b-dimscaling}
+This is the study that motivated the tool of \S\ref{sec:06_sparsity_onpolicy}.
+We report it here rather than in the body because
+\S\ref{subsec:interaction} shows its headline is substantially an artifact of
+the loss it was measured with: the same comparison under a better-conditioned
+loss gives roughly a third of the effect. It remains a fair record of what the
+sampler does \emph{at a fixed loss}, and of how the configuration was arrived
+at.
+
+\paragraph{Two reasons not to read this as a sampler result.}
+Beyond the loss-dependence established in \S\ref{subsec:interaction}, the
+comparison below matches \emph{gradient steps}, and that choice favours the
+on-policy arms: each of their steps is fed by an SMC sweep with tens of
+integration steps and several children per particle, where an off-policy step
+costs one closed-form bridge draw and one reward call. On a compute- or
+reward-call-matched axis the comparison would look different, and we have not
+run it. Second, the on-policy family was fitted with an anchor sweep at
+$d=512$ that the off-policy control did not receive, and has three more free
+knobs besides, so part of the high-dimensional difference may be tuning budget
+rather than mechanism. Neither defect affects the use we make of the sampler;
+both would matter if it were the claim.
+
 \begin{remark}[The benchmark holds the sampling cost fixed]
 \label{rem:kl-fixed}
 The motivation for on-policy sampling is that importance sampling for
@@ -246,16 +269,6 @@ sampling \emph{at} fixed sparsity and cannot measure how the benefit scales
 \emph{with} sparsity. Together with \S\ref{subsec:interaction} this is why we
 do not present the comparison as a result about samplers.
 \end{remark}
-
-\subsection{The sampler comparison across dimension}
-\label{subsec:b-dimscaling}
-This is the study that motivated the tool of \S\ref{sec:06_sparsity_onpolicy}.
-We report it here rather than in the body because
-\S\ref{subsec:interaction} shows its headline is substantially an artifact of
-the loss it was measured with: the same comparison under a better-conditioned
-loss gives roughly a third of the effect. It remains a fair record of what the
-sampler does \emph{at a fixed loss}, and of how the configuration was arrived
-at.
 
 \begin{figure}[t]
   \centering
