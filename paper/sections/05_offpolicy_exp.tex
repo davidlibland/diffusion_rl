@@ -245,8 +245,10 @@ losses \emph{learn}, not in whether they run. The stability axis motivates the
 numerics and is then removed by them.
 
 \paragraph{Scope.}
-This experiment isolates the divergence by construction, and therefore says
-nothing about how the losses interact with an on-policy sampler, where the
-loss influences its own future training data. It is also a single problem
-family at one difficulty setting. The dimensional trend within it is
-informative; extrapolating it to other families is not warranted.
+This experiment isolates the divergence by construction: it holds the sampler
+fixed, so it measures the loss cleanly and says nothing on its own about
+whether that measurement matters in context. \S\ref{subsec:interaction} takes
+up that question directly and finds that it does. What remains outside both is
+that this is a single problem family at one difficulty setting; the dimensional
+trend within it is informative, extrapolating it to other families is not
+warranted.

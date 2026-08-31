@@ -33,11 +33,10 @@ unpaired error bars would hide most of what we report.
 Every number below is $n=30$ seeds at $15$k gradient steps, scored by the
 smoothed-tail plateau of validation reward, and recomputed from per-seed
 records by one script rather than transcribed. Gradient steps are the matched
-budget, and that choice favours the on-policy arms: each of their steps is fed
-by an SMC sweep with tens of integration steps and several children per
-particle, where an off-policy step costs one closed-form bridge draw and one
-reward call. A compute- or reward-call-matched axis would look different and we
-have not run it (\S\ref{sec:09_conclusion}). Full protocol in
+budget throughout. Where a sampler comparison is involved that choice is not
+neutral --- an on-policy step is fed by an SMC sweep and an off-policy step by
+one bridge draw --- and we return to it in App.~\ref{sec:B_onpolicy_zoo}. Full
+protocol in
 App.~\ref{sec:C_experimental_details}.
 
 \subsection{Does the loss choice matter, next to the sampler choice?}
