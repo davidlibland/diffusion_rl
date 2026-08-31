@@ -40,62 +40,55 @@ reward call. A compute- or reward-call-matched axis would look different and we
 have not run it (\S\ref{sec:09_conclusion}). Full protocol in
 App.~\ref{sec:C_experimental_details}.
 
-\subsection{On-policy sampling across dimension}
-\label{subsec:dimscaling}
+\subsection{Does the loss choice matter, next to the sampler choice?}
+\label{subsec:interaction}
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{figures/dimscaling}
-  \caption{Headroom closed against dimension, $n=30$ paired seeds per point,
-    error bars $\pm1$ s.e. \textbf{Left:} absolute performance. \textbf{Right:}
-    paired difference against the off-policy control on the same instances;
-    stars mark $p<0.05$. Fitting the recipe knobs (expansion fraction and
-    integration steps) as part of the per-dimension hyperparameter laws removes
-    the high-dimensional collapse: the dotted family loses $7.8$ points to
-    off-policy at $d=512$, while the solid one is significantly above the
-    control at $d=8$--$32$ and not significantly below it at any dimension.
-    Stars are uncorrected for multiple comparisons.}
-  \label{fig:dimscaling}
-\end{figure}
+\S\ref{sec:05_offpolicy_exp} isolates the divergence by holding the sampler
+fixed, which is the right way to measure a loss and the wrong way to judge
+whether the measurement matters. A reader is entitled to suspect that loss
+design is a second-order concern next to how the training data is generated.
+We test that directly, by running the same sampler comparison under two losses
+on nested paired seeds, so that every cell sees the same problem instances.
 
-Figure~\ref{fig:dimscaling} shows the result that motivates
-\S\ref{sec:06_sparsity_onpolicy}. On-policy sampling is a large win at moderate
-dimension --- for the Monte-Carlo-target method, $+11.2$ points at $d=8$,
-$+4.5$ at $d=16$ and $+2.4$ at $d=32$, all $p<0.05$; the TD($\lambda$) variant
-reaches $+13.4$ at $d=8$ --- and the advantage decays as $d$ grows.
+\begin{center}\small
+\begin{tabular}{llccc}
+\toprule
+loss & $d$ & off-policy & on-policy & sampler effect\\
+\midrule
+Spence  & $8$   & $36.0$ & $46.5$ & $\mathbf{+10.5}$ ($p<0.001$)\\
+log-MSE & $8$   & $57.5$ & $61.1$ & $\mathbf{+3.6}$ ($p=0.024$)\\
+Spence  & $128$ & $24.9$ & $23.2$ & $-1.7$ ($p=0.34$)\\
+log-MSE & $128$ & $33.6$ & $32.5$ & $-1.1$ ($p=0.37$)\\
+\bottomrule
+\end{tabular}
+\end{center}
 
-That decay deserves comment, because it runs opposite to the naive reading of
-\S\ref{sec:06_sparsity_onpolicy}: if on-policy sampling exists to fight signal
-sparsity, and sparsity worsens with dimension, the advantage should grow. It
-does not, and Remark~\ref{rem:kl-fixed} says why. The constant-headroom
-calibration holds $\mathrm{KL}(\mathbb{P}^{\star}\|\mathbb{P})$ at $1.4$--$2.6$
-nats at \emph{every} dimension, so the importance-sampling cost this method
-addresses does not in fact grow along this axis. What does grow is the volume
-the value network must represent, a capacity and coverage problem rather than a
-sampling one --- consistent with concentration becoming actively harmful at
-$d=512$ (App.~\ref{subsec:b-failures}). We therefore do not read
-Fig.~\ref{fig:dimscaling} as evidence about how the sparsity benefit scales
-with sparsity; it is not designed to measure that.
+Two readings, both about the loss.
 
-The interesting part is the failure mode of the naive version. Hyperparameter
-laws fitted without the expansion and step-count knobs (dotted) track
-off-policy until $d=64$ and then fall away, reaching $-4.5$ at $d=256$ and
-$-7.8$ at $d=512$: on-policy sampling becomes actively harmful in exactly the
-regime where its motivation --- signal sparsity --- is strongest. Admitting the
-two coverage knobs into the laws (solid) removes the collapse without
-hand-switching between configurations by dimension. The refitted family is
-significantly above the control at $d=8$--$32$ and never significantly below
-it anywhere. We avoid the word ``matches'' for the remaining dimensions: those
-rest on failure to reject at $n=30$, and with paired standard errors near
-$1.4$ points the data cannot exclude a deficit of a few points. Establishing
-equivalence would require a test against a pre-specified margin, which we did
-not run, and the stars in Fig.~\ref{fig:dimscaling} are uncorrected for
-testing across ten dimensions and two arms.
+\emph{Changing the loss moves this benchmark further than changing the
+sampler.} On the off-policy arm alone, switching from Spence to the
+well-conditioned log-space loss is worth $+21.5$ points at $d=8$ ($p<10^{-4}$)
+and $+8.7$ at $d=128$ ($p=0.008$) --- against $+10.5$ for the best sampler
+change we found. On the metric the sampler literature uses, what one regresses
+with dominates what one samples with.
 
-The refitted family gives up about $3$ points to the un-refitted one at $d\le16$, where both are far above off-policy anyway,
-and recovers $6$ to $9$ points at $d\ge256$, where the un-refitted one is below
-it. Per-dimension retuning would likely recover both, at the cost of the
-single-family property this study was built to test.
+\emph{And two-thirds of the sampler's apparent benefit is the loss again.} The
+on-policy gain at $d=8$ is $+10.5$ under Spence and $+3.6$ under log-MSE, an
+interaction of $+6.9$ ($p=0.0048$, $n=10$ paired). The sampler was largely
+compensating for a baseline handicapped by conditioning; improve the
+conditioning and most of the gap closes without touching the sampler. At
+$d=128$ neither change does anything and there is no interaction, so whatever
+limits that regime is untouched by both.
+
+We draw a narrow conclusion and flag the obvious caveat. The caveat is that
+log-MSE is \emph{biased} (\S\ref{sec:05_offpolicy_exp}); this is not a
+recommendation to adopt it, but a statement about what \emph{frac.\ closed}
+attributes to sampling versus to conditioning. The conclusion is that the two
+are not separable, and that a study which improves a sampler while holding a
+poorly-conditioned loss fixed will overstate what the sampler bought. Our own
+sampler comparison, reported in full in App.~\ref{sec:B_onpolicy_zoo}, is
+subject to exactly that critique, which is why we report it there as a record
+of the tool rather than here as a result.
 
 \subsection{GMM-40: an external Boltzmann target}
 \label{subsec:gmm40}

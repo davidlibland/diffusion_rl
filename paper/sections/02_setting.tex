@@ -193,64 +193,25 @@ Our benchmarks all have cheap analytic rewards, so we report sample counts
 rather than reward-call counts; we flag this as a limitation in
 \S\ref{sec:09_conclusion}.
 
-\paragraph{On-policy (bootstrapped) targets.}
-Roll a sequential-Monte-Carlo sweep forward from $X_0=0$ under the current
-twist $u=2a\nabla \Vf_\theta$. A particle at $(x_t,t)$ spawns $k$ children at
-$s=t+\Delta t$ under the guided kernel; writing $\rho_i$ for the per-step ratio
-of \eqref{eq:girsanov-rho} and $v_i = \Vf_\theta(x^{(i)}_s, s)$, the target
-attached to the parent is the log-mean-exp over its siblings,
-\begin{equation}
-  q \;=\; \log\Big(\tfrac{1}{k}\textstyle\sum_{i=1}^{k}\rho_i\,e^{v_i}\Big).
-  \label{eq:bootstrap-target}
-\end{equation}
-It is worth being exact about what this estimates. Define the one-step backup
-operator $\mathcal{T}_s$ --- the continuous-time analogue of the soft Bellman
-backup \citep{haarnoja2017softq} --- acting on a candidate value function $W$ by
-\begin{equation}
-  (\mathcal{T}_s W)(x,t) \;=\; \log\E_{\Base}\!\big[\,e^{W(X_s,s)}\,\big|\,X_t=x\,\big].
-  \label{eq:backup-op}
-\end{equation}
-The children are i.i.d.\ from the guided kernel given the parent, so by
-\eqref{eq:girsanov}
-\begin{equation}
-  \E\big[e^{q}\mid x_t\big] \;=\; e^{(\mathcal{T}_s \Vf_\theta)(x_t,t)}.
-  \label{eq:backup-unbiased}
-\end{equation}
-That is the whole guarantee: \eqref{eq:bootstrap-target} is an exp-space
-unbiased estimate of the backup of \emph{the current network}, and of nothing
-else. In particular it is not an estimate of $\Vf(x_t,t)$. Because
-$e^{\Vf_\theta}$ is not harmonic, the children's values need not be good
-estimates of the true value at the parent, and whatever error $\Vf_\theta$
-carries at time $s$ is inherited rather than corrected. What keeps the
-recursion honest is the terminal step, where the children carry $q=r(X_1)$
-exactly; the scheme is useful to the extent that this anchoring propagates
-backwards. By \eqref{eq:hmart} the true value is a fixed point,
-$\mathcal{T}_s\Vf=\Vf$, but we prove nothing about convergence to it and treat
-the bootstrap as an empirical device throughout.
-
-\paragraph{Backward-noising expansion.}
-Because $e^{\Vf}$ is harmonic, a target attached at $(x_s,s)$ remains valid at
-any point noised \emph{backwards} from it under the base backward kernel. For
-the pinned interpolants this kernel is available in closed form and, notably,
-does not depend on the terminal law $\nu$ at all:
+\paragraph{On-policy (bootstrapped) targets, and backward-noising.}
+The other two constructions are used by the experiments but are not needed to
+follow the argument, so we state them briefly and defer the details to
+App.~\ref{sec:B_onpolicy_zoo}. A twisted SMC sweep supplies \emph{bootstrapped}
+targets, formed by aggregating the learner's own values at the next step; these
+satisfy no exact identity, being unbiased in exponential space for the one-step
+backup of the current $\Vf_\theta$ rather than for $\Vf$, and their usefulness
+rests on the terminal step carrying $q=r(X_1)$ exactly. Separately, because
+$e^{\Vf}$ is harmonic, a target attached at $(x_s,s)$ can be reattached at a
+point noised backwards from it through the base backward kernel
 \begin{equation}
   X_t \,\big|\, X_s = x_s \;\sim\; \mathcal{N}\!\Big(\tfrac{t}{s}\,x_s,\;
-    2a\,\tfrac{t(s-t)}{s}\,I\Big),
-  \qquad t<s,
+    2a\,\tfrac{t(s-t)}{s}\,I\Big), \qquad t<s,
   \label{eq:backward-kernel}
 \end{equation}
-because conditioning a Brownian bridge on an interior point leaves a Brownian
-bridge to that point, whatever the endpoint distribution. The expansion is
-therefore available for base models with nontrivial drift, not only for
-Brownian motion. The hypothesis that does the work here is about the
-\emph{marginal}, not the kernel: \emph{provided} $x_s$ is drawn from the base
-marginal $p_{\Base}^{(\cdot,s)}$ and $x_t$ from the backward kernel, the pair
-$(x_t,q)$ carries the base joint law and \eqref{eq:hmart} applies unchanged.
-That holds for the off-policy anchors above; \S\ref{sec:06_sparsity_onpolicy}
-returns to what happens when the points instead come from a twisted sweep, for
-which it does not. This turns one trajectory into many
-training pairs at earlier, noisier times, and is the mechanism behind our best
-on-policy variant (\S\ref{sec:06_sparsity_onpolicy}).
+which for the pinned interpolants does not depend on the terminal law $\nu$ at
+all (App.~\ref{sec:D_proofs}), so the construction is available for base models
+with nontrivial drift. It is exact when the noised point is base-distributed
+and approximate under a twist (\S\ref{sec:06_sparsity_onpolicy}).
 
 \medskip
 \noindent In every case the learning problem has the same shape: given pairs

@@ -62,17 +62,16 @@ mean, and with it a loss we call the \emph{Spence loss}: its gradient is
 $p\,(e^{p}-e^{q})/(e^{p}-1)$ in closed form, and its value is expressible
 through the Spence function $\Spence(1-e^{x})$, which names it.
 
-A better-conditioned loss does not, however, make rare targets easier to find.
-That is a sampling problem, and in high dimension it dominates: importance
-sampling for $\E[e^{r}]$ from the base process needs on the order of
-$e^{\mathrm{KL}(\mathbb{P}^{\star}\|\mathbb{P})}$ samples
-\citep{chatterjee2018sample}. Because the H-martingale identity survives any
-adapted twist once the Girsanov ratio is applied, the sampler is free, and the
-learned value is itself the optimal twist. The second half of this paper
-studies that loop. The useful finding there is a negative one: at high
-dimension, concentrating the sampler on the reward corridor is worse than not
-doing so, even with an oracle twist. What helps instead is widening coverage at
-small $t$.
+A better-conditioned loss does not make rare targets easier to find, and it is
+natural to assume that the sampler --- which decides which targets appear at
+all --- is the first-order concern and the divergence a detail. We test that
+assumption in \S\ref{subsec:interaction} and it does not hold here. Changing
+the loss moves this benchmark further than the best sampler change we found,
+and most of what the sampler appears to buy turns out to be compensation for a
+poorly conditioned loss. The sampling machinery we use is described in
+\S\ref{sec:06_sparsity_onpolicy} and detailed in
+App.~\ref{sec:B_onpolicy_zoo}; we present it as the tool it is rather than as a
+result.
 
 \paragraph{Contributions.}
 \begin{itemize}\itemsep2pt
@@ -104,12 +103,13 @@ small $t$.
   a fifth of that for ours), and that at a standard threshold it binds on
   essentially every step, so the usual clipped comparison is not a comparison
   of losses at all (\S\ref{sec:05_offpolicy_exp}).
-\item We show that on-policy twisted sampling, with coverage widened by
-  backward noising, is significantly better than off-policy training at
-  $d=8$--$32$ and never significantly worse anywhere in $2\le d\le512$, while
-  the naive version instead collapses to $7.8$ points below off-policy at
-  $d=512$
-  (\S\ref{sec:06_sparsity_onpolicy}, \S\ref{sec:07_experiments}).
+\item We show that the loss choice is not second-order next to the sampler
+  choice, which is the usual assumption. On this benchmark, changing the loss
+  is worth more than the best sampler change we found ($+21.5$ against $+10.5$
+  points at $d=8$), and two-thirds of the sampler's apparent benefit is itself
+  loss-compensation: the on-policy gain falls from $+10.5$ to $+3.6$ when the
+  baseline's loss is better conditioned ($p=0.005$)
+  (\S\ref{subsec:interaction}).
 \item On GMM-40 the learned value recovers $\log Z$ to $0.30\pm0.07$ nats
   over $15$ runs with complete mode coverage, comparable to the best published
   samplers on that target, and we verify by re-initialising the value head
