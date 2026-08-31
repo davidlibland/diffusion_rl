@@ -109,6 +109,41 @@ well-conditioned biased loss. The unbiased exponential-space target earns its
 keep when $\Vf$ itself is wanted, and since $\Vf(0,0)=\log Z$ that is every
 free-energy and model-evidence use. Our loss is for the second case.
 
+\paragraph{Where the error lives.}
+Averaging the value error over the marginal hides the effect
+\S\ref{sec:03_expmse} predicts, because that effect is confined to a region.
+Splitting by decile of the true value:
+
+\begin{center}\small
+\begin{tabular}{lcccc}
+\toprule
+signed value error & \multicolumn{2}{c}{$d=8$} & \multicolumn{2}{c}{$d=128$}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+ & top decile & bottom decile & top decile & bottom decile\\
+\midrule
+\textbf{Spence}          & $-0.44$ & $+3.32$ & $-0.39$ & $+4.23$\\
+exp-space squared error  & $-0.39$ & $\mathbf{+4.39}$ & $-0.73$ & $\mathbf{+5.70}$\\
+Itakura--Saito           & $-0.47$ & $+2.96$ & $-0.38$ & $+3.42$\\
+generalised KL           & $-0.41$ & $+3.74$ & $-0.43$ & $+4.81$\\
+log-space squared error  & $-2.66$ & $-1.71$ & $-1.71$ & $-0.65$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+In the top decile the four exponential-space losses are indistinguishable. In
+the bottom decile --- where $e^{p}$ is small and squared error's gradient
+$2e^{p}(e^{p}-e^{q})$ is therefore negligible whatever the residual --- squared
+error is worse than every alternative, by $1.07$, $1.43$ and $0.65$ nats at
+$d=8$ and $1.47$, $2.28$ and $0.89$ at $d=128$ against Spence, Itakura--Saito
+and generalised KL respectively, all significant ($p\le0.002$, $n=8$ paired).
+Its predictions there are not wrong in a particular direction because the data
+pushes them that way; they are unconstrained, and they drift.
+
+This locates the pathology of \S\ref{sec:03_expmse} and corrects its usual
+description. The failure is not that a rare high-reward target goes unfound. It
+is that the standard loss goes silent over a fixed tenth of the state space,
+and the aggregate bias reported above is that silence integrated.
+
 \paragraph{Gradient norms: the mechanism, measured.}
 \label{par:gradnorms}
 Before turning to clipping, it is worth checking that the weights do at the

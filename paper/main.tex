@@ -58,10 +58,11 @@ calibration rather than a ranking. The comparison also isolates what the unbiase
 well-conditioned but \emph{biased} log-space regression closes about ten more
 points of headroom than any exponential-space loss at every dimension, so an
 application consuming only $\nabla \Vf$ should prefer it, while the unbiased
-target earns its keep when $\Vf$ itself is wanted --- and $\Vf(0,0)=\log Z$. A
-secondary contribution studies on-policy twisted sampling for the same problem,
-where the useful finding is that widening coverage beats concentrating on the
-reward corridor. We evaluate on a dimensional-scaling benchmark designed for
+target earns its keep when $\Vf$ itself is wanted --- and $\Vf(0,0)=\log Z$. We also find that the loss is not the
+second-order concern it is usually taken to be next to the choice of sampler:
+changing it moves our benchmark further than the best sampler change we found,
+and two-thirds of that sampler's apparent benefit is itself compensation for a
+poorly conditioned loss. We evaluate on a dimensional-scaling benchmark designed for
 clean statistical reads and on the GMM-40 sampler benchmark.
 \end{abstract}
 

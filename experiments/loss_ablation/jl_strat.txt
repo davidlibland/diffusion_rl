@@ -1,0 +1,10 @@
+quad 8 1e-05 8 8000 strat
+quad 128 1e-05 8 8000 strat
+mse 8 3e-05 8 8000 strat
+mse 128 1e-05 8 8000 strat
+is 8 1e-05 8 8000 strat
+is 128 1e-05 8 8000 strat
+gkl 8 1e-05 8 8000 strat
+gkl 128 1e-05 8 8000 strat
+logmse 8 1e-05 8 8000 strat
+logmse 128 1e-05 8 8000 strat

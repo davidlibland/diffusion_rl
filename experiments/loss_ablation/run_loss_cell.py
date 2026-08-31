@@ -114,8 +114,23 @@ def value_error(vm, prob, dim, n=20000, seed=0):
     exact = prob["anal_fn"](x, t.flatten()).flatten().double()
     d = (pred - exact)
     ok = torch.isfinite(d)
+    # Stratify by the TRUE value.  The vanishing-gradient argument of S3 is not
+    # about the marginal; it is about the rare, high-value targets, where
+    # exp-space squared error's gradient 2 e^{p+q} -> 0 exactly when the model
+    # under-predicts.  An aggregate bias averages that region away, so we report
+    # the signed error in the top and bottom deciles of V separately.
+    strat = {}
+    if int(ok.sum()) > 100:
+        de, ex = d[ok], exact[ok]
+        q90 = torch.quantile(ex, 0.90)
+        q10 = torch.quantile(ex, 0.10)
+        hi, lo = ex >= q90, ex <= q10
+        strat = {"bias_topdecile": float(de[hi].mean()),
+                 "bias_botdecile": float(de[lo].mean()),
+                 "rmse_topdecile": float(de[hi].pow(2).mean().sqrt()),
+                 "frac_under_top": float((de[hi] < 0).float().mean())}
     return (float(d[ok].pow(2).mean().sqrt()), float(d[ok].mean()),
-            int((~ok).sum()))
+            int((~ok).sum()), strat)
 
 
 def run_seed(loss, dim, lr, s, steps, val_every, tail, clip=None):
@@ -152,14 +167,15 @@ def run_seed(loss, dim, lr, s, steps, val_every, tail, clip=None):
     else:
         plateau = float("nan")
     try:
-        v_rmse, v_bias, v_nonfin = value_error(vm, prob, dim, seed=s)
-    except Exception as e:                       # a diverged net can be all-NaN
-        v_rmse = v_bias = float("nan"); v_nonfin = -1
+        v_rmse, v_bias, v_nonfin, v_strat = value_error(vm, prob, dim, seed=s)
+    except Exception:                            # a diverged net can be all-NaN
+        v_rmse = v_bias = float("nan"); v_nonfin = -1; v_strat = {}
     out = {"seed": s, "plateau": plateau, "opt_reward": float(e_opt),
            "E_base": prob["diag"]["E_base_r"],
            "frac_closed": ((plateau - prob["diag"]["E_base_r"]) / 6.0
                            if math.isfinite(plateau) else float("nan")),
            "v_rmse": v_rmse, "v_bias": v_bias, "v_nonfinite": v_nonfin,
+           **v_strat,
            "clip": clip,
            **_gradnorm_stats(gn.norms, clip),
            "skips": int(getattr(model, "_nonfinite_count_total", 0)),

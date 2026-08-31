@@ -1,0 +1,8 @@
+off_policy 8 quad
+off_policy 8 logmse
+off_policy 128 quad
+off_policy 128 logmse
+single_seed_mc 8 quad
+single_seed_mc 8 logmse
+single_seed_mc 128 quad
+single_seed_mc 128 logmse
