@@ -29,6 +29,30 @@ that they buy conditioning by giving up the unbiased exponential-space target
 while we keep it; which trade is better is an empirical question we do not
 settle.
 
+\paragraph{Learning the same object, with the loss unexamined.}
+The setting of this paper --- a frozen pretrained base, a value or twist fit by
+regression onto exponential-space targets --- appears in the literature under
+several names, and in each case the divergence applied to those targets is
+taken as given. \citet{chang2026vsdm} formulate guidance as
+$\nabla\log h$ for the Doob $h$-function and estimate $h$ by squared error
+against $e^{r/\alpha}$, exactly our \texttt{mse} arm, then add a gradient
+regulariser so that the plug-in $\nabla\widehat h$ is consistent; their concern
+is statistical convergence of the gradient estimate, ours is the conditioning
+of the loss whose gradient is being taken, and the two are complementary. They
+note that classifier guidance and Monte-Carlo regression do the same thing.
+\citet{lu2023qgpo} report a controlled ablation of precisely this choice on
+D4RL and find exponential-space squared error the worst of their arms; rather
+than change the divergence they replace the regression with a contrastive
+objective. \citet{li2024svdd} reach the same obstacle --- that
+$e^{r/\alpha}$ has ``excessively large'' scale --- and retreat to regressing
+$r$ itself, which is the biased log-space fit of \S\ref{sec:03_expmse}.
+\citet{mao2024diffusiondice} do change the divergence, to
+$\E[w e^{-g}+g]$; this is, up to terms independent of the prediction, the
+Itakura--Saito member of the family in \S\ref{sec:04_bregman}, arrived at
+independently and not identified as such. That four groups meet the same
+pathology and none treats the divergence as the free parameter is the gap this
+paper addresses.
+
 \paragraph{Badly-scaled value regression.}
 The reinforcement-learning literature fixes this by transforming the target
 \citep{vanhasselt2016popart,pohlen2018observe,farebrother2024stopregressing};
