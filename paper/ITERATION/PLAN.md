@@ -118,3 +118,33 @@ disclosure, or the backward-noising caveat. Those are the paper's honesty.
 - The off-policy d=512 anchor sweep that would close the tuning asymmetry.
 - Equivalence test (TOST) for any "ties" claim, if that claim is wanted back.
 - A compute- or reward-call-matched version of Fig. 2.
+
+## Next experiment: QGPO/CEP on D4RL (decided 2026-09-01)
+
+**Why this one.** It is the only published setting where our exact loss axis is
+already ablated with everything else held fixed, on a frozen pretrained base,
+with public checkpoints and small MLPs that fit a 3090 Ti in hours.
+
+QGPO Table 6 (arXiv 2304.12824, verified from PMLR PDF):
+  MSE regression (= our log-space arm)   68.0 locomotion / 46.4 antmaze
+  E-MSE (= our exp-space arm)            58.1 / 24.5
+  resampling, no guide                   76.9 / 63.0
+  CEP contrastive (theirs)               86.6 / 78.3
+Their three losses are sibling `elif` branches on `--method mse|emse|CEP` in
+`diffusion_SDE/model.py`; ours is a fourth branch.
+
+**What it would show.** Our family supplies the arms between their two failures
+and their contrastive fix. Their own §4.1 critique --- MSE converges to
+E[target|x_t] whereas exact guidance needs -log E[e^{-beta target}|x_t] --- does
+NOT bite us, because our targets are the log-expectation by construction. So
+58.1/68.0 are not our baseline; CEP's 86.6/78.3 is the number to reach.
+
+**Honest caveat.** D4RL return is a CONTROL metric, the axis on which our loss
+does not dominate (S5). This is a fair external test, not a favourable one.
+
+**Second, cheaper confirmation.** SVDD's DNA-enhancer task (2408.08252):
+minutes per run, and two independent papers publish the same table.
+
+**Unverified / open:** text-to-image and molecular-conformer families were not
+covered to the same standard; torsional-diffusion reward steering has no
+verified comparable table.
