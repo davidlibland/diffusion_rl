@@ -244,6 +244,22 @@ this work do not recur, and the differences above are differences in what the
 losses \emph{learn}, not in whether they run. The stability axis motivates the
 numerics and is then removed by them.
 
+\paragraph{An external check we did not construct.}
+Two of the five arms here have been run by others, on a pretrained base, and
+published. \citet{lu2023qgpo} ablate the guide objective on D4RL with
+everything else held fixed, and two of their rows correspond to arms of this
+table: regressing the value directly (their \textsc{mse}) is our log-space
+arm, and squared error between exponentials (their \textsc{e-mse},
+$\|e^{f}-e^{\beta E}\|^{2}$) is our exponential-space arm. They report $68.0$
+against $58.1$ on locomotion and $46.4$ against $24.5$ on AntMaze --- the
+log-space fit ahead of the exponential-space one, by $9.9$ and $21.9$ points.
+Our synthetic benchmark gives the same ordering with a comparable gap at every
+dimension ($+15.3$, $+15.9$, $+12.0$, $+23.7$), which is some evidence that the
+control-axis ranking of \S\ref{sec:05_offpolicy_exp} is not an artifact of our
+problem family. The comparison is loose --- different task, different
+architecture, different reward --- so we claim only the direction, and we note
+that neither of those two arms is one we recommend.
+
 \paragraph{Scope.}
 This experiment isolates the divergence by construction: it holds the sampler
 fixed, so it measures the loss cleanly and says nothing on its own about

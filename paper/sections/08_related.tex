@@ -41,9 +41,12 @@ is statistical convergence of the gradient estimate, ours is the conditioning
 of the loss whose gradient is being taken, and the two are complementary. They
 note that classifier guidance and Monte-Carlo regression do the same thing.
 \citet{lu2023qgpo} report a controlled ablation of precisely this choice on
-D4RL and find exponential-space squared error the worst of their arms; rather
-than change the divergence they replace the regression with a contrastive
-objective. \citet{li2024svdd} reach the same obstacle --- that
+D4RL --- same frozen base, same critic, only the guide objective varying ---
+and find exponential-space squared error the worst of their arms by a wide
+margin; rather than change the divergence they replace the regression with a
+contrastive objective. Their squared-error row is not a strawman: it is what
+\citet{janner2022diffuser} does, training the base first and then a separate
+model to predict returns for guidance. \citet{li2024svdd} reach the same obstacle --- that
 $e^{r/\alpha}$ has ``excessively large'' scale --- and retreat to regressing
 $r$ itself, which is the biased log-space fit of \S\ref{sec:03_expmse}.
 \citet{mao2024diffusiondice} do change the divergence, to
